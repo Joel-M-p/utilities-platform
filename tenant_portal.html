@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Tenant Portal</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --success: #27ae60;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --gray: #7f8c8d;
+            --bg: #f4f7f6;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg); margin: 0; padding: 0; color: #1c1c1e; -webkit-font-smoothing: antialiased; padding-bottom: 70px; /* Space for bottom nav */ }
+        
+        /* Login Screen */
+        .login-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; background: var(--primary); color: white; padding: 20px; box-sizing: border-box; }
+        .login-logo { font-size: 2.2em; font-weight: 800; margin-bottom: 30px; letter-spacing: 1px; text-align: center; }
+        .login-card { background: white; padding: 30px; border-radius: 16px; width: 100%; max-width: 350px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .login-card h2 { text-align: center; color: var(--dark); margin-top: 0; margin-bottom: 20px; }
+        .login-card input, .login-card select { width: 100%; padding: 15px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
+        .login-card button { width: 100%; padding: 15px; background: var(--secondary); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .login-error { color: var(--danger); text-align: center; margin-top: 15px; font-size: 0.9em; display: none; }
+
+        /* Main App Structure */
+        .app-header { background: var(--primary); color: white; padding: 15px; text-align: center; font-size: 1.1em; font-weight: bold; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; }
+        
+        .screen { display: none; padding: 15px; max-width: 500px; margin: 0 auto; }
+        .screen.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .card h3 { margin: 0 0 15px 0; color: var(--dark); font-size: 1.1em; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        
+        /* Alert Banner */
+        .alert-banner { background-color: #ffebee; color: #c0392b; padding: 20px; border-radius: 12px; margin-bottom: 20px; border-left: 5px solid #c0392b; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .alert-banner h3 { color: #c0392b; margin: 0 0 10px 0; border: none; padding: 0; font-size: 1.2em; }
+        .alert-banner p { margin: 0 0 15px 0; font-size: 0.95em; }
+        .alert-banner button { width: 100%; padding: 12px; background: #c0392b; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+
+        /* KPI Grid */
+        .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .kpi-card { background: white; border-radius: 12px; padding: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; }
+        .kpi-card h4 { margin: 0 0 5px 0; color: var(--gray); font-size: 0.8em; text-transform: uppercase; }
+        .kpi-card .val { font-size: 1.4em; font-weight: bold; color: var(--dark); }
+        .kpi-card.success .val { color: var(--success); }
+        .kpi-card.danger .val { color: var(--danger); }
+        .kpi-card.warning .val { color: var(--warning); }
+        .kpi-card.secondary .val { color: var(--secondary); }
+
+        /* Main Wallet Card */
+        .wallet-card { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; padding: 30px 20px; border-radius: 16px; text-align: center; margin-bottom: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.15); }
+        .wallet-card h2 { margin: 0 0 10px 0; font-size: 1.2em; font-weight: 400; }
+        .wallet-balance { font-size: 3em; font-weight: 800; margin-bottom: 5px; }
+        .wallet-sub { font-size: 0.9em; opacity: 0.8; margin-bottom: 25px; }
+        .btn-fund { background: white; color: var(--primary); border: none; padding: 15px; width: 100%; border-radius: 8px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        
+        /* Tariff Breakdown Styles */
+        .tariff-item { margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
+        .tariff-item:last-child { border-bottom: none; margin-bottom: 0; }
+        .tariff-name { font-weight: bold; color: var(--dark); font-size: 1em; margin-bottom: 5px; }
+        .tariff-row { display: flex; justify-content: space-between; font-size: 0.9em; color: var(--gray); margin-bottom: 2px; }
+        .tariff-total { font-weight: bold; color: var(--dark); }
+        .vat-badge { background: #e8f8f5; color: #1abc9c; padding: 5px 10px; border-radius: 4px; font-size: 0.8em; font-weight: bold; display: inline-block; margin-bottom: 10px; }
+
+        /* Buy Utility Sections (STS) */
+        .utility-card { display: flex; flex-direction: column; align-items: center; margin-bottom: 15px; padding: 15px; border-radius: 10px; background: #f8f9fa; }
+        .utility-card h4 { margin: 0 0 10px 0; color: var(--dark); font-size: 1.2em; display: flex; align-items: center; gap: 8px; }
+        .utility-card input { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; box-sizing: border-box; text-align: center; font-weight: bold; }
+        .btn-buy { width: 100%; padding: 12px; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .btn-elec { background: var(--warning); }
+        .btn-water { background: var(--secondary); }
+
+        /* Transaction History */
+        .txn-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f1f1; font-size: 0.95em; }
+        .txn-item:last-child { border-bottom: none; }
+        .txn-date { color: var(--gray); font-size: 0.85em; }
+        .txn-amount { font-weight: bold; }
+        .text-success { color: var(--success); }
+        .text-danger { color: var(--danger); }
+        
+        .btn-logout { background: var(--danger); color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9em; }
+        .helper-text { font-size: 0.85em; color: var(--gray); margin-bottom: 8px; text-align: center; }
+        
+        /* Bottom Navigation */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; border-top: 1px solid #ddd; display: flex; justify-content: space-around; padding: 8px 0; z-index: 100; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
+        .nav-btn { background: none; border: none; color: var(--gray); font-size: 0.7em; display: flex; flex-direction: column; align-items: center; cursor: pointer; padding: 5px; width: 100%; }
+        .nav-btn.active { color: var(--secondary); }
+        .nav-icon { font-size: 1.5em; margin-bottom: 3px; }
+
+        /* Modal for Payment (PayGate Style) */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200; }
+        .modal-content { background: white; margin: 20px; border-radius: 12px; padding: 20px; margin-top: 50px; text-align: center; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
+        .modal-title { font-size: 1.2em; font-weight: bold; color: var(--dark); }
+        .modal-close { background: none; border: none; font-size: 1.5em; color: var(--gray); cursor: pointer; }
+        .paygate-logo { font-weight: 800; color: #003366; font-size: 1.5em; margin: 10px 0; }
+        .payment-options { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
+        .payment-logo { background: #f8f9fa; padding: 5px 10px; border-radius: 4px; font-size: 0.8em; font-weight: bold; color: var(--gray); border: 1px solid #ddd; }
+        input, select { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: var(--secondary); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .btn-paygate { background: #003366; }
+    </style>
+</head>
+<body>
+<!-- LOGIN SCREEN -->
+<div id="screen-login" class="login-screen">
+    <div class="login-logo">Tenant Portal</div>
+    <div class="login-card">
+        <h2>Sign In</h2>
+        <select id="login_property"><option value="">Select Property...</option></select>
+        <input type="text" id="login_unit_number" placeholder="Unit Number (e.g., 101)">
+        <input type="email" id="login_email" placeholder="Email Address">
+        <button onclick="tLogin()">Login</button>
+        <div id="loginError" class="login-error">Invalid credentials. Please try again.</div>
+    </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="main-app" style="display:none;">
+
+    <div class="app-header">
+        <span id="appHeaderText">My Utilities</span>
+        <button class="btn-logout" onclick="tLogout()">Logout</button>
+    </div>
+
+    <!-- SCREEN 1: HOME -->
+    <div id="screen-home" class="screen active">
+        <!-- ARREARS ALERT BANNER (Hidden by default) -->
+        <div id="rentAlertBox" class="alert-banner" style="display:none;">    
+            <h3>⚠️ Action Required: Rent Arrears</h3>
+            <p>You currently owe <strong id="alertRentAmount">R 0.00</strong> in rent. Any funds added to your wallet will automatically be allocated to rent first.</p>
+            <button onclick="switchTab('screen-topup', document.querySelector('.nav-btn[data-tab=topup]'))">Add Funds to Clear Rent</button>
+        </div>
+
+        <!-- WALLET CONSUMPTION VIEW (Smart Meters) -->
+        <div id="walletView" style="display:none;">
+            <div class="wallet-card">
+                <h2>Wallet Balance</h2>
+                <div class="wallet-balance" id="kpiWallet">R 0.00</div>
+                <div class="wallet-sub" id="kpiForecast">Loading consumption forecast...</div>
+                <button class="btn-fund" onclick="switchTab('screen-topup', document.querySelector('.nav-btn[data-tab=topup]'))">Fund My Wallet</button>
+            </div>
+            <p style="text-align:center; color:var(--gray); font-size:0.9em; margin-top:-10px; margin-bottom:20px;">
+                Your wallet balance decreases automatically as you consume electricity and municipal services.
+            </p>
+        </div>
+
+        <!-- STS TOKEN VIEW (Dumb Meters) -->
+        <div id="stsView" style="display:none;">
+            <div class="kpi-grid">
+                <div class="kpi-card success">
+                    <h4>Wallet Balance (R)</h4>
+                    <div class="val" id="kpiWalletSts">R 0.00</div>
+                </div>
+                <div class="kpi-card danger">
+                    <h4>Total Arrears</h4>
+                    <div class="val" id="kpiArrearsSts">R 0.00</div>
+                </div>
+            </div>
+            <div class="card">
+                <h3>Quick Top Up</h3>
+                <p style="text-align:center; color:var(--gray); font-size:0.9em; margin-bottom:15px;">Select the "Top Up" tab below to load funds via PayGate and buy tokens.</p>
+                <button class="btn-buy btn-elec" onclick="switchTab('screen-topup', document.querySelector('.nav-btn[data-tab=topup]'))">Go to Top Up</button>
+            </div>
+        </div>
+
+        <!-- Account Summary -->
+        <div class="card">
+            <h3>Account Summary</h3>
+            <div class="txn-item">
+                <span>Rent Outstanding</span>
+                <span class="txn-amount text-danger" id="sumRent">R 0.00</span>
+            </div>
+            <div class="txn-item">
+                <span>Electricity Outstanding</span>
+                <span class="txn-amount text-danger" id="sumElec">R 0.00</span>
+            </div>
+            <div class="txn-item">
+                <span>Municipal Charges Outstanding</span>
+                <span class="txn-amount text-danger" id="sumWater">R 0.00</span>
+            </div>
+            <div class="txn-item">
+                <span>Overdraft Limit Available</span>
+                <span class="txn-amount text-success" id="sumOverdraft">R 0.00</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCREEN 2: TARIFFS -->
+    <div id="screen-tariffs" class="screen">
+        <div class="card">
+            <h3>Tariff & Charges Breakdown</h3>
+            <div class="vat-badge" id="vatBadge">VAT: 15%</div>
+            <div id="tariffListContainer">
+                <p style="text-align:center; color:var(--gray);">Loading tariffs...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCREEN 3: TOP UP -->
+    <div id="screen-topup" class="screen">
+        
+        <!-- PAYMENT OPTIONS (PAYGATE) - ALWAYS VISIBLE FOR BOTH METER TYPES -->
+        <div class="card">
+            <h3>Payment Options</h3>
+            <div class="paygate-logo" style="text-align:center;">PayGate</div>
+            <p style="font-size:0.8em; color:var(--gray); text-align:center; margin-bottom:15px;">A DPO Company</p>
+            <div class="payment-options" style="margin-bottom:20px;">
+                <div class="payment-logo">VISA</div>
+                <div class="payment-logo">MasterCard</div>
+            </div>
+            <div class="helper-text">Enter amount to load into your wallet. Rent will be paid first automatically.</div>
+            <input type="number" id="fund_amount" placeholder="Amount (R)" value="100">
+            <button class="btn-paygate" onclick="tProcessPayGate()">Top Up Wallet</button>
+        </div>
+
+        <!-- TARIFF REDEEM (ONLY FOR STS TOKEN METERS) -->
+        <div id="stsTopupView" style="display:none;">
+            <div class="card">
+                <h3>Tariff Redeem & Payments</h3>
+                
+                <div class="utility-card">
+                    <h4>🏠 Pay Rent / General Payment</h4>
+                    <div class="helper-text">Enter amount in Rand. This will clear rent first, then utilities.</div>
+                    <input type="number" id="rent_pay_amount" placeholder="Amount (R)">
+                    <button class="btn-buy" style="background: var(--success);" onclick="tPayRent()">Submit Payment</button>
+                </div>
+
+                <div class="utility-card">
+                    <h4>⚡ Buy Electricity (Tariff Redeem)</h4>
+                    <div class="helper-text">Enter amount in Rand (e.g., 50). Note: Rent is paid first!</div>
+                    <input type="number" id="elec_amount" placeholder="Amount (R)">
+                    <button class="btn-buy btn-elec" onclick="tBuyUtility('ELECTRICITY')">Redeem Electricity</button>
+                </div>
+
+                <div class="utility-card" style="margin-bottom:0;">
+                    <h4>💧 Pay Municipal Charges</h4>
+                    <div class="helper-text">Enter amount in Rand (e.g., 30). Note: Rent is paid first!</div>
+                    <input type="number" id="water_amount" placeholder="Amount (R)">
+                    <button class="btn-buy btn-water" onclick="tBuyUtility('WATER_COLD')">Redeem Municipal</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCREEN 4: HISTORY -->
+    <div id="screen-history" class="screen">
+        <div class="card">
+            <h3>Recent Transactions</h3>
+            <div id="txnList">
+                <p style="text-align:center; color:var(--gray);">Loading transactions...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+        <button class="nav-btn active" onclick="switchTab('screen-home', event)"><span class="nav-icon">🏠</span>Home</button>
+        <button class="nav-btn" onclick="switchTab('screen-tariffs', event)"><span class="nav-icon">📉</span>Tariffs</button>
+        <button class="nav-btn" onclick="switchTab('screen-topup', event)"><span class="nav-icon">💳</span>Top Up</button>
+        <button class="nav-btn" onclick="switchTab('screen-history', event)"><span class="nav-icon">⏳</span>History</button>
+    </div>
+
+</div>
+
+<script>
+    let tenantToken = localStorage.getItem('tenant_token');
+    let currentTenantId = localStorage.getItem('current_tenant_id');
+    let currentPropertyId = null;
+
+    // Fetch properties for login dropdown on load
+    fetch('/public-properties/').then(r => r.json()).then(d => {
+        const dd = document.getElementById('login_property');
+        d.properties.forEach(p => {
+            dd.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+        });
+    }).catch(e => console.error("Failed to load properties for login"));
+
+    if(tenantToken && currentTenantId) {
+        document.getElementById('screen-login').style.display = 'none';
+        document.getElementById('main-app').style.display = 'block';
+        tLoadDashboard();
+        tLoadTransactions();
+    }
+
+    // --- AUDIT TRAIL ---
+    async function tLogAction(action, details) {
+        try {
+            await fetch(`/audit-log/`, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tenantToken}` },
+                body: JSON.stringify({ username: `Tenant ${currentTenantId}`, action, details })
+            });
+        } catch(e) { console.error("Audit log failed:", e); }
+    }
+    // --- END AUDIT TRAIL ---
+
+    async function tLogin() {
+        const property_id = document.getElementById('login_property').value;
+        const unitNumber = document.getElementById('login_unit_number').value;
+        const email = document.getElementById('login_email').value;
+        const errBox = document.getElementById('loginError');
+        errBox.style.display = 'none';
+
+        if(!property_id) { errBox.innerText = "Please select your property."; errBox.style.display = 'block'; return; }
+
+        try {
+            const r = await fetch('/tenant-login/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ property_id: parseInt(property_id), unit_number: unitNumber, email: email })
+            });
+            const d = await r.json();
+            if (!r.ok) throw new Error(d.detail || "Login failed");
+            
+            localStorage.setItem('tenant_token', d.token);
+            localStorage.setItem('current_tenant_id', d.tenant_id);
+            tenantToken = d.token;
+            currentTenantId = d.tenant_id;
+            
+            document.getElementById('screen-login').style.display = 'none';
+            document.getElementById('main-app').style.display = 'block';
+            tLogAction("Tenant Login", `Prop ID: ${property_id}, Unit: ${unitNumber} logged in.`);
+            tLoadDashboard();
+            tLoadTransactions();
+        } catch (e) {
+            errBox.innerText = e.message;
+            errBox.style.display = 'block';
+        }
+    }
+
+    function tLogout() {
+        tLogAction("Tenant Logout", `Tenant ID: ${currentTenantId} logged out.`);
+        localStorage.removeItem('tenant_token');
+        localStorage.removeItem('current_tenant_id');
+        tenantToken = null;
+        currentTenantId = null;
+        location.reload();
+    }
+
+    function getAuthHeaders() { return { 'Authorization': `Bearer ${tenantToken}` }; }
+
+    function switchTab(screenId, evt) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(screenId).classList.add('active');
+        if(evt && evt.currentTarget) evt.currentTarget.classList.add('active');
+        
+        if(screenId === 'screen-tariffs') tLoadTariffs();
+        if(screenId === 'screen-history') tLoadTransactions();
+    }
+
+    async function tLoadDashboard() {
+        if(!currentTenantId) { tLogout(); return; }
+        try {
+            const r = await fetch(`/tenant-balance/${currentTenantId}`, { headers: getAuthHeaders() });
+            if (!r.ok) {
+                const errData = await r.json();
+                throw new Error(`Error ${r.status}: ${errData.detail || 'Failed to load balance'}`);
+            }
+            const d = await r.json();
+            
+            currentPropertyId = d.property_id || null;
+            const totalArrears = d.rent_outstanding + d.electricity_outstanding + d.water_outstanding;
+            const availableBalance = d.wallet_balance + d.credit_limit;
+            
+            if (d.utility_model === 'WALLET_CONSUMPTION') {
+                document.getElementById('walletView').style.display = 'block';
+                document.getElementById('stsView').style.display = 'none';
+                document.getElementById('stsTopupView').style.display = 'none';
+                
+                document.getElementById("kpiWallet").innerText = `R ${availableBalance.toFixed(2)}`;
+                
+                if (availableBalance > 0) {
+                    const daysLeft = Math.max(1, Math.round(availableBalance / 10));
+                    const forecastDate = new Date();
+                    forecastDate.setDate(forecastDate.getDate() + daysLeft);
+                    document.getElementById("kpiForecast").innerText = `Estimated to run out in ${daysLeft} days (${forecastDate.toLocaleDateString()})`;
+                } else {
+                    document.getElementById("kpiForecast").innerText = "Wallet is empty. Please add funds.";
+                }
+                
+            } else {
+                document.getElementById('walletView').style.display = 'none';
+                document.getElementById('stsView').style.display = 'block';
+                document.getElementById('stsTopupView').style.display = 'block';
+                
+                document.getElementById("kpiWalletSts").innerText = `R ${availableBalance.toFixed(2)}`;
+                document.getElementById("kpiArrearsSts").innerText = `R ${totalArrears.toFixed(2)}`;
+            }
+            
+            document.getElementById("sumRent").innerText = `R ${d.rent_outstanding.toFixed(2)}`;
+            document.getElementById("sumElec").innerText = `R ${d.electricity_outstanding.toFixed(2)}`;
+            document.getElementById("sumWater").innerText = `R ${d.water_outstanding.toFixed(2)}`;
+            document.getElementById("sumOverdraft").innerText = `R ${d.credit_limit.toFixed(2)}`;
+            
+            const alertBox = document.getElementById('rentAlertBox');
+            if (d.rent_outstanding > 0) {
+                document.getElementById('alertRentAmount').innerText = `R ${d.rent_outstanding.toFixed(2)}`;
+                alertBox.style.display = 'block';
+            } else {
+                alertBox.style.display = 'none';
+            }
+            
+        } catch (e) { 
+            console.error("Dashboard load error:", e);
+            alert("Failed to load dashboard: " + e.message);
+            document.getElementById('walletView').style.display = 'none';
+            document.getElementById('stsView').style.display = 'block';
+            document.getElementById('stsTopupView').style.display = 'block';
+        }
+    }
+
+    async function tLoadTariffs() {
+        const container = document.getElementById('tariffListContainer');
+        try {
+            const compRes = await fetch(`/company/`, { headers: getAuthHeaders() });
+            const compData = await compRes.json();
+            const vat = compData.vat_percent || 15;
+            document.getElementById('vatBadge').innerText = `VAT: ${vat}%`;
+
+            if(!currentPropertyId) {
+                container.innerHTML = "<p style='color:var(--gray);'>No property assigned.</p>";
+                return;
+            }
+
+            const r = await fetch(`/tariffs/?property_id=${currentPropertyId}`, { headers: getAuthHeaders() });
+            const d = await r.json();
+            
+            if (!d.tariffs || d.tariffs.length === 0) {
+                container.innerHTML = "<p style='color:var(--gray);'>No tariffs configured for this property yet.</p>";
+                return;
+            }
+
+            let html = "";
+            d.tariffs.forEach(t => {
+                let typeLabel = t.meter_type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+                let chargeType = "Consumption Rate";
+                let det = "";
+                
+                if (t.meter_type === 'SANITATION') {
+                    typeLabel = "Sanitation (Fixed)";
+                    chargeType = "Fixed Daily Charge";
+                    det = `R${t.rate_flat.toFixed(2)} / day`;
+                } else if (t.meter_type === 'WATER_COLD') {
+                    typeLabel = "Water (Municipal)";
+                    chargeType = "Consumption Rate";
+                    if (t.structure_type === "FLAT") det = `R${t.rate_flat.toFixed(2)} / kL`;
+                    else if (t.structure_type === "TIERED") det = `Tier 1: R${t.tier_1_rate.toFixed(2)} up to ${t.tier_1_limit} kL`;
+                    else if (t.structure_type === "TOU") det = `Peak: R${t.tou_peak_rate.toFixed(2)}, Off-Peak: R${t.tou_offpeak_rate.toFixed(2)}`;
+                } else { 
+                    typeLabel = "Electricity";
+                    chargeType = "Consumption Rate";
+                    if (t.structure_type === "FLAT") det = `R${t.rate_flat.toFixed(2)} / kWh`;
+                    else if (t.structure_type === "TIERED") det = `Tier 1: R${t.tier_1_rate.toFixed(2)} up to ${t.tier_1_limit} kWh`;
+                    else if (t.structure_type === "TOU") det = `Peak: R${t.tou_peak_rate.toFixed(2)}, Off-Peak: R${t.tou_offpeak_rate.toFixed(2)}`;
+                }
+
+                html += `<div class="tariff-item">
+                    <div class="tariff-name">${typeLabel}</div>
+                    <div class="tariff-row"><span>Tariff Name</span><span>${t.name}</span></div>
+                    <div class="tariff-row"><span>${chargeType}</span><span>${det}</span></div>
+                </div>`;
+            });
+            container.innerHTML = html;
+        } catch (e) { 
+            container.innerHTML = "<p style='color:var(--danger);'>Error loading tariffs.</p>"; 
+        }
+    }
+    async function tLoadTransactions() {
+        const listDiv = document.getElementById('txnList');
+        try {
+            const r = await fetch(`/transactions/${currentTenantId}`, { headers: getAuthHeaders() });
+            if (!r.ok) throw new Error("Failed");
+            const d = await r.json();
+            
+            if (d.transactions.length === 0) {
+                listDiv.innerHTML = "<p style='text-align:center; color:var(--gray);'>No transactions yet.</p>";
+                return;
+            }
+            
+            let html = "";
+            d.transactions.slice(0, 20).forEach(t => {
+                let colorClass = t.amount > 0 ? 'text-success' : 'text-danger';
+                let sign = t.amount > 0 ? '+' : '';
+                let typeText = t.type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+                if (typeText.includes('Water')) {
+                    typeText = typeText.replace('Water', 'Municipal');
+                }
+                
+                html += `<div class="txn-item">
+                    <div>
+                        <div style="font-weight:600;">${typeText}</div>
+                        <div class="txn-date">${t.date}</div>
+                    </div>
+                    <div class="txn-amount ${colorClass}">${sign}R ${Math.abs(t.amount).toFixed(2)}</div>
+                </div>`;
+            });
+            listDiv.innerHTML = html;
+        } catch (e) { listDiv.innerHTML = "<p style='text-align:center; color:var(--danger);'>Error loading transactions.</p>"; }
+    }
+
+    async function tProcessPayGate() {
+        const amount = document.getElementById('fund_amount').value;
+        if (!amount || amount <= 0) { alert("Please enter a valid amount."); return; }
+
+        try {
+            const r = await fetch('/process-payment/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tenantToken}` },
+                body: JSON.stringify({
+                    tenant_id: parseInt(currentTenantId),
+                    amount: parseFloat(amount),
+                    idempotency_key: crypto.randomUUID()
+                })
+            });
+            const d = await r.json();
+            if (!r.ok) throw new Error(d.detail || "Payment failed");
+            
+            alert("Payment successful! Funds added to wallet. Rent has been cleared automatically.");
+            tLogAction("Wallet Top Up (PayGate)", `Tenant: ${currentTenantId} topped up R${amount}.`);
+            tLoadDashboard();
+            tLoadTransactions();
+            switchTab('screen-home', { currentTarget: document.querySelector('.nav-btn') });
+        } catch (e) {
+            alert("Error: " + e.message);
+        }
+    }
+
+    async function tPayRent() {
+        const amount = document.getElementById('rent_pay_amount').value;
+        if (!amount || amount <= 0) { alert("Please enter a valid amount."); return; }
+
+        try {
+            const r = await fetch('/process-payment/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tenantToken}` },
+                body: JSON.stringify({
+                    tenant_id: parseInt(currentTenantId),
+                    amount: parseFloat(amount),
+                    idempotency_key: crypto.randomUUID()
+                })
+            });
+            const d = await r.json();
+            if (!r.ok) throw new Error(d.detail || "Payment failed");
+            
+            alert("Payment successful! Your rent and utilities have been updated.");
+            tLogAction("Manual Rent Payment", `Tenant: ${currentTenantId} paid R${amount}.`);
+            document.getElementById('rent_pay_amount').value = '';
+            tLoadDashboard();
+            tLoadTransactions();
+        } catch (e) {
+            alert("Error: " + e.message);
+        }
+    }
+
+    async function tBuyUtility(type) {
+        const inputId = type === 'ELECTRICITY' ? 'elec_amount' : 'water_amount';
+        const amount = document.getElementById(inputId).value;
+        
+        if (!amount || amount <= 0) { alert("Please enter a valid amount."); return; }
+
+        try {
+            const r = await fetch('/buy-utility/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tenantToken}` },
+                body: JSON.stringify({
+                    tenant_id: parseInt(currentTenantId),
+                    utility_type: type,
+                    amount: parseFloat(amount),
+                    idempotency_key: crypto.randomUUID()
+                })
+            });
+            const d = await r.json();
+            if (!r.ok) throw new Error(d.detail || "Purchase failed");
+            
+            // Display the detailed message from backend (Amount, VAT, kWh, Token)
+            alert(d.message);
+            tLogAction("Bought Utility", `Tenant: ${currentTenantId} bought R${amount} of ${type}. Token: ${d.token || 'N/A'}`);
+            
+            document.getElementById(inputId).value = '';
+            tLoadDashboard();
+            tLoadTransactions();
+        } catch (e) {
+            alert("Error: " + e.message);
+        }
+    }
+</script>
+</body>
+</html>

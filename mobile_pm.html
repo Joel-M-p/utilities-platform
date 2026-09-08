@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Elups PM App</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --success: #27ae60;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --gray: #7f8c8d;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; color: #1c1c1e; -webkit-font-smoothing: antialiased; }
+        
+        /* Login Screen */
+        .login-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; background: var(--primary); color: white; padding: 20px; box-sizing: border-box; }
+        .login-logo { font-size: 2.5em; font-weight: 800; margin-bottom: 40px; letter-spacing: 1px; }
+        .login-card { background: white; padding: 30px; border-radius: 16px; width: 100%; max-width: 350px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .login-card h2 { text-align: center; color: var(--dark); margin-top: 0; }
+        .login-card input { width: 100%; padding: 15px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
+        .login-card button { width: 100%; padding: 15px; background: var(--secondary); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .login-error { color: var(--danger); text-align: center; margin-top: 15px; font-size: 0.9em; display: none; }
+
+        /* Main App Structure */
+        .app-header { background: var(--primary); color: white; padding: 15px; text-align: center; font-size: 1.1em; font-weight: bold; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
+        .screen { display: none; padding: 15px; padding-bottom: 80px; }
+        .screen.active { display: block; }
+        
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; border-top: 1px solid #ddd; display: flex; justify-content: space-around; padding: 8px 0; z-index: 100; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
+        .nav-btn { background: none; border: none; color: var(--gray); font-size: 0.7em; display: flex; flex-direction: column; align-items: center; cursor: pointer; padding: 5px; width: 100%; }
+        .nav-btn.active { color: var(--secondary); }
+        .nav-icon { font-size: 1.5em; margin-bottom: 3px; }
+        
+        /* Widgets & Cards */
+        .widget-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .widget { background: white; border-radius: 12px; padding: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; flex-direction: column; justify-content: space-between; min-height: 90px; }
+        .widget h3 { margin: 0 0 5px 0; color: var(--gray); font-size: 0.75em; text-transform: uppercase; font-weight: 700; }
+        .widget .value { font-size: 1.5em; font-weight: 800; color: var(--dark); }
+        .widget.success .value { color: var(--success); }
+        .widget.danger .value { color: var(--danger); }
+        
+        .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .card h3 { margin: 0 0 10px 0; color: var(--dark); font-size: 1.1em; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        
+        input, select, textarea { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; box-sizing: border-box; background: white; }
+        button { width: 100%; padding: 12px; background: var(--secondary); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        button:hover { opacity: 0.9; }
+        .btn-success { background: var(--success); }
+        .btn-danger { background: var(--danger); }
+        
+        .tenant-item, .invoice-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; cursor: pointer; }
+        .tenant-item:last-child, .invoice-item:last-child { border-bottom: none; }
+        .tenant-name { font-weight: 500; }
+        .tenant-id, .inv-tenant { font-size: 0.8em; color: var(--gray); margin-top: 3px; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; margin-right: 10px; display: inline-block; }
+        .dot-green { background: var(--success); } .dot-red { background: var(--danger); } .dot-orange { background: var(--warning); }
+        
+        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .action-widget { background: white; border-radius: 12px; padding: 20px 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; text-align: center; }
+        .action-icon { font-size: 2.5em; margin-bottom: 10px; }
+        .action-label { font-size: 0.9em; color: var(--dark); font-weight: 600; }
+
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200; }
+        .modal-content { background: white; margin: 15px; border-radius: 12px; padding: 20px; margin-top: 30px; max-height: 85vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
+        .modal-title { font-size: 1.2em; font-weight: bold; color: var(--dark); }
+        .modal-close { background: none; border: none; font-size: 1.5em; color: var(--gray); cursor: pointer; width: auto; }
+        
+        .stat-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f1f1; }
+        .stat-row:last-child { border-bottom: none; }
+        .stat-label { color: var(--gray); }
+        .stat-value { font-weight: bold; color: var(--dark); }
+        .text-success { color: var(--success); }
+        .text-danger { color: var(--danger); }
+
+        .inv-table { width: 100%; font-size: 0.9em; margin-top: 10px; border-collapse: collapse; }
+        .inv-table th { text-align: left; border-bottom: 1px solid #ddd; padding: 5px 0; }
+        .inv-table td { padding: 8px 0; border-bottom: 1px solid #f1f1f1; }
+        
+        .muted { color: var(--gray); font-size: 0.85em; }
+        .helper-text { font-size: 0.85em; color: var(--secondary); margin-bottom: 5px; font-weight: 600; }
+        .btn-sm { padding: 5px 10px; font-size: 12px; width: auto; margin: 2px; }
+    </style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="screen-login" class="login-screen">
+    <div class="login-logo">ELUPS PM</div>
+    <div class="login-card">
+        <h2>Sign In</h2>
+        <input type="text" id="login_user" placeholder="Username">
+        <input type="password" id="login_pass" placeholder="Password">
+        <button onclick="mLogin()">Login</button>
+        <div id="loginError" class="login-error">Invalid credentials. Please try again.</div>
+    </div>
+</div>
+
+<!-- MAIN APP (Hidden until login) -->
+<div id="main-app" style="display:none;">
+
+<div class="app-header">
+    <span style="width:30px"></span>
+    <span id="appHeader">Dashboard</span>
+    <button onclick="mLogout()" style="width:auto; background:var(--danger); padding: 5px 10px; font-size: 12px;">Logout</button>
+</div>
+
+<!-- Screen 1: Home (Dashboard) -->
+<div id="screen-home" class="screen active">
+    <div class="widget-grid">
+        <div class="widget success"><h3>Revenue</h3><div class="value" id="kpiRevenue">R0</div></div>
+        <div class="widget danger"><h3>Arrears</h3><div class="value" id="kpiArrears">R0</div></div>
+        <div class="widget"><h3>Total Tenants</h3><div class="value" id="kpiTenants">0</div><div class="muted" id="kpiActiveTenants">0 Active</div></div>
+        <div class="widget"><h3>Active Meters</h3><div class="value" id="kpiMeters">0</div><div class="muted" id="kpiMeterStatus">0 Open</div></div>
+    </div>
+    
+    <div class="card">
+        <h3>Quick Actions</h3>
+        <div class="action-grid">
+            <div class="action-widget" onclick="mOpenForm('process_payment')"><div class="action-icon">💳</div><div class="action-label">Process Payment</div></div>
+            <div class="action-widget" onclick="mOpenForm('check_balance')"><div class="action-icon">🔍</div><div class="action-label">Check Balance</div></div>
+        </div>
+    </div>
+</div>
+
+<!-- Screen 2: Tenants -->
+<div id="screen-tenants" class="screen">
+    <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+            <h3 style="margin:0; border:none;">All Tenants</h3>
+            <button onclick="mOpenForm('create_tenant')" style="width:auto; padding:8px 15px; margin:0;">+ New</button>
+        </div>
+        <input type="search" id="tenantSearch" placeholder="Search by name..." onkeyup="filterTenants()" style="margin-bottom: 10px;">
+        <div id="tenantList"><p style="text-align:center; color:#7f8c8d;">Loading...</p></div>
+    </div>
+</div>
+
+<!-- Screen 3: Operations -->
+<div id="screen-ops" class="screen">
+    <div class="card">
+        <h3>Billing & Meters</h3>
+        <div class="action-grid">
+            <div class="action-widget" onclick="mOpenForm('assign_meter')"><div class="action-icon">🔌</div><div class="action-label">Assign Meter</div></div>
+            <div class="action-widget" onclick="mOpenForm('generate_bill')"><div class="action-icon">⚡</div><div class="action-label">Generate Bill</div></div>
+            <div class="action-widget" onclick="mOpenForm('adjust_account')"><div class="action-icon">⚖️</div><div class="action-label">Adjust Account</div></div>
+            <div class="action-widget" onclick="mOpenForm('upload_doc')"><div class="action-icon">📄</div><div class="action-label">Upload FICA</div></div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h3>Water Control & Tenants</h3>
+        <div class="action-grid">
+            <div class="action-widget" onclick="mOpenForm('restrict_water')"><div class="action-icon">🚰</div><div class="action-label">Restrict Flow</div></div>
+            <div class="action-widget" onclick="mOpenForm('unrestrict_water')"><div class="action-icon">✅</div><div class="action-label">Restore Flow</div></div>
+            <div class="action-widget" onclick="mOpenForm('notice_to_vacate')"><div class="action-icon">🚪</div><div class="action-label">Exit Form</div></div>
+            <div class="action-widget" onclick="mOpenForm('inspection')"><div class="action-icon">📋</div><div class="action-label">Inspection</div></div>
+        </div>
+    </div>
+</div>
+
+<!-- Screen 4: Invoices -->
+<div id="screen-invoices" class="screen">
+    <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+        <h3 style="margin:0; border:none;">All Invoices</h3>
+        <button style="width:auto; padding:8px 15px; margin:0;" onclick="mOpenForm('generate_invoice')">+ Generate</button>
+    </div>
+    <input type="search" id="invSearch" placeholder="Search by tenant or ID..." onkeyup="filterInvoices()" style="margin-bottom: 10px;">
+    <div class="card">
+        <div id="invoiceList"><p style="text-align:center; color:#7f8c8d;">Loading invoices...</p></div>
+    </div>
+</div>
+
+<!-- Screen 5: Reports -->
+<div id="screen-reports" class="screen">
+    <div class="card">
+        <h3>Analytics & Exports</h3>
+        <div class="action-grid">
+            <div class="action-widget" onclick="mViewFinancialReport()"><div class="action-icon">💰</div><div class="action-label">Financial Sum.</div></div>
+            <div class="action-widget" onclick="mViewReconReport()"><div class="action-icon">🔄</div><div class="action-label">Pay. Recon</div></div>
+            <div class="action-widget" onclick="mViewAgingReport()"><div class="action-icon">⏳</div><div class="action-label">Arrears Aging</div></div>
+            <div class="action-widget" onclick="mOpenForm('export_excel')"><div class="action-icon">📊</div><div class="action-label">Excel Export</div></div>
+        </div>
+    </div>
+</div>
+
+<!-- Dynamic Modal -->
+<div id="actionModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="modal-title" id="modalTitle">Action</div>
+            <button class="modal-close" onclick="mCloseModal()">&times;</button>
+        </div>
+        <div id="modalContent"></div>
+    </div>
+</div>
+
+<!-- Bottom Navigation -->
+<div class="bottom-nav">
+    <button class="nav-btn active" onclick="showScreen('home', 'Dashboard', event)"><span class="nav-icon">🏠</span>Home</button>
+    <button class="nav-btn" onclick="showScreen('tenants', 'Tenants', event)"><span class="nav-icon">👥</span>Tenants</button>
+    <button class="nav-btn" onclick="showScreen('ops', 'Operations', event)"><span class="nav-icon">⚙️</span>Ops</button>
+    <button class="nav-btn" onclick="showScreen('invoices', 'Invoices', event)"><span class="nav-icon">🧾</span>Invoices</button>
+    <button class="nav-btn" onclick="showScreen('reports', 'Reports', event)"><span class="nav-icon">📊</span>Reports</button>
+</div>
+
+</div>
+
+<script>
+    let authToken = localStorage.getItem('pm_token');
+    let allTenants = [];
+    let allInvoices = [];
+
+    // Auto-login if token exists
+    if(authToken) {
+        document.getElementById('screen-login').style.display = 'none';
+        document.getElementById('main-app').style.display = 'block';
+        initApp();
+    }
+
+    function initApp() {
+        mLoadStats();
+        mLoadTenants();
+        mLoadInvoices();
+    }
+
+    // --- Auth Functions ---
+    async function mLogin() {
+        const user = document.getElementById('login_user').value;
+        const pass = document.getElementById('login_pass').value;
+        const errBox = document.getElementById('loginError');
+        errBox.style.display = 'none';
+
+        try {
+            const r = await fetch('/login/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: user, password: pass })
+            });
+            const d = await r.json();
+            if (!r.ok) throw new Error(d.detail || "Login failed");
+            
+            localStorage.setItem('pm_token', d.token);
+            authToken = d.token;
+            
+            document.getElementById('screen-login').style.display = 'none';
+            document.getElementById('main-app').style.display = 'block';
+            initApp();
+        } catch (e) {
+            errBox.innerText = e.message;
+            errBox.style.display = 'block';
+        }
+    }
+
+    function mLogout() {
+        localStorage.removeItem('pm_token');
+        authToken = null;
+        location.reload();
+    }
+
+    // --- Navigation ---
+    function showScreen(screenId, headerText, event) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('screen-'+screenId).classList.add('active');
+        if(event) event.currentTarget.classList.add('active');
+        document.getElementById('appHeader').innerText = headerText;
+    }
+
+    function getAuthHeaders() { return { 'Authorization': `Bearer ${authToken}` }; }
+    function extractError(data) { if (typeof data.detail === 'string') return data.detail; if (Array.isArray(data.detail)) return data.detail.map(err => err.msg).join(", "); return "Unknown error"; }
+
+    // --- Data Loading ---
+    async function mLoadStats() {
+        try {
+            const r = await fetch(`/dashboard-stats/`, { headers: getAuthHeaders() });
+            if (!r.ok) throw new Error("Failed");
+            const d = await r.json();
+            
+            document.getElementById("kpiRevenue").innerText = `R${d.revenue.total_revenue.toFixed(2)}`;
+            document.getElementById("kpiArrears").innerText = `R${d.arrears.total_arrears.toFixed(2)}`;
+            document.getElementById("kpiTenants").innerText = d.tenants.total;
+            document.getElementById("kpiActiveTenants").innerText = `${d.tenants.active} Active`;
+            
+            const total_meters = (d.meters.counts.ELECTRICITY || 0) + (d.meters.counts.WATER_HOT || 0) + (d.meters.counts.WATER_COLD || 0);
+            document.getElementById("kpiMeters").innerText = total_meters;
+            document.getElementById("kpiMeterStatus").innerText = `${d.meters.statuses.OPEN || 0} Open`;
+        } catch (e) { console.error(e); }
+    }
+
+    async function mLoadTenants() {
+        try {
+            const r = await fetch(`/all-tenants/`, { headers: getAuthHeaders() });
+            if (!r.ok) throw new Error("Failed");
+            const d = await r.json();
+            allTenants = d.tenants;
+            renderTenants(allTenants);
+        } catch (e) { console.error(e); }
+    }
+
+    function renderTenants(tenants) {
+        let html = "";
+        if (tenants.length === 0) {
+            html = "<p style='text-align:center; color:#7f8c8d;'>No tenants found</p>";
+        } else {
+            tenants.forEach(t => {
+                let dotClass = 'dot-red';
+                if(t.status === 'ACTIVE') dotClass = 'dot-green';
+                else if(t.status === 'SUSPENDED' || t.status === 'PENDING_EXIT') dotClass = 'dot-orange';
+                
+                html += `<div class="tenant-item" onclick="mTenantActions(${t.tenant_id})">
+                    <div><span class="status-dot ${dotClass}"></span> <span class="tenant-name">${t.first_name} ${t.last_name}</span></div>
+                    <div class="tenant-id">ID: ${t.tenant_id}</div>
+                </div>`;
+            });
+        }
+        document.getElementById('tenantList').innerHTML = html;
+    }
+
+    function filterTenants() {
+        const term = document.getElementById('tenantSearch').value.toLowerCase();
+        const filtered = allTenants.filter(t => `${t.first_name} ${t.last_name}`.toLowerCase().includes(term));
+        renderTenants(filtered);
+    }
+
+    // --- Invoice Functions ---
+    async function mLoadInvoices() {
+        try {
+            const r = await fetch(`/invoices/`, { headers: getAuthHeaders() });
+            const d = await r.json(); if (!r.ok) throw new Error("Failed");
+            allInvoices = d.invoices || [];
+            renderInvoices(allInvoices);
+        } catch (e) {
+            document.getElementById('invoiceList').innerHTML = `<p style="text-align:center; color:var(--danger);">Error loading invoices</p>`;
+        }
+    }
+
+    function renderInvoices(invoices) {
+        let html = "";
+        if (invoices.length === 0) {
+            html = "<p style='text-align:center; color:#7f8c8d;'>No invoices found</p>";
+        } else {
+            invoices.forEach(inv => {
+                html += `<div class="invoice-item" onclick="mViewInvoice(${inv.id})">
+                    <div>
+                        <div class="tenant-name">INV-${inv.id}</div>
+                        <div class="inv-tenant">${inv.tenant_name}</div>
+                        <div class="muted">${inv.period || ''}</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div class="tenant-name">R${Number(inv.total).toFixed(2)}</div>
+                        <span class="muted">${inv.status}</span>
+                    </div>
+                </div>`;
+            });
+        }
+        document.getElementById('invoiceList').innerHTML = html;
+    }
+
+    function filterInvoices() {
+        const term = document.getElementById('invSearch').value.toLowerCase();
+        const filtered = allInvoices.filter(inv => (inv.tenant_name && inv.tenant_name.toLowerCase().includes(term)) || String(inv.id).includes(term));
+        renderInvoices(filtered);
+    }
+
+    async function mViewInvoice(id) {
+        mOpenModal(`Invoice #${id}`, '<p>Loading invoice...</p>');
+        try {
+            const r = await fetch(`/invoice/${id}`, { headers: getAuthHeaders() });
+            const d = await r.json(); if (!r.ok) throw new Error("Failed");
+            
+            let itemsHtml = `<table class="inv-table"><thead><tr><th>Desc</th><th>Qty</th><th>Total</th></tr></thead><tbody>`;
+            d.items.forEach(it => {
+                itemsHtml += `<tr>
+                    <td>${it.description}</td>
+                    <td>${it.quantity.toFixed(2)}</td>
+                    <td>R${it.total.toFixed(2)}</td>
+                </tr>`;
+            });
+            itemsHtml += `</tbody></table>`;
+            
+            const html = `
+                <div style="text-align:center; margin-bottom:15px;">
+                    <h3 style="margin:0; color:var(--dark);">TAX INVOICE</h3>
+                    <p style="font-size:0.8em; color:var(--gray); margin:5px 0;">Invoice #${d.id}<br>${d.date}</p>
+                </div>
+                
+                <div class="card" style="box-shadow:none; background:#f9f9f9; padding:10px; margin-bottom:10px;">
+                    <div class="stat-row"><span class="stat-label">Tenant</span><span class="stat-value">${d.tenant_name}</span></div>
+                    <div class="stat-row"><span class="stat-label">Period</span><span class="stat-value">${d.period}</span></div>
+                    <div class="stat-row"><span class="stat-label">Status</span><span class="stat-value">${d.status}</span></div>
+                </div>
+
+                ${itemsHtml}
+
+                <div class="card" style="box-shadow:none; background:#f9f9f9; padding:10px; margin-top:10px;">
+                    <div class="stat-row" style="border-top:1px solid #333; margin-top:5px; padding-top:10px;"><span class="stat-label" style="font-weight:bold;">Total Due</span><span class="stat-value" style="font-size:1.2em; color:var(--primary);">R${d.total.toFixed(2)}</span></div>
+                </div>
+            `;
+            mOpenModal(`Invoice #${d.id}`, html);
+        } catch (e) { mOpenModal('Error', `<p style="color:red;">${e.message}</p>`); }
+    }
+
+    // --- Dynamic Form Modal Logic ---
+    function mOpenModal(title, contentHtml) {
+        document.getElementById('modalTitle').innerText = title;
+        document.getElementById('modalContent').innerHTML = contentHtml;
+        document.getElementById('actionModal').style.display = 'block';
+    }
+    function mCloseModal() { document.getElementById('actionModal').style.display = 'none'; }
+
+    function mOpenForm(action) {
+        let html = '', title = '';
+        if (action === 'process_payment') {
+            title = 'Process Payment';
+            html = `
+                <label>Tenant ID</label>
+                <input type="number" id="f_tenant_id" placeholder="Tenant ID">
+                <label>Amount (R)</label>
+                <input type="number" id="f_amount" placeholder="Amount (R)">
+                <div class="helper-text">💡 Allocation % (Optional - Leave blank for standard sequential)</div>
+                <div style="display:flex; gap:5px;">
+                    <input type="number" id="f_rent_pct" placeholder="Rent %">
+                    <input type="number" id="f_elec_pct" placeholder="Elec %">
+                    <input type="number" id="f_water_pct" placeholder="Water %">
+                </div>
+                <button onclick="mSubmitForm('/process-payment/', 'process_payment')">Submit Payment</button>
+            `;
+        } else if (action === 'check_balance') {
+            title = 'Check Balance';
+            html = `<input type="number" id="f_tenant_id" placeholder="Tenant ID"><button onclick="mCheckBalance()">Check</button><div id="balanceResult" style="margin-top:15px;"></div>`;
+        } else if (action === 'create_tenant') {
+            title = 'Onboard New Tenant';
+            html = `<input type="text" id="f_first_name" placeholder="First Name"><input type="text" id="f_last_name" placeholder="Last Name"><input type="email" id="f_email" placeholder="Email"><input type="number" id="f_rent_outstanding" placeholder="Starting Rent Debt" value="0"><input type="number" id="f_electricity_outstanding" placeholder="Starting Elec Debt" value="0"><input type="number" id="f_water_outstanding" placeholder="Starting Water Debt" value="0"><button onclick="mSubmitForm('/create-tenant/', 'create_tenant')">Create Tenant</button>`;
+        } else if (action === 'upload_doc') {
+            title = 'Upload Document';
+            html = `<input type="number" id="f_tenant_id" placeholder="Tenant ID"><select id="f_doc_type"><option value="ID">ID</option><option value="FICA">FICA</option><option value="LEASE">Lease</option></select><input type="file" id="f_file" accept=".pdf,.jpg,.png"><button onclick="mUploadDoc()">Upload</button>`;
+        } else if (action === 'notice_to_vacate') {
+            title = 'Notice to Vacate';
+            html = `<input type="number" id="f_tenant_id" placeholder="Tenant ID"><input type="date" id="f_exit_date"><input type="text" id="f_exit_reason" placeholder="Reason"><button onclick="mSubmitForm('/notice-to-vacate/'+document.getElementById('f_tenant_id').value, 'notice_to_vacate')">Submit Notice</button>`;
+        } else if (action === 'inspection') {
+            title = 'Inspection Result';
+            html = `<input type="number" id="f_tenant_id" placeholder="Tenant ID"><select id="f_status"><option value="PASSED">Passed</option><option value="FAILED">Failed</option></select><input type="text" id="f_notes" placeholder="Notes"><button onclick="mSubmitForm('/inspection-result/'+document.getElementById('f_tenant_id').value, 'inspection')">Submit Result</button>`;
+        } else if (action === 'assign_meter') {
+            title = 'Assign Meter';
+            html = `<input type="number" id="f_tenant_id" placeholder="Tenant ID"><input type="text" id="f_serial_number" placeholder="Serial Number"><select id="f_meter_type"><option value="ELECTRICITY">Electricity</option><option value="WATER_HOT">Hot Water</option><option value="WATER_COLD">Cold Water</option></select><select id="f_billing_type"><option value="PREPAID">Prepaid</option><option value="POSTPAID">Postpaid</option></select><input type="number" id="f_tariff_id" placeholder="Tariff ID"><button onclick="mSubmitForm('/assign-meter/', 'assign_meter')">Assign</button>`;
+        } else if (action === 'generate_bill') {
+            title = 'Generate Utility Bill';
+            html = `<input type="number" id="f_tenant_id" placeholder="Tenant ID"><select id="f_utility_type"><option value="ELECTRICITY">Electricity</option><option value="WATER_HOT">Hot Water</option><option value="WATER_COLD">Cold Water</option></select><input type="number" id="f_amount" placeholder="Total Units"><input type="number" id="f_peak_units" placeholder="Peak Units (Elec only)"><input type="number" id="f_offpeak_units" placeholder="Off-Peak Units (Elec only)"><button onclick="mSubmitForm('/generate-bill/', 'generate_bill')">Generate</button>`;
+        } else if (action === 'generate_invoice') {
+            title = 'Generate Invoice';
+            html = `<input type="number" id="f_tenant_id" placeholder="Tenant ID"><input type="text" id="f_billing_period" placeholder="Period (e.g., 2023-11)"><select id="f_cycle_type"><option value="MONTHLY">Monthly</option><option value="BI_MONTHLY">Bi-Monthly</option><option value="QUARTERLY">Quarterly</option></select><button onclick="mSubmitForm('/generate-invoice/', 'generate_invoice')">Generate</button>`;
+        } else if (action === 'adjust_account') {
+            title = 'Manual Adjustment';
+            html = `<input type="number" id="f_tenant_id" placeholder="Tenant ID"><select id="f_target"><option value="RENT">Rent</option><option value="ELECTRICITY">Electricity</option><option value="WATER">Water</option><option value="WALLET">Wallet</option></select><input type="number" id="f_amount" placeholder="Amount (+/-)"><input type="text" id="f_reason" placeholder="Reason"><button onclick="mSubmitForm('/adjust-account/'+document.getElementById('f_tenant_id').value, 'adjust_account')">Apply</button>`;
+        } else if (action === 'restrict_water') {
+            title = 'Restrict Water';
+            html = `<input type="number" id="f_tenant_id" placeholder="Tenant ID"><button onclick="mSubmitForm('/restrict-water/'+document.getElementById('f_tenant_id').value, 'restrict_water')">Restrict</button>`;
+        } else if (action === 'unrestrict_water') {
+            title = 'Restore Water';
+            html = `<input type="number" id="f_tenant_id" placeholder="Tenant ID"><button onclick="mSubmitForm('/unrestrict-water/'+document.getElementById('f_tenant_id').value, 'unrestrict_water')">Restore</button>`;
+        } else if (action === 'export_excel') {
+            title = 'Excel Export';
+            html = `<input type="text" id="f_month" placeholder="Month (e.g., 2023-11)"><button onclick="mDownloadExcel()">Download</button>`;
+        }
+        mOpenModal(title, html);
+    }
+
+    async function mSubmitForm(endpoint, action) {
+        let payload = {};
+        let url = endpoint;
+        
+        document.querySelectorAll('#modalContent input, #modalContent select').forEach(el => {
+            if(el.id.startsWith('f_')) {
+                let key = el.id.substring(2);
+                let val = el.value;
+                // Handle empty numbers safely to avoid NaN
+                if(el.type === 'number' || (action === 'process_payment' && key === 'amount')) {
+                    val = val === "" ? null : parseFloat(val);
+                }
+                payload[key] = val;
+            }
+        });
+
+        try {
+            const r = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify(payload)
+            });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            
+            alert("Success: " + (d.message || "Action completed!"));
+            mCloseModal();
+            mLoadStats(); 
+            if (action === 'generate_invoice') { mLoadInvoices(); }
+            if (action === 'create_tenant') { mLoadTenants(); }
+        } catch (e) { alert("Error: " + e.message); }
+    }
+
+    async function mUploadDoc() {
+        const tenantId = document.getElementById('f_tenant_id').value;
+        const docType = document.getElementById('f_doc_type').value;
+        const fileInput = document.getElementById('f_file');
+        
+        if(!tenantId || !fileInput.files[0]) { alert("Enter ID and select file"); return; }
+        const formData = new FormData();
+        formData.append("doc_type", docType);
+        formData.append("file", fileInput.files[0]);
+
+        try {
+            const r = await fetch(`/upload-doc/${tenantId}`, { method: 'POST', headers: getAuthHeaders(), body: formData });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            alert("Success: " + d.message);
+            mCloseModal();
+        } catch (e) { alert("Error: " + e.message); }
+    }
+
+    async function mCheckBalance() {
+        const id = document.getElementById('f_tenant_id').value;
+        const resDiv = document.getElementById('balanceResult');
+        if(!id) return;
+        resDiv.innerHTML = "<p>Loading...</p>";
+        try {
+            const r = await fetch(`/tenant-balance/${id}`, { headers: getAuthHeaders() });
+            const d = await r.json(); if (!r.ok) throw new Error(extractError(d));
+            const html = `<div class="stat-row"><span class="stat-label">Tenant</span><span class="stat-value">${d.tenant_name}</span></div>
+                         <div class="stat-row"><span class="stat-label">Rent Owed</span><span class="stat-value text-danger">R${d.rent_outstanding.toFixed(2)}</span></div>
+                         <div class="stat-row"><span class="stat-label">Elec Owed</span><span class="stat-value text-danger">R${d.electricity_outstanding.toFixed(2)}</span></div>
+                         <div class="stat-row"><span class="stat-label">Water Owed</span><span class="stat-value text-danger">R${d.water_outstanding.toFixed(2)}</span></div>
+                         <div class="stat-row"><span class="stat-label">Wallet Balance</span><span class="stat-value text-success">R${d.wallet_balance.toFixed(2)}</span></div>`;
+            resDiv.innerHTML = html;
+        } catch (e) { resDiv.innerHTML = `<p style="color:red;">${e.message}</p>`; }
+    }
+
+    async function mTenantActions(id) {
+        mOpenModal('Tenant Actions', `
+            <button onclick="mCheckBalanceMobile(${id})">Check Balance</button>
+            <button onclick="mSuspendTenant(${id})" class="btn-danger" style="margin-top:10px;">Suspend Tenant</button>
+        `);
+    }
+
+    async function mCheckBalanceMobile(id) {
+        mOpenModal('Tenant Balance', '<p>Loading...</p>');
+        try {
+            const r = await fetch(`/tenant-balance/${id}`, { headers: getAuthHeaders() });
+            const d = await r.json(); if (!r.ok) throw new Error(extractError(d));
+            const html = `<div class="stat-row"><span class="stat-label">Tenant</span><span class="stat-value">${d.tenant_name}</span></div>
+                         <div class="stat-row"><span class="stat-label">Rent Owed</span><span class="stat-value text-danger">R${d.rent_outstanding.toFixed(2)}</span></div>
+                         <div class="stat-row"><span class="stat-label">Elec Owed</span><span class="stat-value text-danger">R${d.electricity_outstanding.toFixed(2)}</span></div>
+                         <div class="stat-row"><span class="stat-label">Water Owed</span><span class="stat-value text-danger">R${d.water_outstanding.toFixed(2)}</span></div>
+                         <div class="stat-row"><span class="stat-label">Wallet Balance</span><span class="stat-value text-success">R${d.wallet_balance.toFixed(2)}</span></div>`;
+            mOpenModal('Tenant Balance', html);
+        } catch (e) { mOpenModal('Error', `<p style="color:red;">${e.message}</p>`); }
+    }
+
+    async function mSuspendTenant(id) {
+        if(!confirm("Suspend this tenant?")) return;
+        try {
+            const r = await fetch(`/suspend-tenant/${id}`, { method: 'POST', headers: getAuthHeaders() });
+            const d = await r.json(); if (!r.ok) throw new Error(extractError(d));
+            alert(d.message);
+            mCloseModal();
+            mLoadTenants();
+        } catch (e) { alert(e.message); }
+    }
+
+    async function mDownloadExcel() {
+        const month = document.getElementById('f_month').value;
+        if(!month) { alert("Please enter a month"); return; }
+        try {
+            const response = await fetch(`/export-excel/?month=${month}`, { headers: getAuthHeaders() });
+            if (!response.ok) throw new Error("Failed");
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Monthly_Report_${month}.xlsx`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            mCloseModal();
+            alert("Excel file downloaded!");
+        } catch (e) { alert("Error: " + e.message); }
+    }
+
+    async function mViewFinancialReport() {
+        mOpenModal('Financial Summary', '<p>Loading...</p>');
+        try {
+            const r = await fetch(`/financial-report/`, { headers: getAuthHeaders() });
+            const d = await r.json(); if (!r.ok) throw new Error("Failed");
+            const html = `<div class="stat-row"><span class="stat-label">Total Billed</span><span class="stat-value">R${d.revenue.total_billed.toFixed(2)}</span></div>
+                          <div class="stat-row"><span class="stat-label">Total Collected</span><span class="stat-value text-success">R${d.revenue.total_revenue.toFixed(2)}</span></div>
+                          <div class="stat-row"><span class="stat-label">Collection Rate</span><span class="stat-value">${d.revenue.collection_rate.toFixed(1)}%</span></div>
+                          <div class="stat-row"><span class="stat-label">Total Arrears</span><span class="stat-value text-danger">R${d.arrears.total.toFixed(2)}</span></div>`;
+            mOpenModal('Financial Summary', html);
+        } catch (e) { mOpenModal('Error', `<p style="color:red;">${e.message}</p>`); }
+    }
+
+    async function mViewReconReport() {
+        mOpenModal('Payment Reconciliation', '<p>Loading...</p>');
+        try {
+            const r = await fetch(`/payment-reconciliation/`, { headers: getAuthHeaders() });
+            const d = await r.json(); if (!r.ok) throw new Error("Failed");
+            let html = `<div style="max-height: 300px; overflow-y: auto;">`;
+            d.reconciliation.forEach(t => {
+                let color = t.balance_due > 0 ? 'var(--danger)' : 'var(--success)';
+                html += `<div class="stat-row"><span class="stat-label">${t.tenant_name}</span><span class="stat-value" style="color:${color};">R${t.balance_due.toFixed(2)}</span></div>`;
+            });
+            html += `</div>`;
+            mOpenModal('Payment Reconciliation', html);
+        } catch (e) { mOpenModal('Error', `<p style="color:red;">${e.message}</p>`); }
+    }
+
+    async function mViewAgingReport() {
+        mOpenModal('Arrears Aging', '<p>Loading...</p>');
+        try {
+            const r = await fetch(`/arrears-aging/`, { headers: getAuthHeaders() });
+            const d = await r.json(); if (!r.ok) throw new Error("Failed");
+            let html = `<div style="max-height: 300px; overflow-y: auto;">`;
+            d.aging.forEach(t => {
+                html += `<div class="stat-row"><span class="stat-label">${t.tenant_name}</span><span class="stat-value text-danger">R${t.total_arrears.toFixed(2)}</span></div>`;
+            });
+            html += `</div>`;
+            mOpenModal('Arrears Aging', html);
+        } catch (e) { mOpenModal('Error', `<p style="color:red;">${e.message}</p>`); }
+    }
+</script>
+</body>
+</html>

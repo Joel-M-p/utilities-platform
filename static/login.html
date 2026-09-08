@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Elups – Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+
+        .login-container {
+            background: white;
+            border-radius: 24px;
+            padding: 3rem 2.5rem;
+            max-width: 420px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .login-container .logo {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .login-container .logo i {
+            font-size: 2.5rem;
+            color: #38bdf8;
+            background: #f0f9ff;
+            padding: 1rem;
+            border-radius: 16px;
+        }
+
+        .login-container .logo h1 {
+            margin-top: 0.8rem;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .login-container .logo p {
+            color: #64748b;
+            font-size: 0.95rem;
+            margin-top: 0.2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            font-size: 0.9rem;
+            color: #1a1a2e;
+            margin-bottom: 0.4rem;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.7rem 1rem;
+            border: 1px solid #d1d9e6;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-family: 'Inter', sans-serif;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #38bdf8;
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 0.8rem;
+            background: #0f172a;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn-login:hover {
+            background: #1e293b;
+        }
+
+        .btn-login:active {
+            transform: scale(0.98);
+        }
+
+        .btn-login:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .error-msg {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .error-msg.show {
+            display: block;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .demo-hint {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e9edf4;
+            text-align: center;
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+
+        .demo-hint code {
+            background: #f1f4f9;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: #0f172a;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">
+            <i class="fas fa-bolt"></i>
+            <h1>Elups</h1>
+            <p>Utilities Management Platform</p>
+        </div>
+
+        <div class="error-msg" id="errorMsg">
+            <i class="fas fa-exclamation-circle"></i> <span id="errorText">Invalid credentials</span>
+        </div>
+
+        <form id="loginForm" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" placeholder="admin@example.com" required autofocus />
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="••••••••" required />
+            </div>
+            <button type="submit" class="btn-login" id="loginBtn">
+                <i class="fas fa-sign-in-alt"></i> Sign In
+            </button>
+        </form>
+
+        <div class="demo-hint">
+            <strong>Demo Credentials:</strong><br />
+            <code>admin@elups.com</code> / <code>admin123</code> (Owner)<br />
+            <code>manager@elups.com</code> / <code>manager123</code> (Manager)
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+
+        async function handleLogin(e) {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('loginBtn');
+            const errorMsg = document.getElementById('errorMsg');
+            const errorText = document.getElementById('errorText');
+
+            // Reset error
+            errorMsg.classList.remove('show');
+
+            if (!email || !password) {
+                errorText.textContent = 'Please enter both email and password';
+                errorMsg.classList.add('show');
+                return;
+            }
+
+            // Show loading state
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Signing in…';
+
+            try {
+                const resp = await fetch(API_BASE + '/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                if (!resp.ok) {
+                    let detail = 'Invalid credentials';
+                    try {
+                        const err = await resp.json();
+                        detail = err.detail || detail;
+                    } catch (_) {}
+                    throw new Error(detail);
+                }
+
+                const data = await resp.json();
+                localStorage.setItem('access_token', data.access_token);
+
+                // Redirect to dashboard
+                window.location.href = '/static/dashboard.html';
+
+            } catch (err) {
+                errorText.textContent = err.message || 'Login failed. Please try again.';
+                errorMsg.classList.add('show');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
+            }
+        }
+
+        // Check if already logged in
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('access_token');
+            if (token) {
+                // Verify token is still valid
+                fetch(API_BASE + '/auth/me', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                })
+                .then(resp => {
+                    if (resp.ok) {
+                        window.location.href = '/static/dashboard.html';
+                    } else {
+                        localStorage.removeItem('access_token');
+                    }
+                })
+                .catch(() => localStorage.removeItem('access_token'));
+            }
+        });
+    </script>
+</body>
+</html>

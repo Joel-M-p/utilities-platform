@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Reports</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f7f6; padding: 20px; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0px 0px 10px #ccc; margin-bottom: 20px; }
+        h1, h2 { color: #2c3e50; }
+        button { padding: 10px 15px; background-color: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 5px; margin-bottom: 10px; }
+        button:hover { background-color: #2980b9; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #2c3e50; color: white; }
+        .result-box { margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Advanced Reports</h1>
+        <p>Click a button to generate the report.</p>
+        
+        <button onclick="loadCreditNote()">1. Generate Credit Note</button>
+        <div id="creditNoteForm" style="display:none; margin-top:10px;">
+            <input type="number" id="cnTenantId" placeholder="Tenant ID">
+            <input type="number" id="cnAmount" placeholder="Amount (R)">
+            <input type="text" id="cnReason" placeholder="Reason">
+            <button onclick="submitCreditNote()">Submit Credit Note</button>
+        </div>
+        <div id="cnResult" class="result-box"></div>
+    </div>
+
+    <div class="container">
+        <h2>2. Property-Level Report</h2>
+        <button onclick="loadPropertyReport()">Generate Property Report</button>
+        <table id="propTable" style="display:none;">
+            <thead><tr><th>Property Name</th><th>Tenants</th><th>Total Arrears</th><th>Wallet Balances</th></tr></thead>
+            <tbody id="propTableBody"></tbody>
+        </table>
+    </div>
+
+    <div class="container">
+        <h2>3. Management Fee Invoice</h2>
+        <button onclick="loadMgmtInvoice()">Generate Fee Invoice</button>
+        <div id="mgmtResult" class="result-box"></div>
+    </div>
+
+    <div class="container">
+        <h2>4. Bank Reconciliation</h2>
+        <button onclick="loadBankRecon()">Generate Bank Recon</button>
+        <div id="bankResult" class="result-box"></div>
+    </div>
+
+    <div class="container">
+        <h2>5. 3-Month Comparative Stats</h2>
+        <button onclick="load3MonthStats()">Generate Stats</button>
+        <table id="statsTable" style="display:none;">
+            <thead><tr><th>Month</th><th>Electricity (R)</th><th>Water (R)</th></tr></thead>
+            <tbody id="statsTableBody"></tbody>
+        </table>
+    </div>
+
+    <script>
+        let authToken = localStorage.getItem('pm_token');
+        if(!authToken) { window.location.href = '/dashboard'; }
+        function getAuthHeaders() { return { 'Authorization': `Bearer ${authToken}` }; }
+
+        function loadCreditNote() { document.getElementById("creditNoteForm").style.display = "block"; }
+        async function submitCreditNote() {
+            const id = document.getElementById("cnTenantId").value, amt = document.getElementById("cnAmount").value, rsn = document.getElementById("cnReason").value;
+            if(!id || !amt || !rsn) { alert("Fill all fields"); return; }
+            try {
+                const r = await fetch(`/generate-credit-note/`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify({ tenant_id: parseInt(id), amount: parseFloat(amt), reason: rsn }) });
+                const d = await r.json(); if (!r.ok) throw new Error(d.detail || "Error");
+                document.getElementById("cnResult").innerHTML = `<p style="color:green;">${d.message}<br>Note No: ${d.note_no}<br>Amount: R${d.amount}</p>`;
+            } catch (e) { document.getElementById("cnResult").innerHTML = `<p style="color:red;">${e.message}</p>`; }
+        }
+
+        async function loadPropertyReport() {
+            try {
+                const r = await fetch(`/property-report/`, { headers: getAuthHeaders() });
+                const d = await r.json(); if (!r.ok) throw new Error("Error");
+                const tb = document.getElementById("propTableBody"); tb.innerHTML = "";
+                d.properties.forEach(p => { tb.innerHTML += `<tr><td>${p.name}</td><td>${p.tenant_count}</td><td>R${p.total_arrears.toFixed(2)}</td><td>R${p.wallet_balance.toFixed(2)}</td></tr>`; });
+                document.getElementById("propTable").style.display = "block";
+            } catch (e) { alert(e.message); }
+        }
+
+        async function loadMgmtInvoice() {
+            try {
+                const r = await fetch(`/management-fee-invoice/`, { headers: getAuthHeaders() });
+                const d = await r.json(); if (!r.ok) throw new Error("Error");
+                let rows = ""; d.items.forEach(i => { rows += `<tr><td>${i.desc}</td><td>R${i.amount.toFixed(2)}</td></tr>`; });
+                document.getElementById("mgmtResult").innerHTML = `
+                    <h3>Management Fee Invoice</h3>
+                    <p>Total Collections: R${d.total_collections.toFixed(2)}</p>
+                    <table><thead><tr><th>Description</th><th>Amount</th></tr></thead><tbody>${rows}</tbody></table>
+                    <h4 style="margin-top:10px;">Subtotal: R${d.subtotal.toFixed(2)}</h4>
+                    <h4>VAT (15%): R${d.vat.toFixed(2)}</h4>
+                    <h3 style="color:red;">Total Due: R${d.total.toFixed(2)}</h3>
+                `;
+            } catch (e) { alert(e.message); }
+        }
+
+        async function loadBankRecon() {
+            try {
+                const r = await fetch(`/bank-reconciliation/`, { headers: getAuthHeaders() });
+                const d = await r.json(); if (!r.ok) throw new Error("Error");
+                document.getElementById("bankResult").innerHTML = `
+                    <h3>Bank Reconciliation</h3>
+                    <p>Total Collected (In): <strong>R${d.total_collected.toFixed(2)}</strong></p>
+                    <p>Total Disbursed (Out): <strong>R${d.total_disbursed.toFixed(2)}</strong></p>
+                    <hr>
+                    <h3>Net Balance: <strong>R${d.net_balance.toFixed(2)}</strong></h3>
+                `;
+            } catch (e) { alert(e.message); }
+        }
+
+        async function load3MonthStats() {
+            try {
+                const r = await fetch(`/three-month-stats/`, { headers: getAuthHeaders() });
+                const d = await r.json(); if (!r.ok) throw new Error("Error");
+                const tb = document.getElementById("statsTableBody"); tb.innerHTML = "";
+                d.stats.forEach(s => { tb.innerHTML += `<tr><td>${s.month}</td><td>R${s.elec.toFixed(2)}</td><td>R${s.water.toFixed(2)}</td></tr>`; });
+                document.getElementById("statsTable").style.display = "block";
+            } catch (e) { alert(e.message); }
+        }
+    </script>
+</body>
+</html>

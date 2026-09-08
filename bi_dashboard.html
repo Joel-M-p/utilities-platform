@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BI Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f7f6; padding: 20px; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0px 0px 10px #ccc; margin-bottom: 20px; }
+        h1, h2 { color: #2c3e50; }
+        #loginScreen { max-width: 400px; margin: 50px auto; text-align: center; }
+        #loginScreen input { width: 100%; padding: 10px; margin-bottom: 15px; box-sizing: border-box; }
+        #loginScreen button { width: 100%; padding: 10px; background-color: #2c3e50; color: white; border: none; cursor: pointer; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+        .card { background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 5px solid #3498db; }
+        .card h3 { margin: 0 0 10px 0; color: #7f8c8d; font-size: 0.9em; }
+        .card .value { font-size: 1.8em; font-weight: bold; color: #2c3e50; }
+        .card.red { border-left-color: #e74c3c; }
+        .card.green { border-left-color: #27ae60; }
+        .card.orange { border-left-color: #e67e22; }
+        .list-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
+        .list-item:last-child { border-bottom: none; }
+        .trend-bar { display: flex; align-items: center; margin-bottom: 8px; }
+        .trend-bar .month { width: 80px; font-size: 0.8em; color: #7f8c8d; }
+        .trend-bar .bar-bg { flex-grow: 1; background: #ecf0f1; border-radius: 4px; height: 20px; overflow: hidden; }
+        .trend-bar .bar-fill { height: 100%; background: #27ae60; border-radius: 4px; }
+        .trend-bar .val { width: 50px; font-size: 0.8em; text-align: right; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div id="loginScreen" class="container">
+    <h1>Executive Login</h1>
+    <input type="text" id="loginUser" placeholder="Username (admin)">
+    <input type="password" id="loginPass" placeholder="Password (password123)">
+    <button onclick="login()">Log In</button>
+    <div id="loginError" style="color: red; margin-top: 10px;"></div>
+</div>
+
+<div id="mainDashboard" style="display:none;">
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h1>Business Intelligence</h1>
+            <button onclick="logout()" style="background-color: #e74c3c; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer;">Logout</button>
+        </div>
+        
+        <div class="grid" id="kpiGrid">
+            <div class="card green"><h3>Total Revenue</h3><div class="value" id="kpiRev">R0</div></div>
+            <div class="card red"><h3>Revenue Leakage (Unbilled)</h3><div class="value" id="kpiLeak">R0</div></div>
+            <div class="card orange"><h3>Meters Disconnected</h3><div class="value" id="kpiDisc">0</div></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Consumption Analytics</h2>
+        <div class="grid">
+            <div class="card">
+                <h3>Top 5 High Consumers</h3>
+                <div id="highConsumers"></div>
+            </div>
+            <div class="card red">
+                <h3>Usage Anomalies (Spikes)</h3>
+                <div id="anomalies"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Revenue Analytics</h2>
+        <div class="grid">
+            <div class="card green">
+                <h3>Collection Rate Trends (6 Months)</h3>
+                <div id="trends"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Operational Analytics</h2>
+        <div class="grid">
+            <div class="card">
+                <h3>Meter Health Status</h3>
+                <div id="meterHealth"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let authToken = localStorage.getItem('pm_token');
+
+    window.onload = function() {
+        if(authToken) {
+            document.getElementById("loginScreen").style.display = "none";
+            document.getElementById("mainDashboard").style.display = "block";
+            loadAnalytics();
+        }
+    };
+
+    async function login() {
+        const user = document.getElementById("loginUser").value, pass = document.getElementById("loginPass").value, errorDiv = document.getElementById("loginError");
+        try {
+            const r = await fetch(`/login/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: user, password: pass }) });
+            const d = await r.json();
+            if (!r.ok) throw new Error(d.detail || "Login failed");
+            authToken = d.token; localStorage.setItem('pm_token', authToken);
+            document.getElementById("loginScreen").style.display = "none"; document.getElementById("mainDashboard").style.display = "block";
+            loadAnalytics();
+        } catch (e) { errorDiv.innerText = e.message; }
+    }
+
+    function logout() { authToken = null; localStorage.removeItem('pm_token'); location.reload(); }
+    function getAuthHeaders() { return { 'Authorization': `Bearer ${authToken}` }; }
+
+    async function loadAnalytics() {
+        try {
+            const r = await fetch(`/analytics/`, { headers: getAuthHeaders() });
+            const d = await r.json(); if (!r.ok) throw new Error("Failed");
+            
+            document.getElementById("kpiRev").innerText = `R${d.revenue.total_revenue.toFixed(0)}`;
+            document.getElementById("kpiLeak").innerText = `R${d.revenue.leakage.toFixed(0)}`;
+            document.getElementById("kpiDisc").innerText = d.operational.meter_health.disconnected;
+
+            let hcHtml = "";
+            d.consumption.high_consumers.forEach(c => { hcHtml += `<div class="list-item"><span>${c.name}</span><strong>R${c.value.toFixed(0)}</strong></div>`; });
+            document.getElementById("highConsumers").innerHTML = hcHtml || "<p>No data</p>";
+
+            let anHtml = "";
+            d.consumption.anomalies.forEach(a => { anHtml += `<div class="list-item"><span>${a.name}</span><strong style="color:red;">Spike detected</strong></div>`; });
+            document.getElementById("anomalies").innerHTML = anHtml || "<p>No anomalies detected</p>";
+
+            let trHtml = "";
+            const maxRate = 100;
+            d.revenue.collection_trends.forEach(t => {
+                const width = (t.rate / maxRate) * 100;
+                trHtml += `<div class="trend-bar"><div class="month">${t.month}</div><div class="bar-bg"><div class="bar-fill" style="width: ${width}%;"></div></div><div class="val">${t.rate.toFixed(0)}%</div></div>`;
+            });
+            document.getElementById("trends").innerHTML = trHtml || "<p>No data</p>";
+
+            const mh = d.operational.meter_health;
+            document.getElementById("meterHealth").innerHTML = `
+                <div class="list-item"><span>Open / Active</span><strong style="color:green;">${mh.open}</strong></div>
+                <div class="list-item"><span>Trickled (Water)</span><strong style="color:orange;">${mh.trickle}</strong></div>
+                <div class="list-item"><span>Disconnected (Elec)</span><strong style="color:red;">${mh.disconnected}</strong></div>
+                <div class="list-item"><span>Inactive / Faulty</span><strong>${mh.inactive}</strong></div>
+            `;
+        } catch (e) { alert(e.message); }
+    }
+</script>
+</body>
+</html>

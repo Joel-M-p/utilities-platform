@@ -1,0 +1,120 @@
+from fastapi import APIRouter, Depends
+from api.database import get_db_connection
+from api.security import verify_token
+from fastapi.responses import JSONResponse
+
+router = APIRouter()
+
+@router.get("/dashboard-stats/", dependencies=[Depends(verify_token)])
+def api_get_dashboard_stats(property_id: int = None):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Dynamic SQL filter for properties
+        p_clause_txns = "AND tn.property_id = %s" if property_id else ""
+        p_clause_t = "WHERE property_id = %s" if property_id else ""
+        p_clause_m = "AND property_id = %s" if property_id else ""
+        
+        params = [property_id] if property_id else []
+
+        # 1. Revenue & Billed (Join with tenants to filter by property)
+        cursor.execute(f"""
+            SELECT 
+                COALESCE(SUM(CASE WHEN t.amount > 0 THEN t.amount ELSE 0 END), 0) as total_revenue,
+                COALESCE(SUM(CASE WHEN t.amount < 0 THEN ABS(t.amount) ELSE 0 END), 0) as total_billed
+            FROM transactions t
+            JOIN wallets w ON t.wallet_id = w.id
+            JOIN tenants tn ON w.tenant_id = tn.id
+            WHERE 1=1 {p_clause_txns}
+        """, params)
+        rev_data = cursor.fetchone()
+        total_revenue = float(rev_data[0])
+        total_billed = float(rev_data[1])
+        collection_rate = (total_revenue / total_billed * 100) if total_billed > 0 else 0.0
+
+        # 2. Arrears Summary
+        cursor.execute(f"""
+            SELECT 
+                COALESCE(SUM(rent_outstanding), 0),
+                COALESCE(SUM(electricity_outstanding), 0),
+                COALESCE(SUM(water_outstanding), 0)
+            FROM tenants
+            {p_clause_t}
+        """, params)
+        arr_data = cursor.fetchone()
+        total_arrears = float(arr_data[0]) + float(arr_data[1]) + float(arr_data[2])
+
+        # 3. Active Meter Counts & Statuses
+        cursor.execute(f"""
+            SELECT meter_type, valve_status, COUNT(*)
+            FROM meters
+            WHERE is_active = TRUE {p_clause_m}
+            GROUP BY meter_type, valve_status
+        """, params)
+        meters_data = cursor.fetchall()
+        
+        meter_counts = {"ELECTRICITY": 0, "WATER_HOT": 0, "WATER_COLD": 0}
+        valve_statuses = {"OPEN": 0, "TRICKLE": 0, "DISCONNECTED": 0}
+        
+        for row in meters_data:
+            m_type, v_status, count = row[0], row[1], row[2]
+            if m_type in meter_counts:
+                meter_counts[m_type] += count
+            if v_status in valve_statuses:
+                valve_statuses[v_status] += count
+
+        # 4. Consumption Trends (Last 6 Months)
+        cursor.execute(f"""
+            SELECT TO_CHAR(t.created_at, 'YYYY-MM') as month, 
+                   COALESCE(SUM(ABS(t.amount)), 0) as consumption_value
+            FROM transactions t
+            JOIN wallets w ON t.wallet_id = w.id
+            JOIN tenants tn ON w.tenant_id = tn.id
+            WHERE t.amount < 0 AND (t.transaction_type LIKE '%_BILL' OR t.transaction_type LIKE '%_USAGE') {p_clause_txns}
+            GROUP BY month
+            ORDER BY month DESC
+            LIMIT 6
+        """, params)
+        trend_data = cursor.fetchall()
+        trends = [{"month": row[0], "value": float(row[1])} for row in trend_data]
+        trends.reverse() # Chronological order for the UI
+
+        # 5. Tenant Counts
+        cursor.execute(f"""
+            SELECT COUNT(*), 
+                   SUM(CASE WHEN status = 'ACTIVE' THEN 1 ELSE 0 END)
+            FROM tenants
+            {p_clause_t}
+        """, params)
+        tenant_data = cursor.fetchone()
+        total_tenants = tenant_data[0]
+        active_tenants = tenant_data[1] or 0
+
+        return {
+            "status": "success",
+            "revenue": {
+                "total_revenue": total_revenue,
+                "total_billed": total_billed,
+                "collection_rate": collection_rate
+            },
+            "arrears": {
+                "total_arrears": total_arrears,
+                "rent": float(arr_data[0]),
+                "electricity": float(arr_data[1]),
+                "water": float(arr_data[2])
+            },
+            "meters": {
+                "counts": meter_counts,
+                "statuses": valve_statuses
+            },
+            "trends": trends,
+            "tenants": {
+                "total": total_tenants,
+                "active": active_tenants
+            }
+        }
+    except Exception as e:
+        return JSONResponse(status_code=400, content={"detail": str(e)})
+    finally:
+        cursor.close()
+        conn.close()
