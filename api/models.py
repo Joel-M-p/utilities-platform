@@ -5,6 +5,15 @@ def init_db():
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
+        # --- PREVENT RENDER MULTI-INSTANCE RACE CONDITIONS ---
+        cursor.execute("SELECT pg_try_advisory_lock(123456789)")
+        locked = cursor.fetchone()[0]
+        
+        if not locked:
+            print("Database initialization already running on another instance. Skipping.")
+            conn.commit()
+            return
+
         # --- 1. PROPERTIES TABLE ---
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS properties (
@@ -207,6 +216,9 @@ def init_db():
         cursor.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS before_balance DECIMAL;")
         cursor.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS after_balance DECIMAL;")
         cursor.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS property_id INTEGER REFERENCES properties(id);")
+        
+        # COMMIT FINANCIAL COLUMNS FIRST SO THEY ARE NEVER ROLLED BACK
+        conn.commit()
 
         # --- ENFORCE UNIQUE EMAIL PER PROPERTY ---
         # 1. Drop the old standalone unique constraint on email if it exists
