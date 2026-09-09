@@ -47,6 +47,10 @@
         .btn-anonymize:hover { background-color: #95a5a6; }
         .btn-invoice { background-color: #2980b9; padding: 5px 10px; font-size: 12px; }
         .btn-invoice:hover { background-color: #3498db; }
+        .btn-event { background-color: #c0392b; padding: 5px 10px; font-size: 12px; }
+        .btn-event:hover { background-color: #e74c3c; }
+        .btn-history { background-color: #8e44ad; padding: 5px 10px; font-size: 12px; }
+        .btn-history:hover { background-color: #9b59b6; }
         .status-active { color: green; font-weight: bold; }
         .status-vacated { color: red; font-weight: bold; }
         .status-suspended { color: #d35400; font-weight: bold; }
@@ -102,6 +106,11 @@
         .help-mode .help-tooltip { display: block; position: absolute; z-index: 10; }
         .help-icon { color: #f1c40f; cursor: pointer; margin-left: 5px; font-size: 0.8em; display: none; }
         .help-mode .help-icon { display: inline-block; }
+        
+        /* Event History Styles */
+        .event-category { font-size: 0.75em; padding: 2px 6px; border-radius: 3px; font-weight: bold; text-transform: uppercase; }
+        .event-category.transaction { background: #e8f4f8; color: #2980b9; }
+        .event-category.event { background: #fce4ec; color: #c0392b; }
     </style>
 </head>
 <body>
@@ -157,25 +166,22 @@
             <h2>User Management & Access Control <span class="help-icon" title="Create users here. Admins see everything. PM Users are locked to their assigned property.">ℹ️</span></h2>
             <p style="color: #7f8c8d; font-size: 0.9rem;">Create users with specific roles. Property Managers are locked to their assigned property.</p>
             
-            <h3>Add / Edit User</h3>
-            <input type="hidden" id="userId">
+            <h3>Add New User</h3>
             <input type="text" id="newUsername" placeholder="Username" title="Enter a unique username for the new user.">
-            <input type="password" id="newPassword" placeholder="Password (leave blank if editing)" title="Enter a secure password.">
+            <input type="password" id="newPassword" placeholder="Password" title="Enter a secure password.">
             <select id="newUserRole" title="Select the user's role. Admins have full access. PM users are restricted.">
                 <option value="ADMIN">Admin (Head Office - All Properties)</option>
                 <option value="PM_SUPER">Super User (Property Level)</option>
                 <option value="PM_USER">Limited User (Property Level)</option>
             </select>
             <select id="newUserProp" title="Assign the user to a specific property. Leave blank for Admins."><option value="">Select Property...</option></select>
-            <br>
-            <button onclick="saveUser()">Save User</button>
-            <button onclick="clearUserForm()" style="background-color: #7f8c8d;">Clear Form</button>
+            <button onclick="createUser()">Create User</button>
             <div id="userResult" class="result" style="display:none;"></div>
             
             <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
             <button onclick="loadUsers()" class="btn-statement">Load Users List</button>
             <table id="usersTable" style="display:none;">
-                <thead><tr><th>ID</th><th>Username</th><th>Role</th><th>Assigned Property</th><th>Actions</th></tr></thead>
+                <thead><tr><th>ID</th><th>Username</th><th>Role</th><th>Assigned Property</th></tr></thead>
                 <tbody id="usersTableBody"></tbody>
             </table>
         </div>
@@ -349,7 +355,7 @@
         </div>
 
         <div class="container">
-            <h2>Installed Meters Overview <span class="help-icon" title="View all meters assigned to tenants for this property.">ℹ️</span></h2>
+            <h2>Installed Meters Overview <span class="help-icon" title="View all meters assigned to tenants for this property. Use 'Log Event' to record tamper or bypass incidents. Use 'History' to view the full audit trail.">ℹ️</span></h2>
             <button onclick="loadAllMeters()">Refresh Meters List</button>
             <table id="metersTable" style="display:none;">
                 <thead><tr><th>Meter ID</th><th>Tenant</th><th>Type</th><th>Billing</th><th>Serial</th><th>Valve</th><th>Active?</th><th>Actions</th></tr></thead>
@@ -493,6 +499,7 @@
 <div id="invoiceModal" class="modal"><div class="modal-content"><span class="close" onclick="closeInvoice()">&times;</span><div id="invoiceContent"></div></div></div>
 <div id="docsModal" class="modal"><div class="modal-content"><span class="close" onclick="closeDocs()">&times;</span><h2>Tenant Documents</h2><table id="docsTable"><thead><tr><th>Date</th><th>Type</th><th>File Name</th></tr></thead><tbody id="docsTableBody"></tbody></table></div></div>
 <div id="reportModal" class="modal"><div class="modal-content"><span class="close" onclick="closeReport()">&times;</span><div id="reportContent"></div></div></div>
+<div id="meterHistoryModal" class="modal"><div class="modal-content"><span class="close" onclick="closeMeterHistory()">&times;</span><h2>Meter Audit History</h2><div id="meterHistoryContent"></div></div></div>
 
 <script>
     let authToken = localStorage.getItem('pm_token');
@@ -585,77 +592,26 @@
             const d = await r.json();
             tB.innerHTML = "";
             d.users.forEach(u => {
-                tB.innerHTML += `<tr>
-                    <td>${u.id}</td>
-                    <td>${u.username}</td>
-                    <td>${u.role}</td>
-                    <td>${u.property_name || 'All'}</td>
-                    <td>
-                        <button onclick="editUser(${u.id}, '${u.username}', '${u.role}', ${u.property_id || 'null'})" class="btn-edit">Edit</button>
-                        <button onclick="deleteUser(${u.id})" class="btn-danger">Delete</button>
-                    </td>
-                </tr>`;
+                tB.innerHTML += `<tr><td>${u.id}</td><td>${u.username}</td><td>${u.role}</td><td>${u.property_name || 'All'}</td></tr>`;
             });
             document.getElementById("usersTable").style.display = "block";
         } catch (e) { console.error(e); alert("Error loading users"); }
     }
 
-    function editUser(id, username, role, property_id) {
-        document.getElementById("userId").value = id;
-        document.getElementById("newUsername").value = username;
-        document.getElementById("newPassword").value = ""; // Always clear password on edit
-        document.getElementById("newUserRole").value = role;
-        document.getElementById("newUserProp").value = property_id || "";
-        window.scrollTo(0, 0);
-    }
-
-    function clearUserForm() {
-        document.getElementById("userId").value = "";
-        document.getElementById("newUsername").value = "";
-        document.getElementById("newPassword").value = "";
-        document.getElementById("newUserRole").value = "ADMIN";
-        document.getElementById("newUserProp").value = "";
-    }
-
-    async function saveUser() {
-        const id = document.getElementById("userId").value;
+    async function createUser() {
         const username = document.getElementById("newUsername").value;
         const password = document.getElementById("newPassword").value;
         const role = document.getElementById("newUserRole").value;
         const property_id = document.getElementById("newUserProp").value || null;
         
-        if(!username) { alert("Username is required"); return; }
-        if(!id && !password) { alert("Password is required for new users"); return; }
-        
-        const payload = { username, role, property_id };
-        if(password) payload.password = password; // Only send password if it was entered
-        
-        const url = id ? `/users/${id}` : `/users/`;
-        const method = id ? 'PUT' : 'POST';
+        if(!username || !password) { alert("Username and password required"); return; }
         
         try {
-            const r = await fetch(url, { 
-                method, 
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, 
-                body: JSON.stringify(payload) 
-            });
+            const r = await fetch(`/users/`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify({username, password, role, property_id}) });
             const d = await r.json();
             if(!r.ok) throw new Error(d.detail || "Error");
             alert(d.message);
-            logAction(id ? "Updated User" : "Created User", `Username: ${username}, Role: ${role}`);
-            clearUserForm();
-            loadUsers();
-        } catch(e) { alert("Error: " + e.message); }
-    }
-
-    async function deleteUser(id) {
-        if(!confirm("Are you sure you want to delete this user?")) return;
-        try {
-            const r = await fetch(`/users/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
-            const d = await r.json();
-            if(!r.ok) throw new Error(d.detail || "Error");
-            alert(d.message);
-            logAction("Deleted User", `User ID: ${id}`);
+            logAction("Created User", `Username: ${username}, Role: ${role}`);
             loadUsers();
         } catch(e) { alert("Error: " + e.message); }
     }
@@ -921,7 +877,7 @@
 
     async function generateBill() {
         const unit = document.getElementById("billUnitNumber").value; const tenantId = getTenantIdByUnit(unit); if(!tenantId) return;
-        const payload = { tenant_id: tenant_id, utility_type: document.getElementById("billType").value, amount: parseFloat(document.getElementById("billAmount").value || 0), peak_units: parseFloat(document.getElementById("billPeak").value || 0), offpeak_units: parseFloat(document.getElementById("billOffpeak").value || 0), manual_entry: true };
+        const payload = { tenant_id: tenantId, utility_type: document.getElementById("billType").value, amount: parseFloat(document.getElementById("billAmount").value || 0), peak_units: parseFloat(document.getElementById("billPeak").value || 0), offpeak_units: parseFloat(document.getElementById("billOffpeak").value || 0), manual_entry: true };
         try { const r = await fetch(`/generate-bill/`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllTenants(); } catch (e) { alert("Error: " + e.message); }
     }
 
@@ -943,10 +899,45 @@
 
     async function loadAllMeters() {
         const tB = document.getElementById("metersTableBody");
-        try { const r = await fetch(`/all-meters/${getPropertyFilter()}`, { headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error("Failed"); tB.innerHTML = ""; d.meters.forEach(m => { tB.innerHTML += `<tr><td>${m.meter_id}</td><td>${m.tenant_name}</td><td>${m.meter_type}</td><td>${m.billing_type}</td><td>${m.serial_number}</td><td>${m.valve_status}</td><td>${m.is_active ? 'Yes' : 'No'}</td><td><button onclick="deactivateMeter(${m.meter_id})" class="btn-danger">Deact</button></td></tr>`; }); document.getElementById("metersTable").style.display = "block"; } catch (e) { console.error(e.message); }
+        try { const r = await fetch(`/all-meters/${getPropertyFilter()}`, { headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error("Failed"); tB.innerHTML = ""; d.meters.forEach(m => { tB.innerHTML += `<tr><td>${m.meter_id}</td><td>${m.tenant_name}</td><td>${m.meter_type}</td><td>${m.billing_type}</td><td>${m.serial_number}</td><td>${m.valve_status}</td><td>${m.is_active ? 'Yes' : 'No'}</td><td><button onclick="deactivateMeter(${m.meter_id})" class="btn-danger">Deact</button> <button onclick="logMeterEvent(${m.meter_id})" class="btn-event">Log Event</button> <button onclick="viewMeterHistory(${m.meter_id})" class="btn-history">History</button></td></tr>`; }); document.getElementById("metersTable").style.display = "block"; } catch (e) { console.error(e.message); }
     }
 
     async function deactivateMeter(id) { if(!confirm("Deactivate meter?")) return; try { const r = await fetch(`/deactivate-meter/${id}`, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllMeters(); } catch (e) { alert("Error: " + e.message); } }
+
+    // --- NEW: METER EVENT FUNCTIONS ---
+    async function logMeterEvent(meterId) {
+        const eventType = prompt("Enter Event Type (e.g., TAMPER_DETECTED, BYPASS, PHYSICAL_INSPECTION):");
+        if(!eventType) return;
+        const eventNotes = prompt("Enter details/notes about this event:");
+        
+        try {
+            const r = await fetch(`/log-meter-event/${meterId}`, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, 
+                body: JSON.stringify({ event_type: eventType, event_notes: eventNotes }) 
+            });
+            const d = await r.json(); if (!r.ok) throw new Error(extractError(d));
+            alert(d.message); logAction("Logged Meter Event", `Meter ID: ${meterId}, Type: ${eventType}`);
+        } catch (e) { alert("Error: " + e.message); }
+    }
+
+    async function viewMeterHistory(meterId) {
+        try {
+            const r = await fetch(`/meter-audit-history/${meterId}`, { headers: getAuthHeaders() });
+            const d = await r.json(); if (!r.ok) throw new Error(extractError(d));
+            
+            let html = `<table><thead><tr><th>Date</th><th>Category</th><th>Type</th><th>Details</th><th>Amount</th><th>Status</th></tr></thead><tbody>`;
+            d.history.forEach(h => {
+                let catClass = h.category === 'EVENT' ? 'event' : 'transaction';
+                html += `<tr><td>${h.date}</td><td><span class="event-category ${catClass}">${h.category}</span></td><td>${h.type}</td><td>${h.details}</td><td>${h.amount > 0 ? 'R' + h.amount.toFixed(2) : '-'}</td><td>${h.status}</td></tr>`;
+            });
+            html += `</tbody></table>`;
+            
+            document.getElementById("meterHistoryContent").innerHTML = html;
+            document.getElementById("meterHistoryModal").style.display = "block";
+        } catch (e) { alert("Error: " + e.message); }
+    }
+    function closeMeterHistory() { document.getElementById("meterHistoryModal").style.display = "none"; }
 
     // --- TARIFFS ---
     async function loadCompanySettings() {

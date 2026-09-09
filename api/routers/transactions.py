@@ -70,10 +70,6 @@ def api_process_payment(payload: dict, current_user: dict = Depends(verify_token
 
 @router.post("/apply-wallet-to-arrears/{tenant_id}")
 def api_apply_wallet_to_arrears(tenant_id: int, current_user: dict = Depends(verify_token)):
-    """
-    Takes the existing positive balance in the wallet and pushes it through the 
-    rent-first waterfall to clear arrears automatically.
-    """
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
@@ -123,23 +119,23 @@ def api_apply_wallet_to_arrears(tenant_id: int, current_user: dict = Depends(ver
         idempotency_key = str(uuid.uuid4())
         if rent_paid > 0:
             cursor.execute("""
-                INSERT INTO transactions (wallet_id, amount, transaction_type, reference, property_id, before_balance, after_balance, idempotency_key) 
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            """, (wallet_id, rent_paid, 'RENT_PAYMENT', 'Wallet Sweep - Rent', tenant_info[0], wallet_balance, new_wallet_balance, f"{idempotency_key}-RENT"))
+                INSERT INTO transactions (wallet_id, amount, transaction_type, reference, property_id, before_balance, after_balance, idempotency_key, status) 
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (wallet_id, rent_paid, 'RENT_PAYMENT', 'Wallet Sweep - Rent', tenant_info[0], wallet_balance, new_wallet_balance, f"{idempotency_key}-RENT", "COMPLETED"))
             wallet_balance = new_wallet_balance 
 
         if elec_paid > 0:
             cursor.execute("""
-                INSERT INTO transactions (wallet_id, amount, transaction_type, reference, property_id, before_balance, after_balance, idempotency_key) 
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            """, (wallet_id, elec_paid, 'ELECTRICITY_PAYMENT', 'Wallet Sweep - Electricity', tenant_info[0], wallet_balance, new_wallet_balance, f"{idempotency_key}-ELEC"))
+                INSERT INTO transactions (wallet_id, amount, transaction_type, reference, property_id, before_balance, after_balance, idempotency_key, status) 
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (wallet_id, elec_paid, 'ELECTRICITY_PAYMENT', 'Wallet Sweep - Electricity', tenant_info[0], wallet_balance, new_wallet_balance, f"{idempotency_key}-ELEC", "COMPLETED"))
             wallet_balance = new_wallet_balance
 
         if water_paid > 0:
             cursor.execute("""
-                INSERT INTO transactions (wallet_id, amount, transaction_type, reference, property_id, before_balance, after_balance, idempotency_key) 
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            """, (wallet_id, water_paid, 'WATER_PAYMENT', 'Wallet Sweep - Water', tenant_info[0], wallet_balance, new_wallet_balance, f"{idempotency_key}-WATER"))
+                INSERT INTO transactions (wallet_id, amount, transaction_type, reference, property_id, before_balance, after_balance, idempotency_key, status) 
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (wallet_id, water_paid, 'WATER_PAYMENT', 'Wallet Sweep - Water', tenant_info[0], wallet_balance, new_wallet_balance, f"{idempotency_key}-WATER", "COMPLETED"))
 
         conn.commit()
         return {
@@ -213,7 +209,8 @@ def api_buy_utility(req: dict, current_user: dict = Depends(verify_token)):
         token = None
         reference_text = ""
         units_purchased = Decimal('0')
-        vat_amount = Decimal('0.00') # Initialize for safety
+        vat_amount = Decimal('0.00')
+        txn_status = "FAILED_DELIVERY" # Default to failed, update to success if token/credit is generated
         
         cursor.execute("SELECT rate_flat FROM tariffs WHERE id = %s", (tariff_id,))
         tariff_data = cursor.fetchone()
@@ -226,6 +223,7 @@ def api_buy_utility(req: dict, current_user: dict = Depends(verify_token)):
 
         if hardware_type == 'STS':
             token = generate_token()
+            txn_status = "TOKEN_ISSUED"
             
             # Calculate VAT and Net Amount for STS Electricity
             vat_amount = (amount_decimal / (Decimal('1') + vat_percent)) * vat_percent
@@ -247,6 +245,7 @@ def api_buy_utility(req: dict, current_user: dict = Depends(verify_token)):
             )
             
         elif hardware_type == 'SMART_IOT':
+            txn_status = "WALLET_CREDITED"
             if rate > 0:
                 units_purchased = amount_decimal / rate
             cursor.execute("UPDATE meters SET meter_balance = meter_balance + %s WHERE id = %s", (units_purchased, meter_id))
@@ -256,16 +255,18 @@ def api_buy_utility(req: dict, current_user: dict = Depends(verify_token)):
             
         else:
             token = generate_token()
+            txn_status = "TOKEN_ISSUED"
             vat_amount = (amount_decimal / (Decimal('1') + vat_percent)) * vat_percent
             amount_ex_vat = amount_decimal - vat_amount
             units_purchased = amount_ex_vat / rate if rate > 0 else Decimal('0')
             reference_text = f"Token: {token} | {units_purchased:.2f} kWh"
             message = f"Purchase Successful! Token: {token}"
 
+        # --- UPDATED: Link meter_id and status to the transaction ---
         cursor.execute("""
-            INSERT INTO transactions (wallet_id, amount, transaction_type, reference, idempotency_key, property_id, before_balance, after_balance) 
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-        """, (wallet_id, amount_decimal, f"{utility_type}_PURCHASE", reference_text, idempotency_key, tenant_info[0], current_balance, new_balance))
+            INSERT INTO transactions (wallet_id, amount, transaction_type, reference, idempotency_key, property_id, before_balance, after_balance, meter_id, status) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (wallet_id, amount_decimal, f"{utility_type}_PURCHASE", reference_text, idempotency_key, tenant_info[0], current_balance, new_balance, meter_id, txn_status))
         
         if current_valve_status in ['TRICKLE', 'DISCONNECTED']:
             cursor.execute("UPDATE meters SET valve_status = 'OPEN' WHERE tenant_id = %s AND meter_type = %s", (tenant_id, utility_type))
@@ -360,17 +361,17 @@ def api_adjust_account(tenant_id: int, req: dict, current_user: dict = Depends(v
                 cursor.execute("UPDATE tenants SET water_outstanding = GREATEST(0, water_outstanding - %s) WHERE id = %s", (amount_input, tenant_id))
 
             cursor.execute("""
-                INSERT INTO transactions (wallet_id, amount, transaction_type, reference, property_id, before_balance, after_balance) 
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """, (wallet_id, -amount_input, f"ADJUSTMENT_{target}", reason, tenant_info[0], current_balance, new_balance))
+                INSERT INTO transactions (wallet_id, amount, transaction_type, reference, property_id, before_balance, after_balance, status) 
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """, (wallet_id, -amount_input, f"ADJUSTMENT_{target}", reason, tenant_info[0], current_balance, new_balance, "COMPLETED"))
 
         elif target == "WALLET":
             new_balance = current_balance + amount_input
             cursor.execute("UPDATE wallets SET balance = %s WHERE id = %s", (new_balance, wallet_id))
             cursor.execute("""
-                INSERT INTO transactions (wallet_id, amount, transaction_type, reference, property_id, before_balance, after_balance) 
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """, (wallet_id, amount_input, f"ADJUSTMENT_{target}", reason, tenant_info[0], current_balance, new_balance))
+                INSERT INTO transactions (wallet_id, amount, transaction_type, reference, property_id, before_balance, after_balance, status) 
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """, (wallet_id, amount_input, f"ADJUSTMENT_{target}", reason, tenant_info[0], current_balance, new_balance, "COMPLETED"))
         else:
             raise HTTPException(status_code=400, detail="Invalid target.")
             
@@ -403,7 +404,7 @@ def api_get_transactions(tenant_id: int, current_user: dict = Depends(verify_tok
         wallet_id = wallet_data[0]
         
         cursor.execute("""
-            SELECT created_at, amount, transaction_type, reference 
+            SELECT created_at, amount, transaction_type, reference, status 
             FROM transactions 
             WHERE wallet_id = %s 
             ORDER BY created_at DESC
@@ -416,7 +417,8 @@ def api_get_transactions(tenant_id: int, current_user: dict = Depends(verify_tok
                 "date": row[0].strftime("%Y-%m-%d %H:%M:%S"),
                 "amount": float(row[1]),
                 "type": row[2],
-                "reference": row[3]
+                "reference": row[3],
+                "status": row[4] or "COMPLETED"
             })
         return {"status": "success", "transactions": txns_list}
     except Exception as e:

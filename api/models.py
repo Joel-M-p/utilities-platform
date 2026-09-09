@@ -172,6 +172,20 @@ def init_db():
             );
         """)
 
+        # --- 13. METER EVENTS TABLE (NEW: FOR TAMPER & AUDIT LOGGING) ---
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS meter_events (
+                id SERIAL PRIMARY KEY,
+                meter_id INTEGER REFERENCES meters(id),
+                tenant_id INTEGER REFERENCES tenants(id),
+                property_id INTEGER REFERENCES properties(id),
+                event_type VARCHAR(50),
+                event_notes TEXT,
+                recorded_by VARCHAR(50),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+
         # --- ADD/UPDATE MISSING COLUMNS FOR EXISTING TABLES ---
         cursor.execute("ALTER TABLE properties ADD COLUMN IF NOT EXISTS utility_model VARCHAR(20) DEFAULT 'STS_TOKEN';")
         cursor.execute("ALTER TABLE properties ADD COLUMN IF NOT EXISTS address TEXT;")
@@ -217,15 +231,16 @@ def init_db():
         cursor.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS after_balance DECIMAL;")
         cursor.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS property_id INTEGER REFERENCES properties(id);")
         
+        # --- NEW: METER LINKAGE AND TRANSACTION STATES ---
+        cursor.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS meter_id INTEGER REFERENCES meters(id);")
+        cursor.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'COMPLETED';")
+        
         # COMMIT FINANCIAL COLUMNS FIRST SO THEY ARE NEVER ROLLED BACK
         conn.commit()
 
         # --- ENFORCE UNIQUE EMAIL PER PROPERTY ---
-        # 1. Drop the old standalone unique constraint on email if it exists
         cursor.execute("ALTER TABLE tenants DROP CONSTRAINT IF EXISTS tenants_email_key;")
         cursor.execute("ALTER TABLE tenants DROP CONSTRAINT IF EXISTS tenants_email_unique;")
-        
-        # 2. Add the composite unique constraint (Property + Email)
         cursor.execute("""
             DO $$             BEGIN
                 IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uniq_property_email') THEN
