@@ -4,11 +4,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
-# Import your modular routers (INCLUDING AUDIT)
+# Import your modular routers (INCLUDING AUDIT AND METER EVENTS)
 from api.routers import (
     auth, tenants, billing, transactions, tariffs, recon, invoices, 
     company, aging, stats, reports, bulk, bi, advanced_reports, export, 
-    properties, erp, users, audit
+    properties, erp, users, audit, meter_events
 )
 
 app = FastAPI(title="Utilities Platform API")
@@ -41,6 +41,7 @@ app.include_router(properties.router)
 app.include_router(erp.router)
 app.include_router(users.router)
 app.include_router(audit.router)     # NEW
+app.include_router(meter_events.router) # NEW: For Tamper & Audit logging
 
 if not os.path.exists("static"):
     os.makedirs("static")
