@@ -2,38 +2,34 @@ import psycopg2
 
 def fix_cloud_schema():
     # PASTE YOUR RENDER DATABASE URL HERE:
-    # You can find this on Render -> Your Web Service -> Environment -> DATABASE_URL
     db_url = "postgresql://neondb_owner:npg_uoBzf2j4TDCF@ep-shy-star-ayefo4p7-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
     
     print("Connecting to Render cloud database...")
     
     try:
-        # Cloud databases require SSL
         conn = psycopg2.connect(db_url, sslmode='require')
         conn.autocommit = True
         cursor = conn.cursor()
         
-        print("Adding missing financial columns to transactions table...")
+        print("Adding missing transaction columns...")
+        cursor.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'COMPLETED';")
+        cursor.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS meter_id INTEGER REFERENCES meters(id);")
         
-        # Add the missing columns one by one
-        cursor.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS idempotency_key VARCHAR(100);")
-        cursor.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS before_balance DECIMAL;")
-        cursor.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS after_balance DECIMAL;")
-        cursor.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS property_id INTEGER;")
-        
-        print("Fixing email constraint on tenants table...")
-        cursor.execute("ALTER TABLE tenants DROP CONSTRAINT IF EXISTS tenants_email_key;")
-        cursor.execute("ALTER TABLE tenants DROP CONSTRAINT IF EXISTS tenants_email_unique;")
+        print("Creating missing meter_events table...")
         cursor.execute("""
-            DO $$             BEGIN
-                IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uniq_property_email') THEN
-                    ALTER TABLE tenants ADD CONSTRAINT uniq_property_email UNIQUE (property_id, email);
-                END IF;
-            END $$;
+            CREATE TABLE IF NOT EXISTS meter_events (
+                id SERIAL PRIMARY KEY,
+                meter_id INTEGER REFERENCES meters(id),
+                tenant_id INTEGER REFERENCES tenants(id),
+                property_id INTEGER REFERENCES properties(id),
+                event_type VARCHAR(50),
+                event_notes TEXT,
+                recorded_by VARCHAR(50),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
         """)
         
-        print("\n✅ Success! The missing columns have been added to your Render database.")
-        print("You can now top up wallets on your live app without errors!")
+        print("\n✅ Success! The missing table and columns have been added to your Render database.")
         
         cursor.close()
         conn.close()

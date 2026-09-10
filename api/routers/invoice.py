@@ -12,6 +12,26 @@ def api_generate_invoice(req: InvoiceGenerateRequest):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
+        # --- AUTOMATIC SCHEMA FIX FOR INVOICES ---
+        cursor.execute("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS billing_period VARCHAR(20);")
+        cursor.execute("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS cycle_type VARCHAR(20);")
+        cursor.execute("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS total_amount DECIMAL DEFAULT 0;")
+        cursor.execute("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'UNPAID';")
+        
+        # Ensure invoice_items table exists
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS invoice_items (
+                id SERIAL PRIMARY KEY,
+                invoice_id INTEGER,
+                description TEXT,
+                quantity DECIMAL,
+                unit_price DECIMAL,
+                total DECIMAL,
+                drill_down TEXT
+            );
+        """)
+        conn.commit()
+
         # 1. Get Tenant Info & Arrears
         cursor.execute("SELECT first_name, last_name, rent_outstanding, electricity_outstanding, water_outstanding FROM tenants WHERE id = %s", (req.tenant_id,))
         tenant = cursor.fetchone()
@@ -64,6 +84,10 @@ def api_get_invoices():
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
+        # --- AUTOMATIC SCHEMA FIX ---
+        cursor.execute("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS total_amount DECIMAL DEFAULT 0;")
+        conn.commit()
+
         cursor.execute("""
             SELECT i.id, t.first_name, t.last_name, i.billing_period, i.total_amount, i.status, i.created_at 
             FROM invoices i 
@@ -75,7 +99,7 @@ def api_get_invoices():
         for row in rows:
             inv_list.append({
                 "id": row[0], "tenant_name": f"{row[1]} {row[2]}",
-                "period": row[3], "total": float(row[4]), "status": row[5],
+                "period": row[3], "total": float(row[4] or 0), "status": row[5],
                 "date": row[6].strftime("%Y-%m-%d")
             })
         return {"status": "success", "invoices": inv_list}
@@ -113,7 +137,7 @@ def api_view_invoice(invoice_id: int):
             
         return {
             "id": inv[0], "tenant_name": f"{inv[1]} {inv[2]}", "email": inv[3],
-            "period": inv[4], "total": float(inv[5]), "status": inv[6],
+            "period": inv[4], "total": float(inv[5] or 0), "status": inv[6],
             "date": inv[7].strftime("%Y-%m-%d"), "items": items_list
         }
     except Exception as e:

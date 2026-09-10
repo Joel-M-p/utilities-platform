@@ -51,6 +51,8 @@
         .btn-event:hover { background-color: #e74c3c; }
         .btn-history { background-color: #8e44ad; padding: 5px 10px; font-size: 12px; }
         .btn-history:hover { background-color: #9b59b6; }
+        .btn-fraud { background-color: #c0392b; padding: 10px 15px; }
+        .btn-fraud:hover { background-color: #e74c3c; }
         .status-active { color: green; font-weight: bold; }
         .status-vacated { color: red; font-weight: bold; }
         .status-suspended { color: #d35400; font-weight: bold; }
@@ -111,6 +113,12 @@
         .event-category { font-size: 0.75em; padding: 2px 6px; border-radius: 3px; font-weight: bold; text-transform: uppercase; }
         .event-category.transaction { background: #e8f4f8; color: #2980b9; }
         .event-category.event { background: #fce4ec; color: #c0392b; }
+        
+        /* Fraud Severity Badges */
+        .sev-badge { padding: 3px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; color: white; }
+        .sev-high { background: #c0392b; }
+        .sev-medium { background: #e67e22; }
+        .sev-low { background: #7f8c8d; }
     </style>
 </head>
 <body>
@@ -398,7 +406,17 @@
     <!-- TAB 5: REPORTS -->
     <div id="tab-reports" class="tab-content">
         
-        <!-- AUDIT TRAIL CARD (NEW) -->
+        <!-- FRAUD INTELLIGENCE CARD (NEW) -->
+        <div class="container">
+            <h2>Fraud Intelligence & Anomaly Detection <span class="help-icon" title="Analyzes purchasing patterns to detect possible meter bypasses, unusual drops in usage, or arrears avoidance.">ℹ️</span></h2>
+            <button onclick="loadFraudAnalysis()" class="btn-fraud">Run Fraud Analysis</button>
+            <table id="fraudTable" style="display:none;">
+                <thead><tr><th>Unit</th><th>Tenant</th><th>Flag Type</th><th>Severity</th><th>Details</th><th>Action</th></tr></thead>
+                <tbody id="fraudTableBody"></tbody>
+            </table>
+        </div>
+
+        <!-- AUDIT TRAIL CARD -->
         <div class="container">
             <h2>Audit Trail <span class="help-icon" title="View the last 100 actions performed on the system by all users.">ℹ️</span></h2>
             <button onclick="loadAuditLog()">Load Audit Log</button>
@@ -508,7 +526,7 @@
     let currentStmtTenantId = null;
     let companyData = { name: "", logo_path: "", address: "", vat_number: "", contact_email: "", contact_phone: "" };
     let allTariffsCache = []; 
-    let allTenantsCache = []; // Cache for ID lookup
+    let allTenantsCache = []; 
 
     window.onload = function() {
         if(authToken) {
@@ -531,20 +549,12 @@
         }
     };
 
-    // --- HELP SYSTEM ---
-    function toggleHelpMode() {
-        document.body.classList.toggle('help-mode');
-    }
+    function toggleHelpMode() { document.body.classList.toggle('help-mode'); }
 
-    // --- AUDIT TRAIL ---
     async function logAction(action, details) {
         try {
             const username = localStorage.getItem('pm_username') || 'Unknown';
-            await fetch(`/audit-log/`, { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-                body: JSON.stringify({ username, action, details })
-            });
+            await fetch(`/audit-log/`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify({ username, action, details }) });
         } catch(e) { console.error("Audit log failed:", e); }
     }
 
@@ -554,19 +564,13 @@
             const r = await fetch(`/audit-log/`, { headers: getAuthHeaders() });
             const d = await r.json();
             tB.innerHTML = "";
-            d.logs.forEach(l => {
-                tB.innerHTML += `<tr><td>${l.timestamp}</td><td>${l.username}</td><td>${l.action}</td><td>${l.details}</td></tr>`;
-            });
+            d.logs.forEach(l => { tB.innerHTML += `<tr><td>${l.timestamp}</td><td>${l.username}</td><td>${l.action}</td><td>${l.details}</td></tr>`; });
             document.getElementById("auditTable").style.display = "block";
         } catch(e) { alert("Error loading audit log."); }
     }
 
     function loadAllData() {
-        loadCompanySettings(); 
-        loadDashboardStats(); 
-        loadAllTenants(); 
-        loadAllMeters(); 
-        loadTariffs(); 
+        loadCompanySettings(); loadDashboardStats(); loadAllTenants(); loadAllMeters(); loadTariffs(); 
         if (typeof loadRecons === 'function') { loadRecons(); }
         if (typeof loadInvoices === 'function') { loadInvoices(); }
     }
@@ -576,24 +580,20 @@
         return val ? `?property_id=${val}` : "";
     }
 
-    // --- INTERNAL ID LOOKUP ---
     function getTenantIdByUnit(unitNumber) {
         if(!unitNumber) { alert("Please enter a Unit Number."); return null; }
         const tenant = allTenantsCache.find(t => String(t.unit_number) === String(unitNumber));
         if(!tenant) { alert(`Tenant with Unit Number ${unitNumber} not found in the selected property.`); return null; }
-        return tenant.tenant_id; // Return internal ID
+        return tenant.tenant_id; 
     }
 
-    // --- USER MANAGEMENT ---
     async function loadUsers() {
         const tB = document.getElementById("usersTableBody");
         try {
             const r = await fetch(`/users/`, { headers: getAuthHeaders() });
             const d = await r.json();
             tB.innerHTML = "";
-            d.users.forEach(u => {
-                tB.innerHTML += `<tr><td>${u.id}</td><td>${u.username}</td><td>${u.role}</td><td>${u.property_name || 'All'}</td></tr>`;
-            });
+            d.users.forEach(u => { tB.innerHTML += `<tr><td>${u.id}</td><td>${u.username}</td><td>${u.role}</td><td>${u.property_name || 'All'}</td></tr>`; });
             document.getElementById("usersTable").style.display = "block";
         } catch (e) { console.error(e); alert("Error loading users"); }
     }
@@ -603,20 +603,15 @@
         const password = document.getElementById("newPassword").value;
         const role = document.getElementById("newUserRole").value;
         const property_id = document.getElementById("newUserProp").value || null;
-        
         if(!username || !password) { alert("Username and password required"); return; }
-        
         try {
             const r = await fetch(`/users/`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify({username, password, role, property_id}) });
             const d = await r.json();
             if(!r.ok) throw new Error(d.detail || "Error");
-            alert(d.message);
-            logAction("Created User", `Username: ${username}, Role: ${role}`);
-            loadUsers();
+            alert(d.message); logAction("Created User", `Username: ${username}, Role: ${role}`); loadUsers();
         } catch(e) { alert("Error: " + e.message); }
     }
 
-    // --- PROPERTY SETUP FUNCTIONS ---
     async function loadProperties() {
         try {
             const r = await fetch(`/properties/`, { headers: getAuthHeaders() });
@@ -628,25 +623,14 @@
             dd.innerHTML = '<option value="">All Properties (Owner View)</option>';
             tB.innerHTML = "";
             userPropDD.innerHTML = '<option value="">Select Property...</option>';
-            
             d.properties.forEach(p => {
                 dd.innerHTML += `<option value="${p.id}">${p.name} (${p.province})</option>`;
                 userPropDD.innerHTML += `<option value="${p.id}">${p.name}</option>`;
                 let modelText = p.utility_model === 'WALLET_CONSUMPTION' ? 'Smart Meters (Wallet)' : 'STS Token (Dumb)';
-                tB.innerHTML += `<tr>
-                    <td>${p.id}</td>
-                    <td>${p.name}</td>
-                    <td>${p.province}</td>
-                    <td>${modelText}</td>
-                    <td><button onclick="editProperty(${p.id}, '${p.name}', '${p.province}', '${p.address}', '${p.utility_model}')" class="btn-edit">Edit</button></td>
-                </tr>`;
+                tB.innerHTML += `<tr><td>${p.id}</td><td>${p.name}</td><td>${p.province}</td><td>${modelText}</td><td><button onclick="editProperty(${p.id}, '${p.name}', '${p.province}', '${p.address}', '${p.utility_model}')" class="btn-edit">Edit</button></td></tr>`;
             });
             document.getElementById("propertiesTable").style.display = "block";
-
-            if(currentRole !== 'ADMIN' && assignedPropId && assignedPropId !== "null") {
-                dd.value = assignedPropId;
-                dd.disabled = true;
-            }
+            if(currentRole !== 'ADMIN' && assignedPropId && assignedPropId !== "null") { dd.value = assignedPropId; dd.disabled = true; }
         } catch (e) { console.error("Error loading properties:", e.message); }
     }
 
@@ -673,24 +657,16 @@
         const province = document.getElementById("propProvince").value;
         const address = document.getElementById("propAddress").value;
         const utility_model = document.getElementById("propUtilityModel").value;
-        
         if (!name) { alert("Property name is required."); return; }
-        
         const payload = { name, province, address, utility_model };
         const url = id ? `/properties/${id}` : `/properties/`;
         const method = id ? 'PUT' : 'POST';
-        
         try {
             const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) });
             const d = await r.json();
             if (!r.ok) throw new Error(d.detail || "Error");
-            alert(d.message);
-            logAction("Saved Property", `Name: ${name}, Model: ${utility_model}`);
-            clearPropertyForm();
-            loadProperties(); 
-        } catch (e) {
-            alert("Error: " + e.message);
-        }
+            alert(d.message); logAction("Saved Property", `Name: ${name}, Model: ${utility_model}`); clearPropertyForm(); loadProperties(); 
+        } catch (e) { alert("Error: " + e.message); }
     }
 
     function switchTab(evt, tabId) {
@@ -706,23 +682,17 @@
             const response = await fetch(`/login/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: user, password: pass }) });
             const data = await response.json();
             if (!response.ok) throw new Error(data.detail || "Login failed");
-            
             authToken = data.token; 
             localStorage.setItem('pm_token', authToken);
             localStorage.setItem('pm_role', data.role);
             localStorage.setItem('pm_prop_id', data.property_id || "null");
             localStorage.setItem('pm_username', user);
-            
             location.reload(); 
         } catch (error) { errorDiv.innerText = error.message; }
     }
 
     function logout() { 
-        localStorage.removeItem('pm_token'); 
-        localStorage.removeItem('pm_role'); 
-        localStorage.removeItem('pm_prop_id'); 
-        localStorage.removeItem('pm_username');
-        location.reload(); 
+        localStorage.removeItem('pm_token'); localStorage.removeItem('pm_role'); localStorage.removeItem('pm_prop_id'); localStorage.removeItem('pm_username'); location.reload(); 
     }
     function getAuthHeaders() { return { 'Authorization': `Bearer ${authToken}` }; }
     function extractError(data) { if (typeof data.detail === 'string') return data.detail; if (Array.isArray(data.detail)) return data.detail.map(err => err.msg).join(", "); return "Unknown error"; }
@@ -732,93 +702,40 @@
             const response = await fetch(`/dashboard-stats/${getPropertyFilter()}`, { headers: getAuthHeaders() });
             if (!response.ok) throw new Error("Failed to load stats");
             const data = await response.json();
-            
             document.getElementById("kpiRevenue").innerText = `R${data.revenue.total_revenue.toFixed(2)}`;
             document.getElementById("kpiRate").innerText = `${data.revenue.collection_rate.toFixed(1)}%`;
             document.getElementById("kpiArrears").innerText = `R${data.arrears.total_arrears.toFixed(2)}`;
-            
             document.getElementById("kpiTenants").innerText = data.tenants.total;
             document.getElementById("kpiActiveTenants").innerText = `${data.tenants.active} Active`;
-            
             const total_meters = data.meters.counts.ELECTRICITY + data.meters.counts.WATER_HOT + data.meters.counts.WATER_COLD;
             document.getElementById("kpiMeters").innerText = total_meters;
             document.getElementById("kpiMeterStatus").innerText = `${data.meters.statuses.OPEN} Open / ${data.meters.statuses.TRICKLE} Trickle / ${data.meters.statuses.DISCONNECTED} Disc`;
-            
             const trendsContainer = document.getElementById("trendsContainer");
-            if(data.trends.length === 0) {
-                trendsContainer.innerHTML = "<p style='color:#7f8c8d; font-size:0.9em;'>No consumption data yet.</p>";
-            } else {
+            if(data.trends.length === 0) { trendsContainer.innerHTML = "<p style='color:#7f8c8d; font-size:0.9em;'>No consumption data yet.</p>"; } 
+            else {
                 const maxVal = Math.max(...data.trends.map(t => t.value), 1);
                 let html = "";
-                data.trends.forEach(t => {
-                    const width = (t.value / maxVal) * 100;
-                    html += `<div class="trend-bar"><div class="month">${t.month}</div><div class="bar-bg"><div class="bar-fill" style="width: ${width}%;"></div></div><div class="val">R${t.value.toFixed(0)}</div></div>`;
-                });
+                data.trends.forEach(t => { const width = (t.value / maxVal) * 100; html += `<div class="trend-bar"><div class="month">${t.month}</div><div class="bar-bg"><div class="bar-fill" style="width: ${width}%;"></div></div><div class="val">R${t.value.toFixed(0)}</div></div>`; });
                 trendsContainer.innerHTML = html;
             }
         } catch (error) { console.error("Error loading stats:", error.message); }
     }
 
-    // --- TENANT MANAGEMENT ---
     async function createTenant() {
         const propId = document.getElementById("propertyFilter").value;
         if(!propId) { alert("Please select a property first."); return; }
-        const payload = {
-            property_id: parseInt(propId),
-            unit_number: document.getElementById("newUnitNumber").value,
-            first_name: document.getElementById("newFirstName").value,
-            last_name: document.getElementById("newLastName").value,
-            email: document.getElementById("newEmail").value,
-            rent_outstanding: parseFloat(document.getElementById("newRentDebt").value || 0),
-            electricity_outstanding: parseFloat(document.getElementById("newElecDebt").value || 0),
-            water_outstanding: parseFloat(document.getElementById("newWaterDebt").value || 0)
-        };
-        try {
-            const r = await fetch(`/create-tenant/`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) });
-            const d = await r.json(); if (!r.ok) throw new Error(extractError(d));
-            alert(d.message); logAction("Created Tenant", `Unit: ${payload.unit_number}`);
-            loadAllTenants();
-        } catch (e) { alert("Error: " + e.message); }
+        const payload = { property_id: parseInt(propId), unit_number: document.getElementById("newUnitNumber").value, first_name: document.getElementById("newFirstName").value, last_name: document.getElementById("newLastName").value, email: document.getElementById("newEmail").value, rent_outstanding: parseFloat(document.getElementById("newRentDebt").value || 0), electricity_outstanding: parseFloat(document.getElementById("newElecDebt").value || 0), water_outstanding: parseFloat(document.getElementById("newWaterDebt").value || 0) };
+        try { const r = await fetch(`/create-tenant/`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); logAction("Created Tenant", `Unit: ${payload.unit_number}`); loadAllTenants(); } catch (e) { alert("Error: " + e.message); }
     }
 
     async function checkBalance() {
-        const unit = document.getElementById("unitNumberInput").value;
-        const tenantId = getTenantIdByUnit(unit);
-        if(!tenantId) return;
-        try {
-            const r = await fetch(`/tenant-balance/${tenantId}`, { headers: getAuthHeaders() });
-            const d = await r.json(); if (!r.ok) throw new Error(extractError(d));
-            document.getElementById("balanceResult").style.display = "block";
-            document.getElementById("balanceResult").innerHTML = `<p><strong>${d.tenant_name}</strong><br>Rent: R${d.rent_outstanding.toFixed(2)}<br>Elec: R${d.electricity_outstanding.toFixed(2)}<br>Water: R${d.water_outstanding.toFixed(2)}<br>Wallet: R${d.wallet_balance.toFixed(2)}</p>`;
-        } catch (e) { alert("Error: " + e.message); }
+        const unit = document.getElementById("unitNumberInput").value; const tenantId = getTenantIdByUnit(unit); if(!tenantId) return;
+        try { const r = await fetch(`/tenant-balance/${tenantId}`, { headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); document.getElementById("balanceResult").style.display = "block"; document.getElementById("balanceResult").innerHTML = `<p><strong>${d.tenant_name}</strong><br>Rent: R${d.rent_outstanding.toFixed(2)}<br>Elec: R${d.electricity_outstanding.toFixed(2)}<br>Water: R${d.water_outstanding.toFixed(2)}<br>Wallet: R${d.wallet_balance.toFixed(2)}</p>`; } catch (e) { alert("Error: " + e.message); }
     }
 
     async function loadAllTenants() {
         const tB = document.getElementById("tenantsTableBody");
-        try {
-            const r = await fetch(`/all-tenants/${getPropertyFilter()}`, { headers: getAuthHeaders() });
-            const d = await r.json(); if (!r.ok) throw new Error("Failed");
-            tB.innerHTML = ""; allTenantsCache = d.tenants;
-            d.tenants.forEach(t => {
-                let statusClass = t.status === 'ACTIVE' ? 'status-active' : (t.status === 'VACATED' ? 'status-vacated' : 'status-suspended');
-                let payStatus = (t.rent_outstanding > 0 || t.electricity_outstanding > 0 || t.water_outstanding > 0) ? '<span style="color:red;font-weight:bold;">IN ARREARS</span>' : '<span style="color:green;font-weight:bold;">CLEAR</span>';
-                tB.innerHTML += `<tr>
-                    <td>${t.unit_number || 'N/A'}</td><td>${t.first_name} ${t.last_name}</td><td>${t.email}</td><td>${payStatus}</td>
-                    <td>R${t.rent_outstanding.toFixed(2)}</td><td>R${t.electricity_outstanding.toFixed(2)}</td><td>R${t.water_outstanding.toFixed(2)}</td><td>R${t.wallet_balance.toFixed(2)}</td>
-                    <td class="${statusClass}">${t.status}</td><td>${t.credit_status || 'N/A'}</td>
-                    <td>
-                        <button onclick="viewStatement(${t.tenant_id})" class="btn-statement">Statement</button>
-                        <button onclick="openDocs(${t.tenant_id})" class="btn-docs">Docs</button>
-                        <button onclick="grantConsent(${t.tenant_id})" class="btn-popia">Consent</button>
-                        <button onclick="anonymize(${t.tenant_id})" class="btn-anonymize">Anonymize</button>
-                        <button onclick="runCreditCheck(${t.tenant_id})" class="btn-credit">Credit</button>
-                        <button onclick="suspendTenant(${t.tenant_id})" class="btn-suspend">Suspend</button>
-                        <button onclick="vacateTenant(${t.tenant_id})" class="btn-danger">Vacate</button>
-                    </td>
-                </tr>`;
-            });
-            document.getElementById("tenantsTable").style.display = "block";
-        } catch (e) { console.error(e.message); }
+        try { const r = await fetch(`/all-tenants/${getPropertyFilter()}`, { headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error("Failed"); tB.innerHTML = ""; allTenantsCache = d.tenants; d.tenants.forEach(t => { let statusClass = t.status === 'ACTIVE' ? 'status-active' : (t.status === 'VACATED' ? 'status-vacated' : 'status-suspended'); let payStatus = (t.rent_outstanding > 0 || t.electricity_outstanding > 0 || t.water_outstanding > 0) ? '<span style="color:red;font-weight:bold;">IN ARREARS</span>' : '<span style="color:green;font-weight:bold;">CLEAR</span>'; tB.innerHTML += `<tr><td>${t.unit_number || 'N/A'}</td><td>${t.first_name} ${t.last_name}</td><td>${t.email}</td><td>${payStatus}</td><td>R${t.rent_outstanding.toFixed(2)}</td><td>R${t.electricity_outstanding.toFixed(2)}</td><td>R${t.water_outstanding.toFixed(2)}</td><td>R${t.wallet_balance.toFixed(2)}</td><td class="${statusClass}">${t.status}</td><td>${t.credit_status || 'N/A'}</td><td><button onclick="viewStatement(${t.tenant_id})" class="btn-statement">Statement</button> <button onclick="openDocs(${t.tenant_id})" class="btn-docs">Docs</button> <button onclick="grantConsent(${t.tenant_id})" class="btn-popia">Consent</button> <button onclick="anonymize(${t.tenant_id})" class="btn-anonymize">Anonymize</button> <button onclick="runCreditCheck(${t.tenant_id})" class="btn-credit">Credit</button> <button onclick="suspendTenant(${t.tenant_id})" class="btn-suspend">Suspend</button> <button onclick="vacateTenant(${t.tenant_id})" class="btn-danger">Vacate</button></td></tr>`; }); document.getElementById("tenantsTable").style.display = "block"; } catch (e) { console.error(e.message); }
     }
 
     async function viewStatement(id) { try { const r = await fetch(`/tenant-statement/${id}`, { headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error("Failed"); currentStmtTenantId = id; let rows = ""; d.transactions.forEach(t => { rows += `<tr><td>${t.date}</td><td>${t.type}</td><td>R${t.amount.toFixed(2)}</td><td>${t.reference}</td></tr>`; }); document.getElementById("statementContent").innerHTML = `<div class="stmt-header"><h2>Account Statement</h2><h3>${d.tenant_name}</h3><p>${d.email}</p></div><div class="stmt-summary"><div><h3>Arrears</h3><p>Rent: R${d.rent_outstanding.toFixed(2)}</p><p>Elec: R${d.electricity_outstanding.toFixed(2)}</p><p>Water: R${d.water_outstanding.toFixed(2)}</p></div><div><h3>Wallet</h3><p>Balance: R${d.wallet_balance.toFixed(2)}</p><p>Credit Limit: R${d.credit_limit.toFixed(2)}</p></div></div><table><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Reference</th></tr></thead><tbody>${rows}</tbody></table>`; document.getElementById("statementModal").style.display = "block"; } catch (e) { alert(e.message); } }
@@ -828,9 +745,7 @@
     function closeDocs() { document.getElementById("docsModal").style.display = "none"; }
 
     async function uploadDoc() {
-        const unit = document.getElementById("docUnitNumber").value;
-        const tenantId = getTenantIdByUnit(unit);
-        if(!tenantId) return;
+        const unit = document.getElementById("docUnitNumber").value; const tenantId = getTenantIdByUnit(unit); if(!tenantId) return;
         const file = document.getElementById("docFile").files[0]; if(!file) { alert("Select a file."); return; }
         const formData = new FormData(); formData.append("doc_type", document.getElementById("docType").value); formData.append("file", file);
         try { const r = await fetch(`/upload-doc/${tenantId}`, { method: 'POST', headers: { 'Authorization': `Bearer ${authToken}` }, body: formData }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); logAction("Uploaded Doc", `Unit: ${unit}`); } catch (e) { alert("Error: " + e.message); }
@@ -855,14 +770,9 @@
     }
 
     async function downloadCSV() {
-        try {
-            const r = await fetch(`/export-csv/${getPropertyFilter()}`, { headers: getAuthHeaders() });
-            const blob = await r.blob(); const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href = url; a.download = 'tenants.csv'; a.click(); window.URL.revokeObjectURL(url);
-        } catch (e) { alert("Error downloading CSV."); }
+        try { const r = await fetch(`/export-csv/${getPropertyFilter()}`, { headers: getAuthHeaders() }); const blob = await r.blob(); const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'tenants.csv'; a.click(); window.URL.revokeObjectURL(url); } catch (e) { alert("Error downloading CSV."); }
     }
 
-    // --- BILLING & OPS ---
     async function setCreditLimit() {
         const unit = document.getElementById("creditUnitNumber").value, limit = document.getElementById("creditLimitInput").value, resultDiv = document.getElementById("creditResult");
         const tenantId = getTenantIdByUnit(unit); if(!tenantId) return;
@@ -904,42 +814,26 @@
 
     async function deactivateMeter(id) { if(!confirm("Deactivate meter?")) return; try { const r = await fetch(`/deactivate-meter/${id}`, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllMeters(); } catch (e) { alert("Error: " + e.message); } }
 
-    // --- NEW: METER EVENT FUNCTIONS ---
     async function logMeterEvent(meterId) {
         const eventType = prompt("Enter Event Type (e.g., TAMPER_DETECTED, BYPASS, PHYSICAL_INSPECTION):");
         if(!eventType) return;
         const eventNotes = prompt("Enter details/notes about this event:");
-        
-        try {
-            const r = await fetch(`/log-meter-event/${meterId}`, { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, 
-                body: JSON.stringify({ event_type: eventType, event_notes: eventNotes }) 
-            });
-            const d = await r.json(); if (!r.ok) throw new Error(extractError(d));
-            alert(d.message); logAction("Logged Meter Event", `Meter ID: ${meterId}, Type: ${eventType}`);
-        } catch (e) { alert("Error: " + e.message); }
+        try { const r = await fetch(`/log-meter-event/${meterId}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify({ event_type: eventType, event_notes: eventNotes }) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); logAction("Logged Meter Event", `Meter ID: ${meterId}, Type: ${eventType}`); } catch (e) { alert("Error: " + e.message); }
     }
 
     async function viewMeterHistory(meterId) {
         try {
             const r = await fetch(`/meter-audit-history/${meterId}`, { headers: getAuthHeaders() });
             const d = await r.json(); if (!r.ok) throw new Error(extractError(d));
-            
             let html = `<table><thead><tr><th>Date</th><th>Category</th><th>Type</th><th>Details</th><th>Amount</th><th>Status</th></tr></thead><tbody>`;
-            d.history.forEach(h => {
-                let catClass = h.category === 'EVENT' ? 'event' : 'transaction';
-                html += `<tr><td>${h.date}</td><td><span class="event-category ${catClass}">${h.category}</span></td><td>${h.type}</td><td>${h.details}</td><td>${h.amount > 0 ? 'R' + h.amount.toFixed(2) : '-'}</td><td>${h.status}</td></tr>`;
-            });
+            d.history.forEach(h => { let catClass = h.category === 'EVENT' ? 'event' : 'transaction'; html += `<tr><td>${h.date}</td><td><span class="event-category ${catClass}">${h.category}</span></td><td>${h.type}</td><td>${h.details}</td><td>${h.amount > 0 ? 'R' + h.amount.toFixed(2) : '-'}</td><td>${h.status}</td></tr>`; });
             html += `</tbody></table>`;
-            
             document.getElementById("meterHistoryContent").innerHTML = html;
             document.getElementById("meterHistoryModal").style.display = "block";
         } catch (e) { alert("Error: " + e.message); }
     }
     function closeMeterHistory() { document.getElementById("meterHistoryModal").style.display = "none"; }
 
-    // --- TARIFFS ---
     async function loadCompanySettings() {
         try { const r = await fetch(`/company/`, { headers: getAuthHeaders() }); if (!r.ok) throw new Error("Failed"); const d = await r.json(); companyData = d; document.getElementById("compName").value = d.name || ""; document.getElementById("compLogo").value = d.logo_path || ""; document.getElementById("compAddress").value = d.address || ""; document.getElementById("compVat").value = d.vat_number || ""; document.getElementById("compVatRate").value = d.vat_percent || 15; document.getElementById("compEmail").value = d.contact_email || ""; document.getElementById("compPhone").value = d.contact_phone || ""; } catch (e) { console.error(e.message); }
     }
@@ -964,21 +858,9 @@
 
     function filterMeterTariffs() {
         const dd = document.getElementById("meterTariff"); const selectedType = document.getElementById("meterType").value; dd.innerHTML = '<option value="">Select...</option>';
-        allTariffsCache.forEach(t => {
-            let det = "";
-            if (t.structure_type === "FLAT") det = `R${t.rate_flat.toFixed(2)}`;
-            else if (t.structure_type === "TIERED") det = `1-${t.tier_1_limit} @ R${t.tier_1_rate.toFixed(2)}, >${t.tier_1_limit} @ R${t.tier_2_rate.toFixed(2)}`;
-            else if (t.structure_type === "TOU") det = `Peak: R${t.tou_peak_rate.toFixed(2)}, Off: R${t.tou_offpeak_rate.toFixed(2)}`;
-            if (t.meter_type === selectedType && t.meter_type !== 'SANITATION') { dd.innerHTML += `<option value="${t.tariff_id}">${t.name} (${t.meter_type}) - ${det}</option>`; }
-        });
+        allTariffsCache.forEach(t => { let det = ""; if (t.structure_type === "FLAT") det = `R${t.rate_flat.toFixed(2)}`; else if (t.structure_type === "TIERED") det = `1-${t.tier_1_limit} @ R${t.tier_1_rate.toFixed(2)}, >${t.tier_1_limit} @ R${t.tier_2_rate.toFixed(2)}`; else if (t.structure_type === "TOU") det = `Peak: R${t.tou_peak_rate.toFixed(2)}, Off: R${t.tou_offpeak_rate.toFixed(2)}`; if (t.meter_type === selectedType && t.meter_type !== 'SANITATION') { dd.innerHTML += `<option value="${t.tariff_id}">${t.name} (${t.meter_type}) - ${det}</option>`; } });
         const tB = document.getElementById("tariffsTableBody"); tB.innerHTML = "";
-        allTariffsCache.forEach(t => {
-            let det = "";
-            if (t.structure_type === "FLAT") det = `R${t.rate_flat.toFixed(2)}`;
-            else if (t.structure_type === "TIERED") det = `1-${t.tier_1_limit} @ R${t.tier_1_rate.toFixed(2)}, >${t.tier_1_limit} @ R${t.tier_2_rate.toFixed(2)}`;
-            else if (t.structure_type === "TOU") det = `Peak: R${t.tou_peak_rate.toFixed(2)}, Off: R${t.tou_offpeak_rate.toFixed(2)}`;
-            tB.innerHTML += `<tr><td>${t.tariff_id}</td><td>${t.name}</td><td>${t.meter_type}</td><td>${t.structure_type}</td><td>${det}</td></tr>`;
-        });
+        allTariffsCache.forEach(t => { let det = ""; if (t.structure_type === "FLAT") det = `R${t.rate_flat.toFixed(2)}`; else if (t.structure_type === "TIERED") det = `1-${t.tier_1_limit} @ R${t.tier_1_rate.toFixed(2)}, >${t.tier_1_limit} @ R${t.tier_2_rate.toFixed(2)}`; else if (t.structure_type === "TOU") det = `Peak: R${t.tou_peak_rate.toFixed(2)}, Off: R${t.tou_offpeak_rate.toFixed(2)}`; tB.innerHTML += `<tr><td>${t.tariff_id}</td><td>${t.name}</td><td>${t.meter_type}</td><td>${t.structure_type}</td><td>${det}</td></tr>`; });
         document.getElementById("tariffsTable").style.display = "block";
     }
 
@@ -988,14 +870,12 @@
         try { const r = await fetch(`/tariffs/`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadTariffs(); } catch (e) { alert("Error: " + e.message); }
     }
 
-    // --- PAYMENTS ---
     async function processPayment() {
         const unit = document.getElementById("paymentUnitNumber").value; const tenantId = getTenantIdByUnit(unit); if(!tenantId) return;
         const payload = { tenant_id: tenantId, amount: parseFloat(document.getElementById("paymentAmount").value), rent_pct: parseFloat(document.getElementById("paymentRentPct").value) || null, elec_pct: parseFloat(document.getElementById("paymentElecPct").value) || null, water_pct: parseFloat(document.getElementById("paymentWaterPct").value) || null };
         try { const r = await fetch(`/process-payment/`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllTenants(); } catch (e) { alert("Error: " + e.message); }
     }
 
-    // --- INVOICE FUNCTIONS ---
     async function generateInvoice() { 
         const unit = document.getElementById("invUnitNumber").value; const tenantId = getTenantIdByUnit(unit); if(!tenantId) return;
         const p = document.getElementById("invPeriod").value, c = document.getElementById("invCycle").value, rD = document.getElementById("invResult"); if(!p) { alert("Enter Period"); return; } 
@@ -1008,7 +888,6 @@
     function toggleDrillDown(id) { const d = document.getElementById(`drill-${id}`); if(d) d.classList.toggle('visible'); }
     function closeInvoice() { document.getElementById("invoiceModal").style.display = "none"; }
 
-    // --- ADVANCED REPORTS JAVASCRIPT ---
     async function submitCreditNote() {
         const unit = document.getElementById("cnUnitNumber").value; const tenantId = getTenantIdByUnit(unit); if(!tenantId) return;
         const amt = document.getElementById("cnAmount").value, rsn = document.getElementById("cnReason").value, rD = document.getElementById("cnResult");
@@ -1021,21 +900,11 @@
     async function loadBankRecon() { const rD = document.getElementById("bankResult"); try { const r = await fetch(`/bank-reconciliation/`, { headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error("Error"); rD.style.display = "block"; rD.innerHTML = `<h3>Bank Reconciliation</h3><p>Net Balance: <strong>R${d.net_balance.toFixed(2)}</strong></p>`; } catch (e) { rD.style.display = "block"; rD.innerHTML = `<p style="color:red;">${e.message}</p>`; } }
     async function load3MonthStats() { const tB = document.getElementById("statsTableBody"); try { const r = await fetch(`/three-month-stats/`, { headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error("Error"); tB.innerHTML = ""; d.stats.forEach(s => { tB.innerHTML += `<tr><td>${s.month}</td><td>R${s.elec.toFixed(2)}</td><td>R${s.water.toFixed(2)}</td></tr>`; }); document.getElementById("statsTable").style.display = "block"; } catch (e) { alert(e.message); } }
 
-    // --- FIXED: SYNC RENT FROM ERP ---
     async function triggerMockRent() {
         const unit = prompt("Enter Unit Number to sync rent for a SPECIFIC tenant.\n\nLeave blank and click OK to sync rent for ALL tenants.");
-        let url = `/trigger-mock-rent/`; // Default to all tenants
-        if(unit) {
-            const tenantId = getTenantIdByUnit(unit);
-            if(!tenantId) return; // Stop if they typed an invalid unit number
-            url = `/trigger-mock-rent/${tenantId}`; // Sync specific tenant
-        }
-        try {
-            const r = await fetch(url, { method: 'POST', headers: getAuthHeaders() });
-            const d = await r.json(); if (!r.ok) throw new Error(extractError(d));
-            alert(d.message); logAction("Synced Rent from ERP", unit ? `Unit: ${unit}` : `All Tenants`);
-            loadAllTenants(); loadDashboardStats(); 
-        } catch (e) { alert("Error syncing rent: " + e.message); }
+        let url = `/trigger-mock-rent/`;
+        if(unit) { const tenantId = getTenantIdByUnit(unit); if(!tenantId) return; url = `/trigger-mock-rent/${tenantId}`; }
+        try { const r = await fetch(url, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); logAction("Synced Rent from ERP", unit ? `Unit: ${unit}` : `All Tenants`); loadAllTenants(); loadDashboardStats(); } catch (e) { alert("Error syncing rent: " + e.message); }
     }
 
     async function loadAging() { const tB = document.getElementById("agingTableBody"); try { const r = await fetch(`/arrears-aging/`, { headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error("Failed"); tB.innerHTML = ""; d.aging.forEach(t => { tB.innerHTML += `<tr><td>${t.tenant_name}</td><td>R${t.total_arrears.toFixed(2)}</td><td>R${t.current.toFixed(2)}</td><td>R${t.days_30.toFixed(2)}</td><td>R${t.days_60.toFixed(2)}</td><td>R${t.days_90.toFixed(2)}</td></tr>`; }); document.getElementById("agingTable").style.display = "block"; } catch (e) { alert(e.message); } }
@@ -1056,6 +925,33 @@
     async function loadPaymentRecon() { const tableBody = document.getElementById("reconReportTableBody"); try { const r = await fetch(`/payment-reconciliation/`, { headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error("Failed"); tableBody.innerHTML = ""; d.reconciliation.forEach(t => { tableBody.innerHTML += `<tr><td>${t.tenant_name}</td><td>R${t.total_billed.toFixed(2)}</td><td>R${t.total_paid.toFixed(2)}</td><td>R${t.wallet_balance.toFixed(2)}</td><td>R${t.rent_arrears.toFixed(2)}</td><td>R${t.elec_arrears.toFixed(2)}</td><td>R${t.water_arrears.toFixed(2)}</td><td>R${t.balance_due.toFixed(2)}</td></tr>`; }); document.getElementById("reconReportTable").style.display = "block"; } catch (e) { alert("Error loading reconciliation: " + e.message); } }
 
     async function downloadExcel() { const month = document.getElementById("excelMonth").value; if(!month) { alert("Enter month"); return; } try { const response = await fetch(`/export-excel/?month=${month}`, { headers: getAuthHeaders() }); if (!response.ok) throw new Error("Failed"); const blob = await response.blob(); const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `Report_${month}.xlsx`; a.click(); window.URL.revokeObjectURL(url); } catch (error) { alert("Error: " + error.message); } }
+
+    // --- NEW: FRAUD ANALYSIS ---
+    async function loadFraudAnalysis() {
+        const tB = document.getElementById("fraudTableBody");
+        try {
+            const r = await fetch(`/fraud-analysis/${getPropertyFilter()}`, { headers: getAuthHeaders() });
+            const d = await r.json(); if (!r.ok) throw new Error(extractError(d));
+            tB.innerHTML = "";
+            if (d.flags.length === 0) {
+                tB.innerHTML = `<tr><td colspan="6" style="text-align:center; color:green; font-weight:bold;">No anomalies detected! All purchasing patterns look normal.</td></tr>`;
+            } else {
+                d.flags.forEach(f => {
+                    let sevClass = f.severity === 'HIGH' ? 'sev-high' : (f.severity === 'MEDIUM' ? 'sev-medium' : 'sev-low');
+                    tB.innerHTML += `<tr>
+                        <td>${f.unit_number || 'N/A'}</td>
+                        <td>${f.tenant_name}</td>
+                        <td><strong>${f.flag_type}</strong></td>
+                        <td><span class="sev-badge ${sevClass}">${f.severity}</span></td>
+                        <td>${f.details}</td>
+                        <td><button onclick="viewStatement(${f.tenant_id})" class="btn-statement">Inspect</button></td>
+                    </tr>`;
+                });
+            }
+            document.getElementById("fraudTable").style.display = "block";
+            logAction("Ran Fraud Analysis", `Found ${d.flags.length} flags.`);
+        } catch (e) { alert("Error loading fraud analysis: " + e.message); }
+    }
 </script>
 </body>
 </html>
