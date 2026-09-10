@@ -21,7 +21,7 @@ def api_generate_bill(bill: BillRequest, current_user: dict = Depends(verify_tok
             raise HTTPException(status_code=404, detail="Tenant not found")
         enforce_property_access(current_user, tenant_info[0])
 
-        idempotency_key = str(uuid.uuid4()) # Assume frontend doesn't send one for bills, generate safely
+        idempotency_key = str(uuid.uuid4())
         cursor.execute("SELECT id FROM transactions WHERE idempotency_key = %s", (idempotency_key,))
         if cursor.fetchone():
             return {"status": "success", "message": "Bill already processed."}
@@ -33,18 +33,29 @@ def api_generate_bill(bill: BillRequest, current_user: dict = Depends(verify_tok
         
         utility_type = bill.utility_type.upper()
         
-        cursor.execute("""
-            SELECT m.id, m.billing_type, m.valve_status, m.tariff_id 
-            FROM meters m
-            WHERE m.tenant_id = %s AND m.meter_type = %s AND m.is_active = TRUE
-            FOR UPDATE
-        """, (bill.tenant_id, utility_type))
+        # --- SMART METER MATCHING ---
+        if utility_type == 'WATER':
+            cursor.execute("""
+                SELECT m.id, m.billing_type, m.valve_status, m.tariff_id, m.meter_type 
+                FROM meters m
+                WHERE m.tenant_id = %s AND m.meter_type LIKE 'WATER%%' AND m.is_active = TRUE
+                FOR UPDATE
+            """, (bill.tenant_id,))
+        else:
+            cursor.execute("""
+                SELECT m.id, m.billing_type, m.valve_status, m.tariff_id, m.meter_type 
+                FROM meters m
+                WHERE m.tenant_id = %s AND m.meter_type = %s AND m.is_active = TRUE
+                FOR UPDATE
+            """, (bill.tenant_id, utility_type))
+            
         meter_data = cursor.fetchone()
         
         if not meter_data:
             raise HTTPException(status_code=404, detail=f"No active {utility_type} meter found for this tenant.")
             
-        meter_id, billing_type, current_valve_status, tariff_id = meter_data
+        meter_id, billing_type, current_valve_status, tariff_id, actual_meter_type = meter_data
+        utility_type = actual_meter_type
 
         if bill.manual_entry and billing_type == 'PREPAID':
             raise HTTPException(status_code=400, detail=f"Manual billing is disabled for Prepaid meters. {utility_type} is deducted automatically by the smart meter.")
@@ -109,7 +120,8 @@ def api_generate_bill(bill: BillRequest, current_user: dict = Depends(verify_tok
                 VALUES (%s, %s, %s, 'Postpaid Meter Reading', %s, %s, %s, %s)
             """, (wallet_id, bill_amount, f"{utility_type}_BILL", tenant_info[0], current_balance, current_balance, idempotency_key))
             
-            send_notification(f"{first_name} {last_name}", email, f"Your {utility_type} bill of R{bill_amount:.2f} has been generated. You now have arrears. Please pay to avoid restrictions.", subject="Bill Generated & Arrears Detected")
+            msg = f"Your {utility_type} bill of R{bill_amount:.2f} has been generated. You now have arrears. Please pay to avoid restrictions."
+            send_notification(f"{first_name} {last_name}", email, msg, subject="Bill Generated & Arrears Detected")
             
         elif billing_type == 'PREPAID':
             new_balance = current_balance - bill_amount
@@ -131,10 +143,13 @@ def api_generate_bill(bill: BillRequest, current_user: dict = Depends(verify_tok
                 cursor.execute("UPDATE meters SET valve_status = %s WHERE id = %s", (restrict_status, meter_id))
                 is_restricted = True
                 
-                send_notification(f"{first_name} {last_name}", email, f"Your {utility_type} has been {'restricted to trickle' if utility_type.startswith('WATER') else 'DISCONNECTED'}! Shortfall of R{shortfall:.2f} added to arrears.", subject="Utility Disconnected/Restricted")
+                action_word = 'restricted to trickle' if utility_type.startswith('WATER') else 'DISCONNECTED'
+                msg = f"Your {utility_type} has been {action_word}! Shortfall of R{shortfall:.2f} added to arrears."
+                send_notification(f"{first_name} {last_name}", email, msg, subject="Utility Disconnected/Restricted")
             else:
                 if new_balance < 50:
-                    send_notification(f"{first_name} {last_name}", email, f"Low Wallet Balance Alert: Your balance is R{new_balance:.2f}. Please top up to avoid disconnection.", subject="Low Wallet Balance Alert")
+                    msg = f"Low Wallet Balance Alert: Your balance is R{new_balance:.2f}. Please top up to avoid disconnection."
+                    send_notification(f"{first_name} {last_name}", email, msg, subject="Low Wallet Balance Alert")
             
             cursor.execute("UPDATE wallets SET balance = %s WHERE id = %s", (new_balance, wallet_id))
             cursor.execute("""
