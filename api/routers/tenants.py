@@ -12,13 +12,23 @@ router = APIRouter()
 
 # --- Helper Function for Authorization ---
 def check_tenant_access(cursor, tenant_id: int, current_user: dict):
-    """Fetches tenant's property_id and checks if the current user is authorized."""
-    cursor.execute("SELECT property_id FROM tenants WHERE id = %s", (tenant_id,))
+    """Fetches a tenant's property_id/status and authorizes the current user against it."""
+    cursor.execute("SELECT property_id, status FROM tenants WHERE id = %s", (tenant_id,))
     tenant_info = cursor.fetchone()
     if not tenant_info:
         raise HTTPException(status_code=404, detail="Tenant not found")
-    enforce_property_access(current_user, tenant_info[0])
-    return tenant_info[0]
+    target_property_id, target_status = tenant_info
+
+    role = current_user.get("role")
+    if role == "TENANT":
+        if current_user.get("tenant_id") != tenant_id:
+            raise HTTPException(status_code=403, detail="Forbidden: you can only access your own tenant account.")
+        if target_status == "VACATED":
+            raise HTTPException(status_code=401, detail="This tenant account has been vacated. Please contact your property manager.")
+    else:
+        enforce_property_access(current_user, target_property_id)
+
+    return target_property_id
 
 # --- Tenant Endpoints ---
 
@@ -323,6 +333,16 @@ def api_get_tenant_balance(tenant_id: int, current_user: dict = Depends(verify_t
     cursor = conn.cursor()
     try:
         check_tenant_access(cursor, tenant_id, current_user)
+        
+        # --- AUTOMATIC SCHEMA FIX ---
+        # Force add the wallet columns in case Render's DB didn't get them
+        cursor.execute("ALTER TABLE wallets ADD COLUMN IF NOT EXISTS credit_limit DECIMAL DEFAULT 0;")
+        cursor.execute("ALTER TABLE wallets ADD COLUMN IF NOT EXISTS credit_balance DECIMAL DEFAULT 0;")
+        cursor.execute("ALTER TABLE wallets ADD COLUMN IF NOT EXISTS credit_debt DECIMAL DEFAULT 0;")
+        cursor.execute("ALTER TABLE wallets ADD COLUMN IF NOT EXISTS credit_taps_used INT DEFAULT 0;")
+        cursor.execute("ALTER TABLE wallets ADD COLUMN IF NOT EXISTS credit_reset_month VARCHAR(7);")
+        conn.commit()
+
         cursor.execute("""
             SELECT t.first_name, t.last_name, t.rent_outstanding, t.electricity_outstanding, t.water_outstanding, t.property_id, p.utility_model 
             FROM tenants t 
@@ -365,6 +385,7 @@ def api_get_tenant_balance(tenant_id: int, current_user: dict = Depends(verify_t
                 water_balance_kl = float(m_balance)
 
         credit_limit = wallet_data[1] if wallet_data[1] is not None else 0
+        tap_size = (Decimal(str(credit_limit)) / Decimal(3)).quantize(Decimal('0.01')) if credit_limit > 0 else 0
 
         return {
             "tenant_name": f"{first_name} {last_name}",
@@ -375,6 +396,7 @@ def api_get_tenant_balance(tenant_id: int, current_user: dict = Depends(verify_t
             "credit_limit": float(credit_limit),
             "credit_balance": float(wallet_data[2] if wallet_data[2] is not None else 0),
             "credit_taps_used": wallet_data[3] if wallet_data[3] is not None else 0,
+            "tap_size": float(tap_size),
             "elec_meter_balance_kwh": elec_balance_kwh,
             "water_meter_balance_kl": water_balance_kl,
             "utility_model": utility_model,
@@ -609,6 +631,16 @@ def api_assign_meter(payload: dict, current_user: dict = Depends(verify_token)):
     try:
         tenant_id = payload.get("tenant_id")
         prop_id = check_tenant_access(cursor, tenant_id, current_user)
+
+        cursor.execute("SELECT status, unit_number FROM tenants WHERE id = %s", (tenant_id,))
+        tenant_status_row = cursor.fetchone()
+        if not tenant_status_row or tenant_status_row[0] != 'ACTIVE':
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot assign a meter to tenant {tenant_id}: tenant status is "
+                       f"'{tenant_status_row[0] if tenant_status_row else 'UNKNOWN'}', not ACTIVE. "
+                       f"If this unit was re-let, make sure the current tenant record is selected."
+            )
 
         meter_type = payload.get("meter_type").upper()
         serial_number = payload.get("serial_number")
