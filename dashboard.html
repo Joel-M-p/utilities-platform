@@ -61,7 +61,7 @@
         .recon-loss { color: red; font-weight: bold; }
         .recon-gain { color: #e67e22; font-weight: bold; }
         .modal { display: none; position: fixed; z-index: 1; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); }
-        .modal-content { background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 700px; border-radius: 10px; }
+        .modal-content { background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 800px; border-radius: 10px; }
         .close { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
         .stmt-header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #2c3e50; padding-bottom: 10px; }
         .stmt-summary { display: flex; justify-content: space-between; margin-bottom: 20px; background: #f9f9f9; padding: 15px; border-radius: 5px; }
@@ -301,7 +301,7 @@
     <!-- TAB 3: BILLING & OPS -->
     <div id="tab-ops" class="tab-content">
         <div class="container">
-            <h2>Process Payment & Credit Facility <span class="help-icon" title="Process manual payments. The waterfall automatically pays Rent first, then Elec, then Water. Set overdraft limits here.">ℹ️</span></h2>
+            <h2>Process Payment & Credit Facility <span class="help-icon" title="Process manual payments. The waterfall automatically pays Rent first, then Elec, then Water. Set emergency fund limits here.">ℹ️</span></h2>
             <h3>Process Payment</h3>
             <input type="text" id="paymentUnitNumber" placeholder="Unit Number">
             <input type="number" id="paymentAmount" placeholder="Amount">
@@ -312,9 +312,9 @@
             <button onclick="processPayment()">Process Payment</button>
             <div id="paymentResult" class="result" style="display:none;"></div>
             <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
-            <h3>Set Credit Limit (Overdraft)</h3>
-            <input type="text" id="creditUnitNumber" placeholder="Unit Number"><input type="number" id="creditLimitInput" placeholder="Credit Limit">
-            <button onclick="setCreditLimit()" class="btn-download">Set Credit Limit</button>
+            <h3>Set Emergency Fund Limit (3 Taps/Month)</h3>
+            <input type="text" id="creditUnitNumber" placeholder="Unit Number"><input type="number" id="creditLimitInput" placeholder="Emergency Fund Limit (R)">
+            <button onclick="setCreditLimit()" class="btn-download">Set Emergency Fund</button>
             <div id="creditResult" class="result" style="display:none;"></div>
         </div>
 
@@ -323,10 +323,10 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                 <div>
                     <h3>Assign Meter</h3>
-                    <input type="text" id="meterUnitNumber" placeholder="Unit Number"><input type="text" id="meterSerial" placeholder="Serial Number">
-                    <select id="meterType" onchange="filterMeterTariffs()"><option value="ELECTRICITY">Electricity</option><option value="WATER_HOT">Hot Water</option><option value="WATER_COLD">Cold Water</option></select>
+                    <input type="text" id="meterUnitNumber" placeholder="Unit Number">
+                    <input type="text" id="meterSerial" placeholder="Serial Number">
+                    <select id="meterType"><option value="ELECTRICITY">Electricity</option><option value="WATER_HOT">Hot Water</option><option value="WATER_COLD">Cold Water</option></select>
                     <select id="billingType"><option value="PREPAID">Prepaid</option><option value="POSTPAID">Postpaid</option></select>
-                    <select id="meterTariff"><option value="">Select Type First...</option></select>
                     <button onclick="assignMeter()">Assign Meter</button>
                     <div id="meterResult" class="result" style="display:none;"></div>
                 </div>
@@ -377,7 +377,8 @@
             <input type="text" id="tariffName" placeholder="Tariff Name">
             <select id="tariffMeterType">
                 <option value="ELECTRICITY">Electricity (Consumption)</option>
-                <option value="WATER_COLD">Water (Consumption)</option>
+                <option value="WATER_HOT">Water Hot (Consumption)</option>
+                <option value="WATER_COLD">Water Cold (Consumption)</option>
                 <option value="SANITATION">Sanitation (Fixed Daily)</option>
             </select>
             <select id="tariffStructure" onchange="toggleTariffFields()"><option value="FLAT">Flat Rate</option><option value="TIERED">Tiered (Block)</option><option value="TOU">Time-of-Use</option></select>
@@ -517,7 +518,7 @@
 <div id="invoiceModal" class="modal"><div class="modal-content"><span class="close" onclick="closeInvoice()">&times;</span><div id="invoiceContent"></div></div></div>
 <div id="docsModal" class="modal"><div class="modal-content"><span class="close" onclick="closeDocs()">&times;</span><h2>Tenant Documents</h2><table id="docsTable"><thead><tr><th>Date</th><th>Type</th><th>File Name</th></tr></thead><tbody id="docsTableBody"></tbody></table></div></div>
 <div id="reportModal" class="modal"><div class="modal-content"><span class="close" onclick="closeReport()">&times;</span><div id="reportContent"></div></div></div>
-<div id="meterHistoryModal" class="modal"><div class="modal-content"><span class="close" onclick="closeMeterHistory()">&times;</span><h2>Meter Audit History</h2><div id="meterHistoryContent"></div></div></div>
+<div id="meterHistoryModal" class="modal"><div class="modal-content"><span class="close" onclick="closeMeterHistory()">&times;</span><div id="meterHistoryContent"></div></div></div>
 
 <script>
     let authToken = localStorage.getItem('pm_token');
@@ -582,9 +583,17 @@
 
     function getTenantIdByUnit(unitNumber) {
         if(!unitNumber) { alert("Please enter a Unit Number."); return null; }
-        const tenant = allTenantsCache.find(t => String(t.unit_number) === String(unitNumber));
-        if(!tenant) { alert(`Tenant with Unit Number ${unitNumber} not found in the selected property.`); return null; }
-        return tenant.tenant_id; 
+        const matches = allTenantsCache.filter(t => String(t.unit_number) === String(unitNumber));
+        if(matches.length === 0) { alert(`Tenant with Unit Number ${unitNumber} not found in the selected property.`); return null; }
+        const active = matches.find(t => t.status === 'ACTIVE');
+        if(!active) {
+            alert(`Unit ${unitNumber} has no ACTIVE tenant (only past/vacated records). Add a new tenant to this unit first.`);
+            return null;
+        }
+        if(matches.length > 1) {
+            console.warn(`Unit ${unitNumber} has ${matches.length} tenant records (history). Using the ACTIVE one: tenant_id ${active.tenant_id}.`);
+        }
+        return active.tenant_id;
     }
 
     async function loadUsers() {
@@ -755,7 +764,7 @@
     async function anonymize(id) { if(!confirm("Anonymize this tenant's data?")) return; try { const r = await fetch(`/anonymize-tenant/${id}`, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllTenants(); } catch (e) { alert("Error: " + e.message); } }
     async function runCreditCheck(id) { try { const r = await fetch(`/credit-check/${id}`, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllTenants(); } catch (e) { alert("Error: " + e.message); } }
     async function suspendTenant(id) { if(!confirm("Suspend this tenant?")) return; try { const r = await fetch(`/suspend-tenant/${id}`, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllTenants(); } catch (e) { alert("Error: " + e.message); } }
-    async function vacateTenant(id) { if(!confirm("Vacate this tenant?")) return; try { const r = await fetch(`/vacate-tenant/${id}`, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllTenants(); } catch (e) { alert("Error: " + e.message); } }
+    async function vacateTenant(id) { if(!confirm("Vacate this tenant?")) return; try { const r = await fetch(`/vacate-tenant/${id}`, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllTenants(); loadAllMeters(); } catch (e) { alert("Error: " + e.message); } }
 
     async function submitNTV() {
         const unit = document.getElementById("ntvUnitNumber").value; const tenantId = getTenantIdByUnit(unit); if(!tenantId) return;
@@ -766,7 +775,7 @@
     async function submitInspection() {
         const unit = document.getElementById("inspUnitNumber").value; const tenantId = getTenantIdByUnit(unit); if(!tenantId) return;
         const payload = { status: document.getElementById("inspStatus").value, notes: document.getElementById("inspNotes").value };
-        try { const r = await fetch(`/inspection-result/${tenantId}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllTenants(); } catch (e) { alert("Error: " + e.message); }
+        try { const r = await fetch(`/inspection-result/${tenantId}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllTenants(); loadAllMeters(); } catch (e) { alert("Error: " + e.message); }
     }
 
     async function downloadCSV() {
@@ -776,13 +785,38 @@
     async function setCreditLimit() {
         const unit = document.getElementById("creditUnitNumber").value, limit = document.getElementById("creditLimitInput").value, resultDiv = document.getElementById("creditResult");
         const tenantId = getTenantIdByUnit(unit); if(!tenantId) return;
-        try { const r = await fetch(`/set-credit-limit/${tenantId}?limit=${limit}`, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`; logAction("Set Credit Limit", `Unit: ${unit}, Limit: ${limit}`); loadAllTenants(); } catch (e) { resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:red;">${e.message}</p>`; }
+        try { const r = await fetch(`/set-credit-limit/${tenantId}?limit=${limit}`, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`; logAction("Set Emergency Fund", `Unit: ${unit}, Limit: ${limit}`); loadAllTenants(); } catch (e) { resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:red;">${e.message}</p>`; }
     }
 
     async function assignMeter() {
-        const unit = document.getElementById("meterUnitNumber").value; const tenantId = getTenantIdByUnit(unit); if(!tenantId) return;
-        const payload = { tenant_id: tenantId, serial_number: document.getElementById("meterSerial").value, meter_type: document.getElementById("meterType").value, billing_type: document.getElementById("billingType").value, tariff_id: parseInt(document.getElementById("meterTariff").value) };
-        try { const r = await fetch(`/assign-meter/`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); logAction("Assigned Meter", `Unit: ${unit}`); loadAllMeters(); } catch (e) { alert("Error: " + e.message); }
+        const unit = document.getElementById("meterUnitNumber").value; 
+        const tenantId = getTenantIdByUnit(unit); 
+        if(!tenantId) return;
+        
+        const serial = document.getElementById("meterSerial").value;
+        if(!serial) { alert("Error: Please enter a Meter Serial Number."); return; }
+
+        const payload = { 
+            tenant_id: tenantId, 
+            serial_number: serial, 
+            meter_type: document.getElementById("meterType").value, 
+            billing_type: document.getElementById("billingType").value 
+        };
+        try { 
+            const r = await fetch(`/assign-meter/`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); 
+            const d = await r.json(); 
+            if (!r.ok) throw new Error(extractError(d)); 
+            alert(d.message); 
+            logAction("Assigned Meter", `Unit: ${unit}`); 
+            
+            // Reset fields after successful capture
+            document.getElementById('meterUnitNumber').value = '';
+            document.getElementById('meterSerial').value = '';
+            document.getElementById('meterType').value = 'ELECTRICITY';
+            document.getElementById('billingType').value = 'PREPAID';
+            
+            loadAllMeters(); 
+        } catch (e) { alert("Error: " + e.message); }
     }
 
     async function generateBill() {
@@ -825,12 +859,36 @@
         try {
             const r = await fetch(`/meter-audit-history/${meterId}`, { headers: getAuthHeaders() });
             const d = await r.json(); if (!r.ok) throw new Error(extractError(d));
-            let html = `<table><thead><tr><th>Date</th><th>Category</th><th>Type</th><th>Details</th><th>Amount</th><th>Status</th></tr></thead><tbody>`;
-            d.history.forEach(h => { let catClass = h.category === 'EVENT' ? 'event' : 'transaction'; html += `<tr><td>${h.date}</td><td><span class="event-category ${catClass}">${h.category}</span></td><td>${h.type}</td><td>${h.details}</td><td>${h.amount > 0 ? 'R' + h.amount.toFixed(2) : '-'}</td><td>${h.status}</td></tr>`; });
-            html += `</tbody></table>`;
+            
+            let rows = "";
+            if (d.history.length === 0) {
+                rows = `<tr><td colspan="6" style="text-align:center; color:#7f8c8d;">No history recorded for this meter yet.</td></tr>`;
+            } else {
+                d.history.forEach(h => { 
+                    let catClass = h.category === 'EVENT' ? 'event' : 'transaction'; 
+                    rows += `<tr><td>${h.date}</td><td>${h.tenant || 'N/A'}</td><td><span class="event-category ${catClass}">${h.category}</span></td><td>${h.type}</td><td>${h.details}</td><td>${h.amount > 0 ? 'R' + h.amount.toFixed(2) : '-'}</td></tr>`; 
+                });
+            }
+            
+            let html = `
+                <div class="invoice-paper">
+                    <div class="stmt-header">
+                        <h2>Meter Audit Report</h2>
+                        <p><strong>Serial Number:</strong> ${d.serial_number} | <strong>Type:</strong> ${d.meter_type}</p>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr><th>Date</th><th>Tenant</th><th>Category</th><th>Type</th><th>Details</th><th>Amount</th></tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                    <button onclick="window.print()" class="btn-print">Print Report</button>
+                </div>
+            `;
+            
             document.getElementById("meterHistoryContent").innerHTML = html;
             document.getElementById("meterHistoryModal").style.display = "block";
-        } catch (e) { alert("Error: " + e.message); }
+        } catch (e) { alert("Error loading meter history: " + e.message); }
     }
     function closeMeterHistory() { document.getElementById("meterHistoryModal").style.display = "none"; }
 
@@ -853,15 +911,7 @@
 
     async function loadTariffs() {
         const tB = document.getElementById("tariffsTableBody");
-        try { const r = await fetch(`/tariffs/${getPropertyFilter()}`, { headers: getAuthHeaders() }); if (!r.ok) throw new Error("Failed"); const d = await r.json(); tB.innerHTML = ""; allTariffsCache = d.tariffs; filterMeterTariffs(); } catch (e) { console.error(e.message); }
-    }
-
-    function filterMeterTariffs() {
-        const dd = document.getElementById("meterTariff"); const selectedType = document.getElementById("meterType").value; dd.innerHTML = '<option value="">Select...</option>';
-        allTariffsCache.forEach(t => { let det = ""; if (t.structure_type === "FLAT") det = `R${t.rate_flat.toFixed(2)}`; else if (t.structure_type === "TIERED") det = `1-${t.tier_1_limit} @ R${t.tier_1_rate.toFixed(2)}, >${t.tier_1_limit} @ R${t.tier_2_rate.toFixed(2)}`; else if (t.structure_type === "TOU") det = `Peak: R${t.tou_peak_rate.toFixed(2)}, Off: R${t.tou_offpeak_rate.toFixed(2)}`; if (t.meter_type === selectedType && t.meter_type !== 'SANITATION') { dd.innerHTML += `<option value="${t.tariff_id}">${t.name} (${t.meter_type}) - ${det}</option>`; } });
-        const tB = document.getElementById("tariffsTableBody"); tB.innerHTML = "";
-        allTariffsCache.forEach(t => { let det = ""; if (t.structure_type === "FLAT") det = `R${t.rate_flat.toFixed(2)}`; else if (t.structure_type === "TIERED") det = `1-${t.tier_1_limit} @ R${t.tier_1_rate.toFixed(2)}, >${t.tier_1_limit} @ R${t.tier_2_rate.toFixed(2)}`; else if (t.structure_type === "TOU") det = `Peak: R${t.tou_peak_rate.toFixed(2)}, Off: R${t.tou_offpeak_rate.toFixed(2)}`; tB.innerHTML += `<tr><td>${t.tariff_id}</td><td>${t.name}</td><td>${t.meter_type}</td><td>${t.structure_type}</td><td>${det}</td></tr>`; });
-        document.getElementById("tariffsTable").style.display = "block";
+        try { const r = await fetch(`/tariffs/${getPropertyFilter()}`, { headers: getAuthHeaders() }); if (!r.ok) throw new Error("Failed"); const d = await r.json(); tB.innerHTML = ""; allTariffsCache = d.tariffs; } catch (e) { console.error(e.message); }
     }
 
     async function createTariff() {
@@ -926,7 +976,6 @@
 
     async function downloadExcel() { const month = document.getElementById("excelMonth").value; if(!month) { alert("Enter month"); return; } try { const response = await fetch(`/export-excel/?month=${month}`, { headers: getAuthHeaders() }); if (!response.ok) throw new Error("Failed"); const blob = await response.blob(); const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `Report_${month}.xlsx`; a.click(); window.URL.revokeObjectURL(url); } catch (error) { alert("Error: " + error.message); } }
 
-    // --- NEW: FRAUD ANALYSIS ---
     async function loadFraudAnalysis() {
         const tB = document.getElementById("fraudTableBody");
         try {

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from api.database import get_db_connection
-from api.security import verify_token, enforce_property_access
+from api.security import verify_token, enforce_property_access, require_staff
+from api.routers.tenants import check_tenant_access
 from api.services.waterfall import process_waterfall_payment
 from api.services.token_engine import generate_token
 from api.services.notifications import send_notification
@@ -21,16 +22,8 @@ def api_process_payment(payload: dict, current_user: dict = Depends(verify_token
         rent_pct = payload.get("rent_pct")
         elec_pct = payload.get("elec_pct")
         water_pct = payload.get("water_pct")
-        
-        if current_user.get("role") == "TENANT":
-            if current_user.get("tenant_id") != tenant_id:
-                raise HTTPException(status_code=403, detail="Forbidden: You can only process payments for your own account.")
 
-        cursor.execute("SELECT property_id FROM tenants WHERE id = %s", (tenant_id,))
-        tenant_info = cursor.fetchone()
-        if not tenant_info:
-            raise HTTPException(status_code=404, detail="Tenant not found")
-        enforce_property_access(current_user, tenant_info[0])
+        prop_id = check_tenant_access(cursor, tenant_id, current_user)
 
         idempotency_key = payload.get("idempotency_key") or str(uuid.uuid4())
         cursor.execute("SELECT id FROM transactions WHERE idempotency_key LIKE %s", (f"{idempotency_key}-%",))
@@ -68,88 +61,6 @@ def api_process_payment(payload: dict, current_user: dict = Depends(verify_token
         cursor.close()
         conn.close()
 
-@router.post("/apply-wallet-to-arrears/{tenant_id}")
-def api_apply_wallet_to_arrears(tenant_id: int, current_user: dict = Depends(verify_token)):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    try:
-        cursor.execute("SELECT property_id FROM tenants WHERE id = %s", (tenant_id,))
-        tenant_info = cursor.fetchone()
-        if not tenant_info:
-            raise HTTPException(status_code=404, detail="Tenant not found")
-        enforce_property_access(current_user, tenant_info[0])
-
-        cursor.execute("SELECT id, balance FROM wallets WHERE tenant_id = %s FOR UPDATE", (tenant_id,))
-        wallet_data = cursor.fetchone()
-        if not wallet_data:
-            raise HTTPException(status_code=404, detail="Wallet not found.")
-        wallet_id, wallet_balance = wallet_data
-
-        if wallet_balance <= 0:
-            raise HTTPException(status_code=400, detail="Wallet balance is zero or negative. Nothing to apply.")
-
-        cursor.execute("SELECT rent_outstanding, electricity_outstanding, water_outstanding FROM tenants WHERE id = %s FOR UPDATE", (tenant_id,))
-        rent_owed, elec_owed, water_owed = cursor.fetchone()
-
-        available_funds = Decimal(str(wallet_balance))
-        
-        rent_paid = Decimal('0')
-        elec_paid = Decimal('0')
-        water_paid = Decimal('0')
-
-        if available_funds > 0 and rent_owed > 0:
-            rent_paid = min(available_funds, rent_owed)
-            available_funds -= rent_paid
-            cursor.execute("UPDATE tenants SET rent_outstanding = rent_outstanding - %s WHERE id = %s", (rent_paid, tenant_id))
-
-        if available_funds > 0 and elec_owed > 0:
-            elec_paid = min(available_funds, elec_owed)
-            available_funds -= elec_paid
-            cursor.execute("UPDATE tenants SET electricity_outstanding = electricity_outstanding - %s WHERE id = %s", (elec_paid, tenant_id))
-
-        if available_funds > 0 and water_owed > 0:
-            water_paid = min(available_funds, water_owed)
-            available_funds -= water_paid
-            cursor.execute("UPDATE tenants SET water_outstanding = water_outstanding - %s WHERE id = %s", (water_paid, tenant_id))
-
-        total_paid = rent_paid + elec_paid + water_paid
-        new_wallet_balance = wallet_balance - total_paid
-        cursor.execute("UPDATE wallets SET balance = %s WHERE id = %s", (new_wallet_balance, wallet_id))
-
-        idempotency_key = str(uuid.uuid4())
-        if rent_paid > 0:
-            cursor.execute("""
-                INSERT INTO transactions (wallet_id, amount, transaction_type, reference, property_id, before_balance, after_balance, idempotency_key, status) 
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """, (wallet_id, rent_paid, 'RENT_PAYMENT', 'Wallet Sweep - Rent', tenant_info[0], wallet_balance, new_wallet_balance, f"{idempotency_key}-RENT", "COMPLETED"))
-            wallet_balance = new_wallet_balance 
-
-        if elec_paid > 0:
-            cursor.execute("""
-                INSERT INTO transactions (wallet_id, amount, transaction_type, reference, property_id, before_balance, after_balance, idempotency_key, status) 
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """, (wallet_id, elec_paid, 'ELECTRICITY_PAYMENT', 'Wallet Sweep - Electricity', tenant_info[0], wallet_balance, new_wallet_balance, f"{idempotency_key}-ELEC", "COMPLETED"))
-            wallet_balance = new_wallet_balance
-
-        if water_paid > 0:
-            cursor.execute("""
-                INSERT INTO transactions (wallet_id, amount, transaction_type, reference, property_id, before_balance, after_balance, idempotency_key, status) 
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """, (wallet_id, water_paid, 'WATER_PAYMENT', 'Wallet Sweep - Water', tenant_info[0], wallet_balance, new_wallet_balance, f"{idempotency_key}-WATER", "COMPLETED"))
-
-        conn.commit()
-        return {
-            "status": "success", 
-            "message": f"Successfully applied R{total_paid:.2f} from wallet to arrears.",
-            "new_wallet_balance": float(new_wallet_balance)
-        }
-    except Exception as e:
-        conn.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
-    finally:
-        cursor.close()
-        conn.close()
-
 @router.post("/buy-utility/")
 def api_buy_utility(req: dict, current_user: dict = Depends(verify_token)):
     conn = get_db_connection()
@@ -160,15 +71,7 @@ def api_buy_utility(req: dict, current_user: dict = Depends(verify_token)):
         amount = req.get("amount")
         amount_decimal = Decimal(str(amount))
 
-        if current_user.get("role") == "TENANT":
-            if current_user.get("tenant_id") != tenant_id:
-                raise HTTPException(status_code=403, detail="Forbidden: You can only buy utilities for your own account.")
-
-        cursor.execute("SELECT property_id FROM tenants WHERE id = %s", (tenant_id,))
-        tenant_info = cursor.fetchone()
-        if not tenant_info:
-            raise HTTPException(status_code=404, detail="Tenant not found")
-        enforce_property_access(current_user, tenant_info[0])
+        prop_id = check_tenant_access(cursor, tenant_id, current_user)
 
         idempotency_key = req.get("idempotency_key") or str(uuid.uuid4())
         cursor.execute("SELECT id FROM transactions WHERE idempotency_key = %s", (idempotency_key,))
@@ -195,28 +98,50 @@ def api_buy_utility(req: dict, current_user: dict = Depends(verify_token)):
             
         meter_id, billing_type, current_valve_status, hardware_type, tariff_id = meter_data
         
-        cursor.execute("SELECT id, balance, credit_limit FROM wallets WHERE tenant_id = %s FOR UPDATE", (tenant_id,))
+        # --- EMERGENCY FUND LOGIC (STRICT MONTHLY ALLOWANCE) ---
+        cursor.execute("SELECT id, balance, credit_limit, credit_balance, credit_debt, credit_taps_used, credit_reset_month FROM wallets WHERE tenant_id = %s FOR UPDATE", (tenant_id,))
         wallet_data = cursor.fetchone()
-        wallet_id, current_balance, credit_limit = wallet_data
+        wallet_id, current_balance, credit_limit, credit_balance, credit_debt, credit_taps_used, credit_reset_month = wallet_data
         
-        available_funds = current_balance + (credit_limit or Decimal('0'))
+        current_month = datetime.datetime.now().strftime("%Y-%m")
+        if credit_reset_month != current_month:
+            credit_balance = credit_limit or Decimal('0')
+            credit_debt = Decimal('0')
+            credit_taps_used = 0
+            cursor.execute("UPDATE wallets SET credit_balance = %s, credit_debt = 0, credit_taps_used = 0, credit_reset_month = %s WHERE id = %s", (credit_balance, current_month, wallet_id))
+
+        available_funds = current_balance + (credit_balance or Decimal('0'))
         if available_funds < amount_decimal:
-            raise HTTPException(status_code=400, detail=f"Insufficient funds. Balance: R{current_balance:.2f}, Credit: R{credit_limit or 0:.2f}.")
-            
-        new_balance = current_balance - amount_decimal
-        cursor.execute("UPDATE wallets SET balance = %s WHERE id = %s", (new_balance, wallet_id))
+            raise HTTPException(status_code=400, detail=f"Insufficient funds. Available: R{available_funds:.2f}.")
+        
+        needs_credit = False
+        credit_to_use = Decimal('0.00')
+        if current_balance < amount_decimal:
+            needs_credit = True
+            credit_to_use = amount_decimal - current_balance
+            if credit_taps_used >= 3:
+                raise HTTPException(status_code=403, detail="Insufficient main wallet funds. You have used your 3 allowed emergency fund taps for this month.")
+
+        if needs_credit:
+            new_balance = Decimal('0.00')
+            new_credit_balance = (credit_balance or Decimal('0')) - credit_to_use
+            new_credit_debt = (credit_debt or Decimal('0')) + credit_to_use
+            credit_taps_used += 1
+            cursor.execute("UPDATE wallets SET balance = 0.00, credit_balance = %s, credit_debt = %s, credit_taps_used = %s WHERE id = %s", (new_credit_balance, new_credit_debt, credit_taps_used, wallet_id))
+        else:
+            new_balance = current_balance - amount_decimal
+            cursor.execute("UPDATE wallets SET balance = %s WHERE id = %s", (new_balance, wallet_id))
         
         token = None
         reference_text = ""
         units_purchased = Decimal('0')
         vat_amount = Decimal('0.00')
-        txn_status = "FAILED_DELIVERY" # Default to failed, update to success if token/credit is generated
+        txn_status = "FAILED_DELIVERY"
         
         cursor.execute("SELECT rate_flat FROM tariffs WHERE id = %s", (tariff_id,))
         tariff_data = cursor.fetchone()
         rate = Decimal(str(tariff_data[0])) if tariff_data and tariff_data[0] else Decimal('1.0')
 
-        # Fetch Company VAT percentage
         cursor.execute("SELECT vat_percent FROM company WHERE id = 1")
         company_vat = cursor.fetchone()
         vat_percent = (Decimal(str(company_vat[0])) / Decimal(100)) if company_vat and company_vat[0] else Decimal('0.15')
@@ -224,25 +149,12 @@ def api_buy_utility(req: dict, current_user: dict = Depends(verify_token)):
         if hardware_type == 'STS':
             token = generate_token()
             txn_status = "TOKEN_ISSUED"
-            
-            # Calculate VAT and Net Amount for STS Electricity
             vat_amount = (amount_decimal / (Decimal('1') + vat_percent)) * vat_percent
             amount_ex_vat = amount_decimal - vat_amount
-            
-            # Calculate kWh using ex-VAT amount
             if rate > 0:
                 units_purchased = amount_ex_vat / rate
-                
             reference_text = f"Token: {token} | {units_purchased:.2f} kWh"
-            
-            # Create a multi-line message for the frontend alert
-            message = (
-                f"Purchase Successful!\n"
-                f"Amount Paid: R{amount_decimal:.2f}\n"
-                f"VAT ({int(vat_percent * 100)}%): R{vat_amount:.2f}\n"
-                f"Net Energy: {units_purchased:.2f} kWh\n"
-                f"Token: {token}"
-            )
+            message = f"Purchase Successful!\nAmount Paid: R{amount_decimal:.2f}\nVAT ({int(vat_percent * 100)}%): R{vat_amount:.2f}\nNet Energy: {units_purchased:.2f} kWh\nToken: {token}"
             
         elif hardware_type == 'SMART_IOT':
             txn_status = "WALLET_CREDITED"
@@ -262,11 +174,10 @@ def api_buy_utility(req: dict, current_user: dict = Depends(verify_token)):
             reference_text = f"Token: {token} | {units_purchased:.2f} kWh"
             message = f"Purchase Successful! Token: {token}"
 
-        # --- UPDATED: Link meter_id and status to the transaction ---
         cursor.execute("""
             INSERT INTO transactions (wallet_id, amount, transaction_type, reference, idempotency_key, property_id, before_balance, after_balance, meter_id, status) 
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """, (wallet_id, amount_decimal, f"{utility_type}_PURCHASE", reference_text, idempotency_key, tenant_info[0], current_balance, new_balance, meter_id, txn_status))
+        """, (wallet_id, amount_decimal, f"{utility_type}_PURCHASE", reference_text, idempotency_key, prop_id, current_balance, new_balance, meter_id, txn_status))
         
         if current_valve_status in ['TRICKLE', 'DISCONNECTED']:
             cursor.execute("UPDATE meters SET valve_status = 'OPEN' WHERE tenant_id = %s AND meter_type = %s", (tenant_id, utility_type))
@@ -294,19 +205,19 @@ def api_buy_utility(req: dict, current_user: dict = Depends(verify_token)):
         conn.close()
 
 @router.post("/set-credit-limit/{tenant_id}")
-def api_set_credit_limit(tenant_id: int, limit: float, current_user: dict = Depends(verify_token)):
+def api_set_credit_limit(tenant_id: int, limit: float, current_user: dict = Depends(require_staff)):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT property_id FROM tenants WHERE id = %s", (tenant_id,))
-        tenant_info = cursor.fetchone()
-        if not tenant_info:
-            raise HTTPException(status_code=404, detail="Tenant not found")
-        enforce_property_access(current_user, tenant_info[0])
+        check_tenant_access(cursor, tenant_id, current_user)
 
-        cursor.execute("UPDATE wallets SET credit_limit = %s WHERE tenant_id = %s", (Decimal(str(limit)), tenant_id))
+        limit_dec = Decimal(str(limit))
+        current_month = datetime.datetime.now().strftime("%Y-%m")
+        
+        cursor.execute("UPDATE wallets SET credit_limit = %s, credit_balance = %s, credit_debt = 0, credit_taps_used = 0, credit_reset_month = %s WHERE tenant_id = %s", 
+                       (limit_dec, limit_dec, current_month, tenant_id))
         conn.commit()
-        return {"status": "success", "message": f"Credit limit set to R{limit:.2f}."}
+        return {"status": "success", "message": f"Emergency Fund limit set to R{limit:.2f}."}
     except Exception as e:
         conn.rollback()
         raise HTTPException(status_code=400, detail=str(e))
@@ -319,11 +230,7 @@ def api_adjust_account(tenant_id: int, req: dict, current_user: dict = Depends(v
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT property_id FROM tenants WHERE id = %s", (tenant_id,))
-        tenant_info = cursor.fetchone()
-        if not tenant_info:
-            raise HTTPException(status_code=404, detail="Tenant not found")
-        enforce_property_access(current_user, tenant_info[0])
+        prop_id = check_tenant_access(cursor, tenant_id, current_user)
 
         cursor.execute("SELECT id, balance FROM wallets WHERE tenant_id = %s FOR UPDATE", (tenant_id,))
         wallet_data = cursor.fetchone()
@@ -333,7 +240,6 @@ def api_adjust_account(tenant_id: int, req: dict, current_user: dict = Depends(v
         target = req.get("target").upper()
         reason = req.get("reason")
         
-        # Cap the adjustment amount to what is actually owed so we don't over-deduct from the wallet
         cursor.execute("SELECT rent_outstanding, electricity_outstanding, water_outstanding FROM tenants WHERE id = %s FOR UPDATE", (tenant_id,))
         rent_owed, elec_owed, water_owed = cursor.fetchone()
 
@@ -348,11 +254,9 @@ def api_adjust_account(tenant_id: int, req: dict, current_user: dict = Depends(v
             if amount_input <= 0:
                 raise HTTPException(status_code=400, detail="No arrears to adjust for this utility.")
 
-            # Deduct from wallet
             new_balance = current_balance - amount_input
             cursor.execute("UPDATE wallets SET balance = %s WHERE id = %s", (new_balance, wallet_id))
             
-            # Clear the arrears
             if target == "RENT":
                 cursor.execute("UPDATE tenants SET rent_outstanding = GREATEST(0, rent_outstanding - %s) WHERE id = %s", (amount_input, tenant_id))
             elif target == "ELECTRICITY":
@@ -363,7 +267,7 @@ def api_adjust_account(tenant_id: int, req: dict, current_user: dict = Depends(v
             cursor.execute("""
                 INSERT INTO transactions (wallet_id, amount, transaction_type, reference, property_id, before_balance, after_balance, status) 
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            """, (wallet_id, -amount_input, f"ADJUSTMENT_{target}", reason, tenant_info[0], current_balance, new_balance, "COMPLETED"))
+            """, (wallet_id, -amount_input, f"ADJUSTMENT_{target}", reason, prop_id, current_balance, new_balance, "COMPLETED"))
 
         elif target == "WALLET":
             new_balance = current_balance + amount_input
@@ -371,7 +275,7 @@ def api_adjust_account(tenant_id: int, req: dict, current_user: dict = Depends(v
             cursor.execute("""
                 INSERT INTO transactions (wallet_id, amount, transaction_type, reference, property_id, before_balance, after_balance, status) 
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            """, (wallet_id, amount_input, f"ADJUSTMENT_{target}", reason, tenant_info[0], current_balance, new_balance, "COMPLETED"))
+            """, (wallet_id, amount_input, f"ADJUSTMENT_{target}", reason, prop_id, current_balance, new_balance, "COMPLETED"))
         else:
             raise HTTPException(status_code=400, detail="Invalid target.")
             
@@ -389,15 +293,7 @@ def api_get_transactions(tenant_id: int, current_user: dict = Depends(verify_tok
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        if current_user.get("role") == "TENANT":
-            if current_user.get("tenant_id") != tenant_id:
-                raise HTTPException(status_code=403, detail="Forbidden: You can only view your own transactions.")
-
-        cursor.execute("SELECT property_id FROM tenants WHERE id = %s", (tenant_id,))
-        tenant_info = cursor.fetchone()
-        if not tenant_info:
-            raise HTTPException(status_code=404, detail="Tenant not found")
-        enforce_property_access(current_user, tenant_info[0])
+        check_tenant_access(cursor, tenant_id, current_user)
 
         cursor.execute("SELECT id FROM wallets WHERE tenant_id = %s", (tenant_id,))
         wallet_data = cursor.fetchone()
@@ -427,16 +323,81 @@ def api_get_transactions(tenant_id: int, current_user: dict = Depends(verify_tok
         cursor.close()
         conn.close()
 
-@router.post("/restrict-water/{tenant_id}")
-def api_restrict_water(tenant_id: int, current_user: dict = Depends(verify_token)):
+@router.get("/tenant-utility-history/{tenant_id}")
+def api_get_tenant_utility_history(tenant_id: int, current_user: dict = Depends(verify_token)):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT property_id FROM tenants WHERE id = %s", (tenant_id,))
-        tenant_info = cursor.fetchone()
-        if not tenant_info:
-            raise HTTPException(status_code=404, detail="Tenant not found")
-        enforce_property_access(current_user, tenant_info[0])
+        check_tenant_access(cursor, tenant_id, current_user)
+
+        cursor.execute("SELECT id FROM wallets WHERE tenant_id = %s", (tenant_id,))
+        wallet_data = cursor.fetchone()
+        if not wallet_data:
+            return {"status": "success", "electricity": [], "water": []}
+        wallet_id = wallet_data[0]
+        
+        cursor.execute("""
+            SELECT created_at, amount, transaction_type, reference 
+            FROM transactions 
+            WHERE wallet_id = %s AND (transaction_type LIKE '%%_PURCHASE' OR transaction_type LIKE '%%_USAGE' OR transaction_type LIKE '%%_BILL')
+            ORDER BY created_at DESC
+            LIMIT 100
+        """, (wallet_id,))
+        
+        rows = cursor.fetchall()
+        
+        elec_list = []
+        water_list = []
+        
+        for row in rows:
+            date_str = row[0].strftime("%Y-%m-%d %H:%M")
+            amount = float(abs(row[1]))
+            txn_type = row[2]
+            ref = row[3] or ""
+            
+            token = None
+            units = ""
+            
+            if "Token:" in ref:
+                parts = ref.split("|")
+                token = parts[0].replace("Token:", "").strip()
+                if len(parts) > 1:
+                    units = parts[1].strip()
+            elif "Top-up:" in ref:
+                units = ref.replace("Smart Meter Top-up:", "").strip()
+            elif "BILL" in txn_type:
+                units = "Postpaid Bill"
+                
+            record = {
+                "date": date_str,
+                "amount": amount,
+                "type": txn_type,
+                "token": token,
+                "units": units
+            }
+            
+            if "ELECTRICITY" in txn_type:
+                elec_list.append(record)
+            elif "WATER" in txn_type:
+                water_list.append(record)
+                
+        return {
+            "status": "success", 
+            "electricity": elec_list, 
+            "water": water_list
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
+@router.post("/restrict-water/{tenant_id}")
+def api_restrict_water(tenant_id: int, current_user: dict = Depends(require_staff)):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        check_tenant_access(cursor, tenant_id, current_user)
 
         cursor.execute("SELECT balance FROM wallets WHERE tenant_id = %s", (tenant_id,))
         wallet_data = cursor.fetchone()
@@ -459,15 +420,11 @@ def api_restrict_water(tenant_id: int, current_user: dict = Depends(verify_token
         conn.close()
 
 @router.post("/unrestrict-water/{tenant_id}")
-def api_unrestrict_water(tenant_id: int, current_user: dict = Depends(verify_token)):
+def api_unrestrict_water(tenant_id: int, current_user: dict = Depends(require_staff)):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT property_id FROM tenants WHERE id = %s", (tenant_id,))
-        tenant_info = cursor.fetchone()
-        if not tenant_info:
-            raise HTTPException(status_code=404, detail="Tenant not found")
-        enforce_property_access(current_user, tenant_info[0])
+        check_tenant_access(cursor, tenant_id, current_user)
 
         cursor.execute("""
             UPDATE meters SET valve_status = 'OPEN' 
@@ -485,15 +442,11 @@ def api_unrestrict_water(tenant_id: int, current_user: dict = Depends(verify_tok
         conn.close()
 
 @router.post("/admin-reset-wallet/{tenant_id}")
-def api_admin_reset_wallet(tenant_id: int, current_user: dict = Depends(verify_token)):
+def api_admin_reset_wallet(tenant_id: int, current_user: dict = Depends(require_staff)):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT property_id FROM tenants WHERE id = %s", (tenant_id,))
-        tenant_info = cursor.fetchone()
-        if not tenant_info:
-            raise HTTPException(status_code=404, detail="Tenant not found")
-        enforce_property_access(current_user, tenant_info[0])
+        check_tenant_access(cursor, tenant_id, current_user)
 
         cursor.execute("UPDATE wallets SET balance = 0.00 WHERE tenant_id = %s", (tenant_id,))
         cursor.execute("UPDATE tenants SET rent_outstanding = 0.00, electricity_outstanding = 0.00, water_outstanding = 0.00 WHERE id = %s", (tenant_id,))

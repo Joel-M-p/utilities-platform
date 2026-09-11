@@ -172,7 +172,7 @@ def init_db():
             );
         """)
 
-        # --- 13. METER EVENTS TABLE (NEW: FOR TAMPER & AUDIT LOGGING) ---
+        # --- 13. METER EVENTS TABLE ---
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS meter_events (
                 id SERIAL PRIMARY KEY,
@@ -205,7 +205,11 @@ def init_db():
         cursor.execute("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS inspection_notes TEXT;")
         cursor.execute("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS unit_number VARCHAR(50);")
 
+        # --- NEW: MICRO-CREDIT WALLET COLUMNS ---
         cursor.execute("ALTER TABLE wallets ADD COLUMN IF NOT EXISTS credit_limit DECIMAL DEFAULT 0;")
+        cursor.execute("ALTER TABLE wallets ADD COLUMN IF NOT EXISTS credit_balance DECIMAL DEFAULT 0;")
+        cursor.execute("ALTER TABLE wallets ADD COLUMN IF NOT EXISTS credit_taps_used INT DEFAULT 0;")
+        cursor.execute("ALTER TABLE wallets ADD COLUMN IF NOT EXISTS credit_reset_month VARCHAR(7);")
 
         cursor.execute("ALTER TABLE meters ADD COLUMN IF NOT EXISTS property_id INTEGER REFERENCES properties(id);")
         cursor.execute("ALTER TABLE meters ADD COLUMN IF NOT EXISTS hardware_type VARCHAR(20) DEFAULT 'STS';")
@@ -230,8 +234,6 @@ def init_db():
         cursor.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS before_balance DECIMAL;")
         cursor.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS after_balance DECIMAL;")
         cursor.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS property_id INTEGER REFERENCES properties(id);")
-        
-        # --- NEW: METER LINKAGE AND TRANSACTION STATES ---
         cursor.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS meter_id INTEGER REFERENCES meters(id);")
         cursor.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'COMPLETED';")
         

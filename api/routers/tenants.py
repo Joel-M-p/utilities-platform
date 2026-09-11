@@ -1,11 +1,12 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
 from api.database import get_db_connection
 from api.schemas import TenantRequest, MeterRequest, MeterUpdateRequest, TenantUpdateRequest, ExitFormRequest, InspectionResultRequest
-from api.security import verify_token, enforce_property_access
+from api.security import verify_token, enforce_property_access, require_staff
 from api.services.notifications import send_notification
 import datetime
 import os
 import random
+from decimal import Decimal
 
 router = APIRouter()
 
@@ -38,14 +39,14 @@ def api_create_tenant(payload: dict, current_user: dict = Depends(verify_token))
         unit_number = payload.get("unit_number")
         
         if unit_number and property_id:
-            cursor.execute("SELECT id FROM tenants WHERE unit_number = %s AND property_id = %s", (unit_number, property_id))
+            cursor.execute("SELECT id FROM tenants WHERE unit_number = %s AND property_id = %s AND status = 'ACTIVE'", (unit_number, property_id))
             if cursor.fetchone():
-                raise HTTPException(status_code=400, detail=f"Unit {unit_number} already exists at this property.")
+                raise HTTPException(status_code=400, detail=f"Unit {unit_number} is currently occupied by an active tenant.")
         
         if email and property_id:
-            cursor.execute("SELECT id FROM tenants WHERE email = %s AND property_id = %s", (email, property_id))
+            cursor.execute("SELECT id FROM tenants WHERE email = %s AND property_id = %s AND status = 'ACTIVE'", (email, property_id))
             if cursor.fetchone():
-                raise HTTPException(status_code=400, detail=f"Email {email} is already registered at this property. Emails must be unique per property.")
+                raise HTTPException(status_code=400, detail=f"Email {email} is already registered to an active tenant at this property.")
         
         cursor.execute("""
             INSERT INTO tenants (first_name, last_name, email, rent_outstanding, electricity_outstanding, water_outstanding, property_id, unit_number) 
@@ -206,7 +207,7 @@ def api_inspection_result(tenant_id: int, req: InspectionResultRequest, current_
         
         if req.status.upper() == "PASSED":
             cursor.execute("UPDATE tenants SET status = 'VACATED', vacated_at = CURRENT_TIMESTAMP WHERE id = %s", (tenant_id,))
-            # --- UPDATED: Free the meters from the tenant so they can be reassigned ---
+            # --- AUTOMATIC METER FREEING ---
             cursor.execute("UPDATE meters SET is_active = FALSE, tenant_id = NULL WHERE tenant_id = %s", (tenant_id,))
             send_notification(f"{first_name} {last_name}", email, "Inspection passed. Account officially closed. Goodbye!")
         
@@ -244,9 +245,9 @@ def api_update_tenant(tenant_id: int, tenant: TenantUpdateRequest, current_user:
                 raise HTTPException(status_code=400, detail="Cannot change Tenant Name once billing information exists.")
         
         if tenant.email != curr_email:
-            cursor.execute("SELECT id FROM tenants WHERE email = %s AND property_id = %s AND id != %s", (tenant.email, prop_id, tenant_id))
+            cursor.execute("SELECT id FROM tenants WHERE email = %s AND property_id = %s AND status = 'ACTIVE' AND id != %s", (tenant.email, prop_id, tenant_id))
             if cursor.fetchone():
-                raise HTTPException(status_code=400, detail=f"Email {tenant.email} is already registered at this property.")
+                raise HTTPException(status_code=400, detail=f"Email {tenant.email} is already registered to an active tenant at this property.")
 
             cursor.execute("SELECT previous_emails FROM tenants WHERE id = %s", (tenant_id,))
             prev_log = cursor.fetchone()[0] or ""
@@ -265,7 +266,7 @@ def api_update_tenant(tenant_id: int, tenant: TenantUpdateRequest, current_user:
                 cursor.execute("UPDATE meters SET is_active = FALSE WHERE tenant_id = %s", (tenant_id,))
             elif new_status == 'VACATED':
                 cursor.execute("UPDATE tenants SET status = 'VACATED', vacated_at = CURRENT_TIMESTAMP, suspended_at = NULL WHERE id = %s", (tenant_id,))
-                # --- UPDATED: Free the meters from the tenant so they can be reassigned ---
+                # --- AUTOMATIC METER FREEING ---
                 cursor.execute("UPDATE meters SET is_active = FALSE, tenant_id = NULL WHERE tenant_id = %s", (tenant_id,))
             elif new_status == 'ACTIVE':
                 cursor.execute("UPDATE tenants SET status = 'ACTIVE', suspended_at = NULL, vacated_at = NULL WHERE id = %s", (tenant_id,))
@@ -305,7 +306,7 @@ def api_vacate_tenant(tenant_id: int, current_user: dict = Depends(verify_token)
     try:
         check_tenant_access(cursor, tenant_id, current_user)
         cursor.execute("UPDATE tenants SET status = 'VACATED', vacated_at = CURRENT_TIMESTAMP, suspended_at = NULL WHERE id = %s", (tenant_id,))
-        # --- UPDATED: Free the meters from the tenant so they can be reassigned ---
+        # --- AUTOMATIC METER FREEING (PRODUCTION SAFE) ---
         cursor.execute("UPDATE meters SET is_active = FALSE, tenant_id = NULL WHERE tenant_id = %s", (tenant_id,))
         conn.commit()
         return {"status": "success", "message": f"Tenant {tenant_id} has been vacated. Meters freed for reassignment."}
@@ -334,7 +335,7 @@ def api_get_tenant_balance(tenant_id: int, current_user: dict = Depends(verify_t
         if not utility_model:
             utility_model = "STS_TOKEN"
             
-        cursor.execute("SELECT balance, credit_limit FROM wallets WHERE tenant_id = %s", (tenant_id,))
+        cursor.execute("SELECT balance, credit_limit, credit_balance, credit_taps_used FROM wallets WHERE tenant_id = %s", (tenant_id,))
         wallet_data = cursor.fetchone()
         
         cursor.execute("""
@@ -363,13 +364,17 @@ def api_get_tenant_balance(tenant_id: int, current_user: dict = Depends(verify_t
             elif m_type.startswith('WATER') and m_hardware == 'SMART_IOT':
                 water_balance_kl = float(m_balance)
 
+        credit_limit = wallet_data[1] if wallet_data[1] is not None else 0
+
         return {
             "tenant_name": f"{first_name} {last_name}",
             "rent_outstanding": float(rent_owed),
             "electricity_outstanding": float(elec_owed),
             "water_outstanding": float(water_owed),
             "wallet_balance": float(wallet_data[0]),
-            "credit_limit": float(wallet_data[1] if wallet_data[1] is not None else 0),
+            "credit_limit": float(credit_limit),
+            "credit_balance": float(wallet_data[2] if wallet_data[2] is not None else 0),
+            "credit_taps_used": wallet_data[3] if wallet_data[3] is not None else 0,
             "elec_meter_balance_kwh": elec_balance_kwh,
             "water_meter_balance_kl": water_balance_kl,
             "utility_model": utility_model,
@@ -560,56 +565,91 @@ def api_get_docs(tenant_id: int, current_user: dict = Depends(verify_token)):
 
 # --- Meter Endpoints ---
 
-@router.post("/assign-meter/")
-def api_assign_meter(meter: MeterRequest, current_user: dict = Depends(verify_token)):
+@router.get("/available-meters/")
+def api_get_available_meters(current_user: dict = Depends(verify_token)):
+    """Fetches meters that are vacant (tenant_id IS NULL) so PMs can reassign them easily."""
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        prop_id = check_tenant_access(cursor, meter.tenant_id, current_user)
+        user_role = current_user.get("role")
+        user_prop_id = current_user.get("property_id")
 
-        cursor.execute("SELECT meter_type FROM tariffs WHERE id = %s", (meter.tariff_id,))
+        query = """
+            SELECT id, serial_number, meter_type, billing_type, tariff_id 
+            FROM meters 
+            WHERE tenant_id IS NULL AND is_active = FALSE
+        """
+        params = []
+        if user_role != "ADMIN" and user_prop_id:
+            query += " AND property_id = %s"
+            params.append(user_prop_id)
+        
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        meters_list = []
+        for row in rows:
+            meters_list.append({
+                "id": row[0],
+                "serial_number": row[1],
+                "meter_type": row[2],
+                "billing_type": row[3],
+                "tariff_id": row[4]
+            })
+        return {"status": "success", "meters": meters_list}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
+@router.post("/assign-meter/")
+def api_assign_meter(payload: dict, current_user: dict = Depends(verify_token)):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        tenant_id = payload.get("tenant_id")
+        prop_id = check_tenant_access(cursor, tenant_id, current_user)
+
+        meter_type = payload.get("meter_type").upper()
+        serial_number = payload.get("serial_number")
+        billing_type = payload.get("billing_type").upper()
+
+        # --- AUTO-FETCH TARIFF ---
+        cursor.execute("SELECT id FROM tariffs WHERE property_id = %s AND meter_type = %s", (prop_id, meter_type))
         tariff_data = cursor.fetchone()
         if not tariff_data:
-            raise HTTPException(status_code=404, detail="Selected tariff not found.")
-        
-        tariff_meter_type = tariff_data[0]
-        if tariff_meter_type != meter.meter_type:
-            raise HTTPException(status_code=400, detail=f"Type mismatch: You cannot assign a {tariff_meter_type} tariff to a {meter.meter_type} meter.")
+            raise HTTPException(status_code=400, detail=f"No {meter_type} tariff configured for this property. Please create a tariff first.")
+        tariff_id = tariff_data[0]
 
-        # --- PREVENT DUPLICATE ACTIVE METERS OF SAME TYPE ---
         cursor.execute("""
             SELECT id FROM meters 
             WHERE tenant_id = %s AND meter_type = %s AND is_active = TRUE
-        """, (meter.tenant_id, meter.meter_type.upper()))
+        """, (tenant_id, meter_type))
         if cursor.fetchone():
-            raise HTTPException(status_code=400, detail=f"Tenant already has an active {meter.meter_type} meter. Deactivate the existing one first if you need to replace it.")
+            raise HTTPException(status_code=400, detail=f"Tenant already has an active {meter_type} meter. Deactivate the existing one first if you need to replace it.")
 
-        # --- NEW: CHECK IF METER ALREADY EXISTS (REASSIGNMENT) ---
-        # If the serial number exists on this property, it means a previous tenant left it behind.
         cursor.execute("""
             SELECT id FROM meters 
             WHERE serial_number = %s AND property_id = %s
-        """, (meter.serial_number, prop_id))
+        """, (serial_number, prop_id))
         existing_meter = cursor.fetchone()
 
         if existing_meter:
-            # Reassign the existing physical meter to the new tenant
             meter_id = existing_meter[0]
             cursor.execute("""
                 UPDATE meters 
                 SET tenant_id = %s, tariff_id = %s, billing_type = %s, is_active = TRUE, valve_status = 'OPEN' 
                 WHERE id = %s
-            """, (meter.tenant_id, meter.tariff_id, meter.billing_type.upper(), meter_id))
+            """, (tenant_id, tariff_id, billing_type, meter_id))
         else:
-            # Create a brand new meter
             cursor.execute("""
                 INSERT INTO meters (tenant_id, meter_type, billing_type, serial_number, tariff_id, property_id) 
                 VALUES (%s, %s, %s, %s, %s, %s) RETURNING id
-            """, (meter.tenant_id, meter.meter_type.upper(), meter.billing_type.upper(), meter.serial_number, meter.tariff_id, prop_id))
+            """, (tenant_id, meter_type, billing_type, serial_number, tariff_id, prop_id))
             meter_id = cursor.fetchone()[0]
 
         conn.commit()
-        return {"status": "success", "message": f"{meter.meter_type} meter assigned successfully!", "meter_id": meter_id}
+        return {"status": "success", "message": f"{meter_type} meter assigned successfully!", "meter_id": meter_id}
     except Exception as e:
         conn.rollback()
         raise HTTPException(status_code=400, detail=str(e))
@@ -626,7 +666,6 @@ def api_update_meter(meter_id: int, meter: MeterUpdateRequest, current_user: dic
         meter_data = cursor.fetchone()
         if not meter_data:
             raise HTTPException(status_code=404, detail="Meter not found.")
-        # Check if meter is assigned to a tenant. If so, verify tenant access.
         if meter_data[0]:
             check_tenant_access(cursor, meter_data[0], current_user)
 

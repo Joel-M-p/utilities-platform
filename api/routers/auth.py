@@ -42,12 +42,24 @@ def api_tenant_login(payload: dict):
         unit_number = payload.get("unit_number")
         email = payload.get("email")
         
-        cursor.execute("SELECT id, email, property_id FROM tenants WHERE unit_number = %s AND property_id = %s", (unit_number, property_id))
+        # A unit can have multiple tenant rows over time (a VACATED tenant's record is
+        # kept for history once the unit is re-let). We must exclude VACATED rows from
+        # login resolution, otherwise a re-let unit can resolve to the past tenant and a
+        # legitimate current tenant (ACTIVE, SUSPENDED, or PENDING_EXIT) gets rejected.
+        # ORDER BY id DESC + LIMIT 1 is a safety net in case of any historical data
+        # anomalies where more than one non-vacated row exists for the same unit.
+        cursor.execute("""
+            SELECT id, email, property_id 
+            FROM tenants 
+            WHERE unit_number = %s AND property_id = %s AND status != 'VACATED'
+            ORDER BY id DESC
+            LIMIT 1
+        """, (unit_number, property_id))
         tenant_data = cursor.fetchone()
         
         if not tenant_data:
-            raise HTTPException(status_code=404, detail="Tenant not found for this Unit Number at this Property")
-        if tenant_data[1] != email:
+            raise HTTPException(status_code=404, detail="No active tenant found for this Unit Number at this Property")
+        if tenant_data[1].strip().lower() != email.strip().lower():
             raise HTTPException(status_code=401, detail="Invalid email for this Unit Number")
             
         # Issue a real JWT for the tenant, embedding their tenant_id and property_id

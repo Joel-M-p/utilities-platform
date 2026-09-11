@@ -1,7 +1,6 @@
 from decimal import Decimal
 
 def process_waterfall_payment(cursor, tenant_id, payment_amount, rent_pct=None, elec_pct=None, water_pct=None, idempotency_key=None):
-    # LOCK THE TENANT ROW
     cursor.execute("""
         SELECT first_name, last_name, email, property_id, rent_outstanding, electricity_outstanding, water_outstanding 
         FROM tenants WHERE id = %s FOR UPDATE
@@ -13,12 +12,11 @@ def process_waterfall_payment(cursor, tenant_id, payment_amount, rent_pct=None, 
         
     first_name, last_name, email, property_id, rent_owed, elec_owed, water_owed = tenant_data
     
-    # LOCK THE WALLET ROW
-    cursor.execute("SELECT id, balance FROM wallets WHERE tenant_id = %s FOR UPDATE", (tenant_id,))
+    cursor.execute("SELECT id, balance, credit_limit, credit_balance, credit_debt FROM wallets WHERE tenant_id = %s FOR UPDATE", (tenant_id,))
     wallet_row = cursor.fetchone()
     if not wallet_row:
         raise Exception("Wallet not found")
-    wallet_id, current_balance = wallet_row
+    wallet_id, current_balance, credit_limit, credit_balance, credit_debt = wallet_row
     
     payment_amount = Decimal(str(payment_amount))
     
@@ -38,7 +36,6 @@ def process_waterfall_payment(cursor, tenant_id, payment_amount, rent_pct=None, 
     spillover = Decimal('0.0')
     
     def insert_txn(amount, t_type, ref, before_bal, after_bal, suffix):
-        # Append a suffix so multiple inserts in the same payment don't violate the UNIQUE constraint
         key = f"{idempotency_key}-{suffix}" if idempotency_key else None
         cursor.execute("""
             INSERT INTO transactions (wallet_id, amount, transaction_type, reference, property_id, before_balance, after_balance, idempotency_key) 
@@ -81,7 +78,7 @@ def process_waterfall_payment(cursor, tenant_id, payment_amount, rent_pct=None, 
         else:
             spillover += water_target
 
-    # STEP 4: Handle Spillover
+    # STEP 4: Handle Spillover (If a specific utility had no arrears, its % goes to the remaining arrears)
     if spillover > 0:
         if rent_owed > 0:
             allocation = min(spillover, rent_owed)
@@ -104,7 +101,16 @@ def process_waterfall_payment(cursor, tenant_id, payment_amount, rent_pct=None, 
             cursor.execute("UPDATE tenants SET water_outstanding = %s WHERE id = %s", (new_water_owed, tenant_id))
             insert_txn(allocation, 'WATER_PAYMENT', 'Waterfall Spillover', current_balance, current_balance, "SPILL_WATER")
 
-    # STEP 5: Top up wallet with anything left over
+    # STEP 5: Repay Emergency Fund Debt (The Loan)
+    # Pay off the debt WITHOUT restoring the credit_balance.
+    if spillover > 0 and credit_debt and credit_debt > 0:
+        repayment_amount = min(spillover, credit_debt)
+        new_credit_debt = credit_debt - repayment_amount
+        spillover -= repayment_amount
+        cursor.execute("UPDATE wallets SET credit_debt = %s WHERE id = %s", (new_credit_debt, wallet_id))
+        insert_txn(repayment_amount, 'EMERGENCY_FUND_REPAYMENT', 'Loan Repayment', current_balance, current_balance, "CRED_REPAY")
+
+    # STEP 6: Top up main wallet with anything left over
     if spillover > 0:
         new_wallet_balance = current_balance + spillover
         cursor.execute("UPDATE wallets SET balance = %s WHERE id = %s", (new_wallet_balance, wallet_id))

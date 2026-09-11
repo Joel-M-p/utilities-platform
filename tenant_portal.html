@@ -21,7 +21,7 @@
             --gray: #7f8c8d;
             --bg: #f4f7f6;
         }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg); margin: 0; padding: 0; color: #1c1c1e; -webkit-font-smoothing: antialiased; padding-bottom: 70px; /* Space for bottom nav */ }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg); margin: 0; padding: 0; color: #1c1c1e; -webkit-font-smoothing: antialiased; padding-bottom: 70px; }
         
         /* Login Screen */
         .login-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; background: var(--primary); color: white; padding: 20px; box-sizing: border-box; }
@@ -42,11 +42,17 @@
         .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .card h3 { margin: 0 0 15px 0; color: var(--dark); font-size: 1.1em; border-bottom: 1px solid #eee; padding-bottom: 10px; }
         
-        /* Alert Banner */
-        .alert-banner { background-color: #ffebee; color: #c0392b; padding: 20px; border-radius: 12px; margin-bottom: 20px; border-left: 5px solid #c0392b; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .alert-banner h3 { color: #c0392b; margin: 0 0 10px 0; border: none; padding: 0; font-size: 1.2em; }
+        /* Alert Banners */
+        .alert-banner { padding: 20px; border-radius: 12px; margin-bottom: 20px; border-left: 5px solid; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .alert-banner h3 { margin: 0 0 10px 0; border: none; padding: 0; font-size: 1.2em; }
         .alert-banner p { margin: 0 0 15px 0; font-size: 0.95em; }
-        .alert-banner button { width: 100%; padding: 12px; background: #c0392b; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .alert-banner button { width: 100%; padding: 12px; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .alert-danger { background-color: #ffebee; color: #c0392b; border-left-color: #c0392b; }
+        .alert-danger h3 { color: #c0392b; }
+        .alert-danger button { background: #c0392b; }
+        .alert-warning { background-color: #fff3cd; color: #856404; border-left-color: #f39c12; }
+        .alert-warning h3 { color: #856404; }
+        .alert-warning button { background: #f39c12; }
 
         /* KPI Grid */
         .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
@@ -65,6 +71,12 @@
         .wallet-sub { font-size: 0.9em; opacity: 0.8; margin-bottom: 25px; }
         .btn-fund { background: white; color: var(--primary); border: none; padding: 15px; width: 100%; border-radius: 8px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         
+        /* Emergency Fund Card */
+        .credit-card { background: white; border: 2px dashed var(--warning); padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 20px; }
+        .credit-card h3 { color: var(--warning); border: none; margin-bottom: 5px; }
+        .credit-card .val { font-size: 1.8em; font-weight: bold; color: var(--warning); margin-bottom: 5px; }
+        .credit-card .taps-badge { background: var(--warning); color: white; padding: 3px 10px; border-radius: 20px; font-size: 0.8em; font-weight: bold; }
+
         /* Tariff Breakdown Styles */
         .tariff-item { margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
         .tariff-item:last-child { border-bottom: none; margin-bottom: 0; }
@@ -94,7 +106,7 @@
         
         /* Bottom Navigation */
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; border-top: 1px solid #ddd; display: flex; justify-content: space-around; padding: 8px 0; z-index: 100; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
-        .nav-btn { background: none; border: none; color: var(--gray); font-size: 0.7em; display: flex; flex-direction: column; align-items: center; cursor: pointer; padding: 5px; width: 100%; }
+        .nav-btn { background: none; border: none; color: var(--gray); font-size: 0.65em; display: flex; flex-direction: column; align-items: center; cursor: pointer; padding: 5px; width: 100%; }
         .nav-btn.active { color: var(--secondary); }
         .nav-icon { font-size: 1.5em; margin-bottom: 3px; }
 
@@ -110,6 +122,9 @@
         input, select { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
         button { width: 100%; padding: 12px; background: var(--secondary); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
         .btn-paygate { background: #003366; }
+        
+        /* Token Reprint Button */
+        .btn-token { background: var(--secondary); padding: 5px 10px; font-size: 0.75em; width: auto; }
     </style>
 </head>
 <body>
@@ -136,23 +151,37 @@
 
     <!-- SCREEN 1: HOME -->
     <div id="screen-home" class="screen active">
-        <!-- ARREARS ALERT BANNER (Hidden by default) -->
-        <div id="rentAlertBox" class="alert-banner" style="display:none;">    
+        <!-- RENT ARREARS ALERT BANNER (Red) -->
+        <div id="rentAlertBox" class="alert-banner alert-danger" style="display:none;">    
             <h3>⚠️ Action Required: Rent Arrears</h3>
             <p>You currently owe <strong id="alertRentAmount">R 0.00</strong> in rent. Any funds added to your wallet will automatically be allocated to rent first.</p>
             <button onclick="switchTab('screen-topup', document.querySelector('.nav-btn[data-tab=topup]'))">Add Funds to Clear Rent</button>
         </div>
 
+        <!-- LOW BALANCE WARNING BANNER (Yellow/Orange) -->
+        <div id="lowBalanceBox" class="alert-banner alert-warning" style="display:none;">
+            <h3>⚠️ Low Wallet Balance</h3>
+            <p>Your main wallet balance is <strong id="alertLowBalAmount">R 0.00</strong>. <span id="alertLowBalText">Please top up immediately to avoid utility disconnection.</span></p>
+            <button onclick="switchTab('screen-topup', document.querySelector('.nav-btn[data-tab=topup]'))">Top Up Wallet Now</button>
+        </div>
+
         <!-- WALLET CONSUMPTION VIEW (Smart Meters) -->
         <div id="walletView" style="display:none;">
             <div class="wallet-card">
-                <h2>Wallet Balance</h2>
+                <h2>Main Wallet Balance</h2>
                 <div class="wallet-balance" id="kpiWallet">R 0.00</div>
                 <div class="wallet-sub" id="kpiForecast">Loading consumption forecast...</div>
                 <button class="btn-fund" onclick="switchTab('screen-topup', document.querySelector('.nav-btn[data-tab=topup]'))">Fund My Wallet</button>
             </div>
+            
+            <!-- EMERGENCY FUND CARD -->
+            <div id="creditCardBox" class="credit-card" style="display:none;">
+                <h3>Emergency Fund Available</h3>
+                <div class="val" id="kpiCreditBal">R 0.00</div>
+                <span class="taps-badge" id="tapsBadge">3 Taps Left</span>
+            </div>
             <p style="text-align:center; color:var(--gray); font-size:0.9em; margin-top:-10px; margin-bottom:20px;">
-                Your wallet balance decreases automatically as you consume electricity and municipal services.
+                Your main wallet balance decreases automatically as you consume electricity and municipal services.
             </p>
         </div>
 
@@ -167,6 +196,11 @@
                     <h4>Total Arrears</h4>
                     <div class="val" id="kpiArrearsSts">R 0.00</div>
                 </div>
+            </div>
+            <div id="creditCardBoxSts" class="credit-card" style="display:none; margin-bottom: 20px;">
+                <h3>Emergency Fund Available</h3>
+                <div class="val" id="kpiCreditBalSts">R 0.00</div>
+                <span class="taps-badge" id="tapsBadgeSts">3 Taps Left</span>
             </div>
             <div class="card">
                 <h3>Quick Top Up</h3>
@@ -191,7 +225,7 @@
                 <span class="txn-amount text-danger" id="sumWater">R 0.00</span>
             </div>
             <div class="txn-item">
-                <span>Overdraft Limit Available</span>
+                <span>Emergency Fund Limit Set</span>
                 <span class="txn-amount text-success" id="sumOverdraft">R 0.00</span>
             </div>
         </div>
@@ -264,11 +298,28 @@
         </div>
     </div>
 
+    <!-- SCREEN 5: UTILITIES (NEW) -->
+    <div id="screen-utilities" class="screen">
+        <div class="card">
+            <h3>⚡ Electricity History & Tokens</h3>
+            <div id="elecUtilList">
+                <p style="text-align:center; color:var(--gray);">Loading electricity history...</p>
+            </div>
+        </div>
+        <div class="card">
+            <h3>💧 Water / Municipal History</h3>
+            <div id="waterUtilList">
+                <p style="text-align:center; color:var(--gray);">Loading water history...</p>
+            </div>
+        </div>
+    </div>
+
     <!-- Bottom Navigation -->
     <div class="bottom-nav">
         <button class="nav-btn active" onclick="switchTab('screen-home', event)"><span class="nav-icon">🏠</span>Home</button>
         <button class="nav-btn" onclick="switchTab('screen-tariffs', event)"><span class="nav-icon">📉</span>Tariffs</button>
         <button class="nav-btn" onclick="switchTab('screen-topup', event)"><span class="nav-icon">💳</span>Top Up</button>
+        <button class="nav-btn" onclick="switchTab('screen-utilities', event)"><span class="nav-icon">⚡</span>Utilities</button>
         <button class="nav-btn" onclick="switchTab('screen-history', event)"><span class="nav-icon">⏳</span>History</button>
     </div>
 
@@ -359,6 +410,7 @@
         
         if(screenId === 'screen-tariffs') tLoadTariffs();
         if(screenId === 'screen-history') tLoadTransactions();
+        if(screenId === 'screen-utilities') tLoadUtilityHistory();
     }
 
     async function tLoadDashboard() {
@@ -373,30 +425,103 @@
             
             currentPropertyId = d.property_id || null;
             const totalArrears = d.rent_outstanding + d.electricity_outstanding + d.water_outstanding;
-            const availableBalance = d.wallet_balance + d.credit_limit;
+            
+            // Separate Main Balance and Emergency Fund
+            const mainBalance = d.wallet_balance;
+            const creditBalance = d.credit_balance || 0;
+            const tapsUsed = d.credit_taps_used || 0;
+            const tapsLeft = 3 - tapsUsed;
+            
+            // --- SMART CONSUMPTION PATTERN FORECAST ---
+            let dailyRate = 0;
+            let forecastText = "No recent usage to forecast.";
+            let daysLeft = 0;
+            
+            try {
+                const txRes = await fetch(`/transactions/${currentTenantId}`, { headers: getAuthHeaders() });
+                const txData = await txRes.json();
+                const now = new Date();
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(now.getDate() - 30);
+                
+                let totalSpend30Days = 0;
+                if (txData.transactions) {
+                    txData.transactions.forEach(t => {
+                        // Only consider debits (negative amounts) within the last 30 days
+                        if (t.amount < 0) {
+                            const txDate = new Date(t.date);
+                            if (txDate >= thirtyDaysAgo) {
+                                totalSpend30Days += Math.abs(t.amount);
+                            }
+                        }
+                    });
+                }
+                
+                if (totalSpend30Days > 0) {
+                    dailyRate = totalSpend30Days / 30;
+                }
+            } catch (e) { console.error("Error calculating consumption pattern:", e); }
+
+            if (mainBalance > 0) {
+                if (dailyRate > 0) {
+                    daysLeft = Math.floor(mainBalance / dailyRate);
+                    forecastText = `Estimated to run out in ${daysLeft} days (R${dailyRate.toFixed(2)}/day)`;
+                } else {
+                    forecastText = "No recent usage to forecast.";
+                }
+            } else {
+                forecastText = "Wallet is empty. Please add funds.";
+            }
+            
+            // --- LOW BALANCE WARNING LOGIC ---
+            const lowBalBox = document.getElementById('lowBalanceBox');
+            const lowBalText = document.getElementById('alertLowBalText');
+            if (mainBalance > 0) {
+                if (dailyRate > 0 && daysLeft <= 3) {
+                    // Pattern-based warning: running out in 3 days or less
+                    document.getElementById('alertLowBalAmount').innerText = `R ${mainBalance.toFixed(2)}`;
+                    lowBalText.innerText = `Based on your usage, this will run out in ${daysLeft} day(s). Please top up immediately to avoid utility disconnection.`;
+                    lowBalBox.style.display = 'block';
+                } else if (dailyRate === 0 && mainBalance < 50) {
+                    // Fallback generic warning for new tenants with no history
+                    document.getElementById('alertLowBalAmount').innerText = `R ${mainBalance.toFixed(2)}`;
+                    lowBalText.innerText = `Your wallet balance is low. Please top up to avoid utility disconnection.`;
+                    lowBalBox.style.display = 'block';
+                } else {
+                    lowBalBox.style.display = 'none';
+                }
+            } else {
+                lowBalBox.style.display = 'none';
+            }
+            
+            // --- EMERGENCY FUND UI LOGIC ---
+            const showCredit = (d.credit_limit > 0);
+            if(showCredit) {
+                if (d.utility_model === 'WALLET_CONSUMPTION') {
+                    document.getElementById('creditCardBox').style.display = 'block';
+                    document.getElementById('kpiCreditBal').innerText = `R ${creditBalance.toFixed(2)}`;
+                    document.getElementById('tapsBadge').innerText = `${tapsLeft} Taps Left`;
+                } else {
+                    document.getElementById('creditCardBoxSts').style.display = 'block';
+                    document.getElementById('kpiCreditBalSts').innerText = `R ${creditBalance.toFixed(2)}`;
+                    document.getElementById('tapsBadgeSts').innerText = `${tapsLeft} Taps Left`;
+                }
+            }
             
             if (d.utility_model === 'WALLET_CONSUMPTION') {
                 document.getElementById('walletView').style.display = 'block';
                 document.getElementById('stsView').style.display = 'none';
                 document.getElementById('stsTopupView').style.display = 'none';
                 
-                document.getElementById("kpiWallet").innerText = `R ${availableBalance.toFixed(2)}`;
-                
-                if (availableBalance > 0) {
-                    const daysLeft = Math.max(1, Math.round(availableBalance / 10));
-                    const forecastDate = new Date();
-                    forecastDate.setDate(forecastDate.getDate() + daysLeft);
-                    document.getElementById("kpiForecast").innerText = `Estimated to run out in ${daysLeft} days (${forecastDate.toLocaleDateString()})`;
-                } else {
-                    document.getElementById("kpiForecast").innerText = "Wallet is empty. Please add funds.";
-                }
+                document.getElementById("kpiWallet").innerText = `R ${mainBalance.toFixed(2)}`;
+                document.getElementById("kpiForecast").innerText = forecastText;
                 
             } else {
                 document.getElementById('walletView').style.display = 'none';
                 document.getElementById('stsView').style.display = 'block';
                 document.getElementById('stsTopupView').style.display = 'block';
                 
-                document.getElementById("kpiWalletSts").innerText = `R ${availableBalance.toFixed(2)}`;
+                document.getElementById("kpiWalletSts").innerText = `R ${mainBalance.toFixed(2)}`;
                 document.getElementById("kpiArrearsSts").innerText = `R ${totalArrears.toFixed(2)}`;
             }
             
@@ -478,6 +603,7 @@
             container.innerHTML = "<p style='color:var(--danger);'>Error loading tariffs.</p>"; 
         }
     }
+    
     async function tLoadTransactions() {
         const listDiv = document.getElementById('txnList');
         try {
@@ -509,6 +635,59 @@
             });
             listDiv.innerHTML = html;
         } catch (e) { listDiv.innerHTML = "<p style='text-align:center; color:var(--danger);'>Error loading transactions.</p>"; }
+    }
+
+    // --- LOAD SEPARATED UTILITY HISTORY & TOKENS ---
+    async function tLoadUtilityHistory() {
+        const elecList = document.getElementById('elecUtilList');
+        const waterList = document.getElementById('waterUtilList');
+        try {
+            const r = await fetch(`/tenant-utility-history/${currentTenantId}`, { headers: getAuthHeaders() });
+            if (!r.ok) throw new Error("Failed");
+            const d = await r.json();
+            
+            // Render Electricity
+            if (d.electricity.length === 0) {
+                elecList.innerHTML = "<p style='text-align:center; color:var(--gray);'>No electricity purchases yet.</p>";
+            } else {
+                let html = "";
+                d.electricity.forEach(t => {
+                    let tokenBtn = t.token ? `<button class="btn-token" onclick="tShowToken('${t.token}', '${t.units}')">View Token</button>` : '';
+                    html += `<div class="txn-item">
+                        <div>
+                            <div style="font-weight:600;">${t.units || 'Electricity Purchase'}</div>
+                            <div class="txn-date">${t.date} ${tokenBtn}</div>
+                        </div>
+                        <div class="txn-amount text-danger">R ${t.amount.toFixed(2)}</div>
+                    </div>`;
+                });
+                elecList.innerHTML = html;
+            }
+
+            // Render Water
+            if (d.water.length === 0) {
+                waterList.innerHTML = "<p style='text-align:center; color:var(--gray);'>No water/municipal charges yet.</p>";
+            } else {
+                let html = "";
+                d.water.forEach(t => {
+                    html += `<div class="txn-item">
+                        <div>
+                            <div style="font-weight:600;">${t.units || 'Water/Municipal Charge'}</div>
+                            <div class="txn-date">${t.date}</div>
+                        </div>
+                        <div class="txn-amount text-danger">R ${t.amount.toFixed(2)}</div>
+                    </div>`;
+                });
+                waterList.innerHTML = html;
+            }
+        } catch (e) { 
+            elecList.innerHTML = "<p style='text-align:center; color:var(--danger);'>Error loading history.</p>"; 
+            waterList.innerHTML = ""; 
+        }
+    }
+
+    function tShowToken(token, units) {
+        alert(`ELECTRICITY TOKEN\nUnits: ${units}\nToken: ${token}\n\nPlease enter this 20-digit token into your meter.`);
     }
 
     async function tProcessPayGate() {

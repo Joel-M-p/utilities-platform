@@ -10,7 +10,6 @@ def api_log_meter_event(meter_id: int, payload: dict, current_user: dict = Depen
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        # 1. Fetch meter and verify ownership
         cursor.execute("SELECT tenant_id, property_id FROM meters WHERE id = %s", (meter_id,))
         meter_data = cursor.fetchone()
         if not meter_data:
@@ -21,17 +20,8 @@ def api_log_meter_event(meter_id: int, payload: dict, current_user: dict = Depen
 
         event_type = payload.get("event_type", "GENERAL_EVENT").upper()
         event_notes = payload.get("event_notes", "")
-        
-        # --- NEW: Fetch username from DB using user_id in token ---
-        user_id = current_user.get("user_id")
-        recorded_by = "Unknown PM"
-        if user_id is not None:
-            cursor.execute("SELECT username FROM users WHERE id = %s", (user_id,))
-            user_data = cursor.fetchone()
-            if user_data:
-                recorded_by = user_data[0]
+        recorded_by = current_user.get("username", "Unknown PM")
 
-        # 2. Insert the event
         cursor.execute("""
             INSERT INTO meter_events (meter_id, tenant_id, property_id, event_type, event_notes, recorded_by) 
             VALUES (%s, %s, %s, %s, %s, %s) RETURNING id
@@ -52,58 +42,90 @@ def api_get_meter_history(meter_id: int, current_user: dict = Depends(verify_tok
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        # 1. Verify ownership of the meter
-        cursor.execute("SELECT property_id FROM meters WHERE id = %s", (meter_id,))
+        # --- AUTOMATIC SCHEMA FIX ---
+        cursor.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS meter_id INTEGER;")
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS meter_events (
+                id SERIAL PRIMARY KEY,
+                meter_id INTEGER REFERENCES meters(id),
+                tenant_id INTEGER REFERENCES tenants(id),
+                property_id INTEGER REFERENCES properties(id),
+                event_type VARCHAR(50),
+                event_notes TEXT,
+                recorded_by VARCHAR(50),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+        conn.commit()
+
+        # 1. Verify ownership of the meter and get details
+        cursor.execute("SELECT property_id, serial_number, meter_type FROM meters WHERE id = %s", (meter_id,))
         meter_data = cursor.fetchone()
         if not meter_data:
             raise HTTPException(status_code=404, detail="Meter not found.")
+        
         enforce_property_access(current_user, meter_data[0])
+        serial_number = meter_data[1]
+        meter_type = meter_data[2]
 
-        # 2. Fetch all transactions linked to this meter
+        # 2. Fetch all transactions linked to this meter, JOINING with tenants to get the name
         cursor.execute("""
-            SELECT t.created_at, t.amount, t.transaction_type, t.reference, t.status
+            SELECT t.created_at, t.amount, t.transaction_type, t.reference, t.status, tn.first_name, tn.last_name
             FROM transactions t
+            JOIN wallets w ON t.wallet_id = w.id
+            JOIN tenants tn ON w.tenant_id = tn.id
             WHERE t.meter_id = %s
             ORDER BY t.created_at DESC
-            LIMIT 50
+            LIMIT 100
         """, (meter_id,))
         txns = cursor.fetchall()
         
         history = []
         for row in txns:
+            tenant_name = f"{row[5]} {row[6]}" if row[5] else "Unknown"
             history.append({
                 "date": row[0].strftime("%Y-%m-%d %H:%M:%S"),
                 "type": row[2],
                 "details": row[3],
                 "amount": float(row[1]),
                 "category": "TRANSACTION",
-                "status": row[4] or "COMPLETED"
+                "status": row[4] or "COMPLETED",
+                "tenant": tenant_name
             })
 
-        # 3. Fetch all events (tamper/bypass) linked to this meter
+        # 3. Fetch all events (tamper/bypass) linked to this meter, JOINING with tenants
         cursor.execute("""
-            SELECT e.created_at, e.event_type, e.event_notes, e.recorded_by
+            SELECT e.created_at, e.event_type, e.event_notes, e.recorded_by, tn.first_name, tn.last_name
             FROM meter_events e
+            LEFT JOIN tenants tn ON e.tenant_id = tn.id
             WHERE e.meter_id = %s
             ORDER BY e.created_at DESC
-            LIMIT 50
+            LIMIT 100
         """, (meter_id,))
         events = cursor.fetchall()
 
         for row in events:
+            tenant_name = f"{row[4]} {row[5]}" if row[4] else "Vacant/Unknown"
             history.append({
                 "date": row[0].strftime("%Y-%m-%d %H:%M:%S"),
                 "type": row[1],
                 "details": f"{row[2]} (Logged by: {row[3]})",
                 "amount": 0.0,
                 "category": "EVENT",
-                "status": "LOGGED"
+                "status": "LOGGED",
+                "tenant": tenant_name
             })
 
         # 4. Sort combined history by date descending
         history.sort(key=lambda x: x["date"], reverse=True)
 
-        return {"status": "success", "history": history}
+        return {
+            "status": "success", 
+            "meter_id": meter_id,
+            "serial_number": serial_number,
+            "meter_type": meter_type,
+            "history": history
+        }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     finally:
