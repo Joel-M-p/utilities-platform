@@ -1,10 +1,11 @@
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+import json
 
-# Import your modular routers (INCLUDING AUDIT, METER EVENTS, AND FRAUD)
+# Import your modular routers (INCLUDING AUDIT AND METER EVENTS)
 from api.routers import (
     auth, tenants, billing, transactions, tariffs, recon, invoices, 
     company, aging, stats, reports, bulk, bi, advanced_reports, export, 
@@ -40,9 +41,9 @@ app.include_router(export.router)
 app.include_router(properties.router)
 app.include_router(erp.router)
 app.include_router(users.router)
-app.include_router(audit.router)
-app.include_router(meter_events.router)
-app.include_router(fraud.router) # NEW: For Fraud Intelligence
+app.include_router(audit.router)     
+app.include_router(meter_events.router) 
+app.include_router(fraud.router)
 
 if not os.path.exists("static"):
     os.makedirs("static")
@@ -60,6 +61,16 @@ def setup_database():
         return {"status": "success", "message": "Database tables created successfully in the cloud!"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+# --- PWA MANIFEST ENDPOINT ---
+@app.get("/manifest.json")
+def get_manifest():
+    try:
+        with open("manifest.json", "r") as f:
+            manifest_data = json.load(f)
+        return JSONResponse(content=manifest_data, media_type="application/manifest+json")
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=404)
 
 # --- Serve the Web Pages ---
 @app.get("/dashboard", response_class=HTMLResponse)

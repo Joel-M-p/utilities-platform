@@ -8,6 +8,14 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
+    
+    <!-- PWA META TAGS -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#2c3e50">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Utilities">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+    
     <title>Tenant Portal</title>
     <style>
         :root {
@@ -23,7 +31,6 @@
         }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg); margin: 0; padding: 0; color: #1c1c1e; -webkit-font-smoothing: antialiased; padding-bottom: 70px; }
         
-        /* Login Screen */
         .login-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; background: var(--primary); color: white; padding: 20px; box-sizing: border-box; }
         .login-logo { font-size: 2.2em; font-weight: 800; margin-bottom: 30px; letter-spacing: 1px; text-align: center; }
         .login-card { background: white; padding: 30px; border-radius: 16px; width: 100%; max-width: 350px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
@@ -32,7 +39,6 @@
         .login-card button { width: 100%; padding: 15px; background: var(--secondary); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
         .login-error { color: var(--danger); text-align: center; margin-top: 15px; font-size: 0.9em; display: none; }
 
-        /* Main App Structure */
         .app-header { background: var(--primary); color: white; padding: 15px; text-align: center; font-size: 1.1em; font-weight: bold; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; }
         
         .screen { display: none; padding: 15px; max-width: 500px; margin: 0 auto; }
@@ -42,7 +48,6 @@
         .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .card h3 { margin: 0 0 15px 0; color: var(--dark); font-size: 1.1em; border-bottom: 1px solid #eee; padding-bottom: 10px; }
         
-        /* Alert Banners */
         .alert-banner { padding: 20px; border-radius: 12px; margin-bottom: 20px; border-left: 5px solid; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .alert-banner h3 { margin: 0 0 10px 0; border: none; padding: 0; font-size: 1.2em; }
         .alert-banner p { margin: 0 0 15px 0; font-size: 0.95em; }
@@ -54,7 +59,6 @@
         .alert-warning h3 { color: #856404; }
         .alert-warning button { background: #f39c12; }
 
-        /* KPI Grid */
         .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
         .kpi-card { background: white; border-radius: 12px; padding: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; }
         .kpi-card h4 { margin: 0 0 5px 0; color: var(--gray); font-size: 0.8em; text-transform: uppercase; }
@@ -64,20 +68,17 @@
         .kpi-card.warning .val { color: var(--warning); }
         .kpi-card.secondary .val { color: var(--secondary); }
 
-        /* Main Wallet Card */
         .wallet-card { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; padding: 30px 20px; border-radius: 16px; text-align: center; margin-bottom: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.15); }
         .wallet-card h2 { margin: 0 0 10px 0; font-size: 1.2em; font-weight: 400; }
         .wallet-balance { font-size: 3em; font-weight: 800; margin-bottom: 5px; }
         .wallet-sub { font-size: 0.9em; opacity: 0.8; margin-bottom: 25px; }
         .btn-fund { background: white; color: var(--primary); border: none; padding: 15px; width: 100%; border-radius: 8px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         
-        /* Emergency Fund Card */
         .credit-card { background: white; border: 2px dashed var(--warning); padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 20px; }
         .credit-card h3 { color: var(--warning); border: none; margin-bottom: 5px; }
         .credit-card .val { font-size: 1.8em; font-weight: bold; color: var(--warning); margin-bottom: 5px; }
         .credit-card .taps-badge { background: var(--warning); color: white; padding: 3px 10px; border-radius: 20px; font-size: 0.8em; font-weight: bold; }
 
-        /* Tariff Breakdown Styles */
         .tariff-item { margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
         .tariff-item:last-child { border-bottom: none; margin-bottom: 0; }
         .tariff-name { font-weight: bold; color: var(--dark); font-size: 1em; margin-bottom: 5px; }
@@ -85,7 +86,6 @@
         .tariff-total { font-weight: bold; color: var(--dark); }
         .vat-badge { background: #e8f8f5; color: #1abc9c; padding: 5px 10px; border-radius: 4px; font-size: 0.8em; font-weight: bold; display: inline-block; margin-bottom: 10px; }
 
-        /* Buy Utility Sections (STS) */
         .utility-card { display: flex; flex-direction: column; align-items: center; margin-bottom: 15px; padding: 15px; border-radius: 10px; background: #f8f9fa; }
         .utility-card h4 { margin: 0 0 10px 0; color: var(--dark); font-size: 1.2em; display: flex; align-items: center; gap: 8px; }
         .utility-card input { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; box-sizing: border-box; text-align: center; font-weight: bold; }
@@ -93,7 +93,6 @@
         .btn-elec { background: var(--warning); }
         .btn-water { background: var(--secondary); }
 
-        /* Transaction History */
         .txn-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f1f1; font-size: 0.95em; }
         .txn-item:last-child { border-bottom: none; }
         .txn-date { color: var(--gray); font-size: 0.85em; }
@@ -104,13 +103,11 @@
         .btn-logout { background: var(--danger); color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9em; }
         .helper-text { font-size: 0.85em; color: var(--gray); margin-bottom: 8px; text-align: center; }
         
-        /* Bottom Navigation */
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; border-top: 1px solid #ddd; display: flex; justify-content: space-around; padding: 8px 0; z-index: 100; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
         .nav-btn { background: none; border: none; color: var(--gray); font-size: 0.65em; display: flex; flex-direction: column; align-items: center; cursor: pointer; padding: 5px; width: 100%; }
         .nav-btn.active { color: var(--secondary); }
         .nav-icon { font-size: 1.5em; margin-bottom: 3px; }
 
-        /* Modal for Payment (PayGate Style) */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200; }
         .modal-content { background: white; margin: 20px; border-radius: 12px; padding: 20px; margin-top: 50px; text-align: center; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
@@ -123,7 +120,6 @@
         button { width: 100%; padding: 12px; background: var(--secondary); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
         .btn-paygate { background: #003366; }
         
-        /* Token Reprint Button */
         .btn-token { background: var(--secondary); padding: 5px 10px; font-size: 0.75em; width: auto; }
     </style>
 </head>
@@ -151,21 +147,18 @@
 
     <!-- SCREEN 1: HOME -->
     <div id="screen-home" class="screen active">
-        <!-- RENT ARREARS ALERT BANNER (Red) -->
         <div id="rentAlertBox" class="alert-banner alert-danger" style="display:none;">    
             <h3>⚠️ Action Required: Rent Arrears</h3>
             <p>You currently owe <strong id="alertRentAmount">R 0.00</strong> in rent. Any funds added to your wallet will automatically be allocated to rent first.</p>
             <button onclick="switchTab('screen-topup', document.querySelector('.nav-btn[data-tab=topup]'))">Add Funds to Clear Rent</button>
         </div>
 
-        <!-- LOW BALANCE WARNING BANNER (Yellow/Orange) -->
         <div id="lowBalanceBox" class="alert-banner alert-warning" style="display:none;">
             <h3>⚠️ Low Wallet Balance</h3>
             <p>Your main wallet balance is <strong id="alertLowBalAmount">R 0.00</strong>. <span id="alertLowBalText">Please top up immediately to avoid utility disconnection.</span></p>
             <button onclick="switchTab('screen-topup', document.querySelector('.nav-btn[data-tab=topup]'))">Top Up Wallet Now</button>
         </div>
 
-        <!-- WALLET CONSUMPTION VIEW (Smart Meters) -->
         <div id="walletView" style="display:none;">
             <div class="wallet-card">
                 <h2>Main Wallet Balance</h2>
@@ -174,7 +167,6 @@
                 <button class="btn-fund" onclick="switchTab('screen-topup', document.querySelector('.nav-btn[data-tab=topup]'))">Fund My Wallet</button>
             </div>
             
-            <!-- EMERGENCY FUND CARD -->
             <div id="creditCardBox" class="credit-card" style="display:none;">
                 <h3>Emergency Fund Available</h3>
                 <div class="val" id="kpiCreditBal">R 0.00</div>
@@ -185,7 +177,6 @@
             </p>
         </div>
 
-        <!-- STS TOKEN VIEW (Dumb Meters) -->
         <div id="stsView" style="display:none;">
             <div class="kpi-grid">
                 <div class="kpi-card success">
@@ -209,7 +200,6 @@
             </div>
         </div>
 
-        <!-- Account Summary -->
         <div class="card">
             <h3>Account Summary</h3>
             <div class="txn-item">
@@ -245,7 +235,6 @@
     <!-- SCREEN 3: TOP UP -->
     <div id="screen-topup" class="screen">
         
-        <!-- PAYMENT OPTIONS (PAYGATE) - ALWAYS VISIBLE FOR BOTH METER TYPES -->
         <div class="card">
             <h3>Payment Options</h3>
             <div class="paygate-logo" style="text-align:center;">PayGate</div>
@@ -259,7 +248,6 @@
             <button class="btn-paygate" onclick="tProcessPayGate()">Top Up Wallet</button>
         </div>
 
-        <!-- TARIFF REDEEM (ONLY FOR STS TOKEN METERS) -->
         <div id="stsTopupView" style="display:none;">
             <div class="card">
                 <h3>Tariff Redeem & Payments</h3>
@@ -298,7 +286,7 @@
         </div>
     </div>
 
-    <!-- SCREEN 5: UTILITIES (NEW) -->
+    <!-- SCREEN 5: UTILITIES -->
     <div id="screen-utilities" class="screen">
         <div class="card">
             <h3>⚡ Electricity History & Tokens</h3>
@@ -330,7 +318,6 @@
     let currentTenantId = localStorage.getItem('current_tenant_id');
     let currentPropertyId = null;
 
-    // Fetch properties for login dropdown on load
     fetch('/public-properties/').then(r => r.json()).then(d => {
         const dd = document.getElementById('login_property');
         d.properties.forEach(p => {
@@ -345,7 +332,6 @@
         tLoadTransactions();
     }
 
-    // --- AUDIT TRAIL ---
     async function tLogAction(action, details) {
         try {
             await fetch(`/audit-log/`, { 
@@ -355,7 +341,6 @@
             });
         } catch(e) { console.error("Audit log failed:", e); }
     }
-    // --- END AUDIT TRAIL ---
 
     async function tLogin() {
         const property_id = document.getElementById('login_property').value;
@@ -426,13 +411,11 @@
             currentPropertyId = d.property_id || null;
             const totalArrears = d.rent_outstanding + d.electricity_outstanding + d.water_outstanding;
             
-            // Separate Main Balance and Emergency Fund
             const mainBalance = d.wallet_balance;
             const creditBalance = d.credit_balance || 0;
             const tapsUsed = d.credit_taps_used || 0;
             const tapsLeft = 3 - tapsUsed;
             
-            // --- SMART CONSUMPTION PATTERN FORECAST ---
             let dailyRate = 0;
             let forecastText = "No recent usage to forecast.";
             let daysLeft = 0;
@@ -447,7 +430,6 @@
                 let totalSpend30Days = 0;
                 if (txData.transactions) {
                     txData.transactions.forEach(t => {
-                        // Only consider debits (negative amounts) within the last 30 days
                         if (t.amount < 0) {
                             const txDate = new Date(t.date);
                             if (txDate >= thirtyDaysAgo) {
@@ -473,17 +455,14 @@
                 forecastText = "Wallet is empty. Please add funds.";
             }
             
-            // --- LOW BALANCE WARNING LOGIC ---
             const lowBalBox = document.getElementById('lowBalanceBox');
             const lowBalText = document.getElementById('alertLowBalText');
             if (mainBalance > 0) {
                 if (dailyRate > 0 && daysLeft <= 3) {
-                    // Pattern-based warning: running out in 3 days or less
                     document.getElementById('alertLowBalAmount').innerText = `R ${mainBalance.toFixed(2)}`;
                     lowBalText.innerText = `Based on your usage, this will run out in ${daysLeft} day(s). Please top up immediately to avoid utility disconnection.`;
                     lowBalBox.style.display = 'block';
                 } else if (dailyRate === 0 && mainBalance < 50) {
-                    // Fallback generic warning for new tenants with no history
                     document.getElementById('alertLowBalAmount').innerText = `R ${mainBalance.toFixed(2)}`;
                     lowBalText.innerText = `Your wallet balance is low. Please top up to avoid utility disconnection.`;
                     lowBalBox.style.display = 'block';
@@ -494,7 +473,6 @@
                 lowBalBox.style.display = 'none';
             }
             
-            // --- EMERGENCY FUND UI LOGIC ---
             const showCredit = (d.credit_limit > 0);
             if(showCredit) {
                 if (d.utility_model === 'WALLET_CONSUMPTION') {
@@ -637,7 +615,6 @@
         } catch (e) { listDiv.innerHTML = "<p style='text-align:center; color:var(--danger);'>Error loading transactions.</p>"; }
     }
 
-    // --- LOAD SEPARATED UTILITY HISTORY & TOKENS ---
     async function tLoadUtilityHistory() {
         const elecList = document.getElementById('elecUtilList');
         const waterList = document.getElementById('waterUtilList');
@@ -646,7 +623,6 @@
             if (!r.ok) throw new Error("Failed");
             const d = await r.json();
             
-            // Render Electricity
             if (d.electricity.length === 0) {
                 elecList.innerHTML = "<p style='text-align:center; color:var(--gray);'>No electricity purchases yet.</p>";
             } else {
@@ -664,7 +640,6 @@
                 elecList.innerHTML = html;
             }
 
-            // Render Water
             if (d.water.length === 0) {
                 waterList.innerHTML = "<p style='text-align:center; color:var(--gray);'>No water/municipal charges yet.</p>";
             } else {
@@ -764,7 +739,6 @@
             const d = await r.json();
             if (!r.ok) throw new Error(d.detail || "Purchase failed");
             
-            // Display the detailed message from backend (Amount, VAT, kWh, Token)
             alert(d.message);
             tLogAction("Bought Utility", `Tenant: ${currentTenantId} bought R${amount} of ${type}. Token: ${d.token || 'N/A'}`);
             
