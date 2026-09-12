@@ -32,9 +32,10 @@ def api_process_payment(payload: dict, current_user: dict = Depends(verify_token
 
         result = process_waterfall_payment(cursor, tenant_id, amount, rent_pct, elec_pct, water_pct, idempotency_key)
         
-        cursor.execute("SELECT first_name, last_name, email FROM tenants WHERE id = %s", (tenant_id,))
+        # --- NEW: Fetch cellphone along with name and email ---
+        cursor.execute("SELECT first_name, last_name, email, cellphone FROM tenants WHERE id = %s", (tenant_id,))
         tenant = cursor.fetchone()
-        first_name, last_name, email = tenant
+        first_name, last_name, email, cellphone = tenant
         
         receipt_no = f"RCP-{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}-{tenant_id}"
         receipt_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -42,7 +43,9 @@ def api_process_payment(payload: dict, current_user: dict = Depends(verify_token
         conn.commit()
         
         receipt_message = f"Payment of R{amount:.2f} received. Receipt No: {receipt_no}. Date: {receipt_date}. Thank you for your payment!"
-        send_notification(f"{first_name} {last_name}", email, receipt_message, subject=f"Payment Receipt - {receipt_no}")
+        
+        # --- NEW: Pass cellphone to send_notification ---
+        send_notification(f"{first_name} {last_name}", email, cellphone, receipt_message, subject=f"Payment Receipt - {receipt_no}")
         
         return {
             "status": "success", 
@@ -78,9 +81,10 @@ def api_buy_utility(req: dict, current_user: dict = Depends(verify_token)):
         if cursor.fetchone():
             return {"status": "success", "message": "Purchase already processed."}
 
-        cursor.execute("SELECT first_name, last_name, email, rent_outstanding FROM tenants WHERE id = %s FOR UPDATE", (tenant_id,))
+        # --- NEW: Fetch cellphone along with name, email, rent ---
+        cursor.execute("SELECT first_name, last_name, email, rent_outstanding, cellphone FROM tenants WHERE id = %s FOR UPDATE", (tenant_id,))
         tenant_data = cursor.fetchone()
-        first_name, last_name, email, rent_owed = tenant_data
+        first_name, last_name, email, rent_owed, cellphone = tenant_data
         
         if rent_owed > 0:
             raise HTTPException(status_code=403, detail=f"Action Blocked: You have outstanding rent arrears of R{rent_owed:.2f}. Please clear your rent first before purchasing utilities.")
@@ -98,17 +102,16 @@ def api_buy_utility(req: dict, current_user: dict = Depends(verify_token)):
             
         meter_id, billing_type, current_valve_status, hardware_type, tariff_id = meter_data
         
-        # --- EMERGENCY FUND LOGIC (STRICT MONTHLY ALLOWANCE) ---
-        cursor.execute("SELECT id, balance, credit_limit, credit_balance, credit_debt, credit_taps_used, credit_reset_month FROM wallets WHERE tenant_id = %s FOR UPDATE", (tenant_id,))
+        # --- EMERGENCY FUND LOGIC (SIMPLIFIED & ACCURATE) ---
+        cursor.execute("SELECT id, balance, credit_limit, credit_balance, credit_taps_used, credit_reset_month FROM wallets WHERE tenant_id = %s FOR UPDATE", (tenant_id,))
         wallet_data = cursor.fetchone()
-        wallet_id, current_balance, credit_limit, credit_balance, credit_debt, credit_taps_used, credit_reset_month = wallet_data
+        wallet_id, current_balance, credit_limit, credit_balance, credit_taps_used, credit_reset_month = wallet_data
         
         current_month = datetime.datetime.now().strftime("%Y-%m")
         if credit_reset_month != current_month:
             credit_balance = credit_limit or Decimal('0')
-            credit_debt = Decimal('0')
             credit_taps_used = 0
-            cursor.execute("UPDATE wallets SET credit_balance = %s, credit_debt = 0, credit_taps_used = 0, credit_reset_month = %s WHERE id = %s", (credit_balance, current_month, wallet_id))
+            cursor.execute("UPDATE wallets SET credit_balance = %s, credit_taps_used = 0, credit_reset_month = %s WHERE id = %s", (credit_balance, current_month, wallet_id))
 
         available_funds = current_balance + (credit_balance or Decimal('0'))
         if available_funds < amount_decimal:
@@ -125,9 +128,8 @@ def api_buy_utility(req: dict, current_user: dict = Depends(verify_token)):
         if needs_credit:
             new_balance = Decimal('0.00')
             new_credit_balance = (credit_balance or Decimal('0')) - credit_to_use
-            new_credit_debt = (credit_debt or Decimal('0')) + credit_to_use
             credit_taps_used += 1
-            cursor.execute("UPDATE wallets SET balance = 0.00, credit_balance = %s, credit_debt = %s, credit_taps_used = %s WHERE id = %s", (new_credit_balance, new_credit_debt, credit_taps_used, wallet_id))
+            cursor.execute("UPDATE wallets SET balance = 0.00, credit_balance = %s, credit_taps_used = %s WHERE id = %s", (new_credit_balance, credit_taps_used, wallet_id))
         else:
             new_balance = current_balance - amount_decimal
             cursor.execute("UPDATE wallets SET balance = %s WHERE id = %s", (new_balance, wallet_id))
@@ -181,10 +183,12 @@ def api_buy_utility(req: dict, current_user: dict = Depends(verify_token)):
         
         if current_valve_status in ['TRICKLE', 'DISCONNECTED']:
             cursor.execute("UPDATE meters SET valve_status = 'OPEN' WHERE tenant_id = %s AND meter_type = %s", (tenant_id, utility_type))
-            send_notification(f"{first_name} {last_name}", email, f"Your {utility_type} has been reconnected.")
+            # --- NEW: Pass cellphone to send_notification ---
+            send_notification(f"{first_name} {last_name}", email, cellphone, f"Your {utility_type} has been reconnected.")
         
         conn.commit()
-        send_notification(f"{first_name} {last_name}", email, message)
+        # --- NEW: Pass cellphone to send_notification ---
+        send_notification(f"{first_name} {last_name}", email, cellphone, message)
         return {
             "status": "success", 
             "message": message, 
@@ -214,7 +218,7 @@ def api_set_credit_limit(tenant_id: int, limit: float, current_user: dict = Depe
         limit_dec = Decimal(str(limit))
         current_month = datetime.datetime.now().strftime("%Y-%m")
         
-        cursor.execute("UPDATE wallets SET credit_limit = %s, credit_balance = %s, credit_debt = 0, credit_taps_used = 0, credit_reset_month = %s WHERE tenant_id = %s", 
+        cursor.execute("UPDATE wallets SET credit_limit = %s, credit_balance = %s, credit_taps_used = 0, credit_reset_month = %s WHERE tenant_id = %s", 
                        (limit_dec, limit_dec, current_month, tenant_id))
         conn.commit()
         return {"status": "success", "message": f"Emergency Fund limit set to R{limit:.2f}."}
@@ -323,6 +327,7 @@ def api_get_transactions(tenant_id: int, current_user: dict = Depends(verify_tok
         cursor.close()
         conn.close()
 
+# --- SEPARATED UTILITY HISTORY & TOKEN REPRINTS ---
 @router.get("/tenant-utility-history/{tenant_id}")
 def api_get_tenant_utility_history(tenant_id: int, current_user: dict = Depends(verify_token)):
     conn = get_db_connection()

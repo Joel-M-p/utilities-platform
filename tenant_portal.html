@@ -200,8 +200,13 @@
             </div>
         </div>
 
+        <!-- Account Summary -->
         <div class="card">
             <h3>Account Summary</h3>
+            <div class="txn-item">
+                <span>Cellphone Number</span>
+                <span class="txn-amount" id="sumCellphone" style="color: var(--secondary);">N/A</span>
+            </div>
             <div class="txn-item">
                 <span>Rent Outstanding</span>
                 <span class="txn-amount text-danger" id="sumRent">R 0.00</span>
@@ -503,6 +508,7 @@
                 document.getElementById("kpiArrearsSts").innerText = `R ${totalArrears.toFixed(2)}`;
             }
             
+            document.getElementById("sumCellphone").innerText = d.cellphone || "Not set";
             document.getElementById("sumRent").innerText = `R ${d.rent_outstanding.toFixed(2)}`;
             document.getElementById("sumElec").innerText = `R ${d.electricity_outstanding.toFixed(2)}`;
             document.getElementById("sumWater").innerText = `R ${d.water_outstanding.toFixed(2)}`;

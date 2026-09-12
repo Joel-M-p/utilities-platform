@@ -1,14 +1,26 @@
+import os
 import psycopg2
 
-def fix_cloud_schema():
-    # PASTE YOUR RENDER DATABASE URL HERE:
-    db_url = "postgresql://neondb_owner:npg_uoBzf2j4TDCF@ep-shy-star-ayefo4p7-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
-    
-    print("Connecting to Render cloud database...")
+def fix_schema():
+    print("Connecting to database...")
+    db_url = os.getenv("postgresql://neondb_owner:npg_uoBzf2j4TDCF@ep-shy-star-ayefo4p7-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require")
     
     try:
-        # Cloud databases require SSL for security
-        conn = psycopg2.connect(db_url, sslmode='require')
+        if db_url:
+            print("Found DATABASE_URL. Connecting to CLOUD (Render) database...")
+            if "?sslmode=" not in db_url:
+                db_url += "?sslmode=require"
+            conn = psycopg2.connect(db_url)
+        else:
+            print("No DATABASE_URL found. Connecting to LOCAL database...")
+            conn = psycopg2.connect(
+                dbname="utilities_platform",
+                user="postgres",
+                password="5432",
+                host="localhost",
+                port="5432"
+            )
+            
         conn.autocommit = True
         cursor = conn.cursor()
         
@@ -27,6 +39,9 @@ def fix_cloud_schema():
         cursor.execute("ALTER TABLE wallets ADD COLUMN IF NOT EXISTS credit_taps_used INT DEFAULT 0;")
         cursor.execute("ALTER TABLE wallets ADD COLUMN IF NOT EXISTS credit_reset_month VARCHAR(7);")
         
+        print("Adding missing tenant columns (Cellphone)...")
+        cursor.execute("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS cellphone VARCHAR(20);")
+        
         print("Creating missing meter_events table...")
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS meter_events (
@@ -41,13 +56,11 @@ def fix_cloud_schema():
             );
         """)
         
-        print("\n✅ Success! The missing columns have been added to your Render database.")
-        print("You can now top up wallets and use the Emergency Fund without errors.")
-        
+        print("\n✅ Success! All missing columns (including cellphone) have been added.")
         cursor.close()
         conn.close()
     except Exception as e:
         print(f"Error: {e}")
 
 if __name__ == "__main__":
-    fix_cloud_schema()
+    fix_schema()

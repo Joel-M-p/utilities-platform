@@ -204,12 +204,14 @@ def init_db():
         cursor.execute("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS exit_reason TEXT;")
         cursor.execute("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS inspection_notes TEXT;")
         cursor.execute("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS unit_number VARCHAR(50);")
+        cursor.execute("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS cellphone VARCHAR(20);") # NEW
 
         # --- NEW: MICRO-CREDIT WALLET COLUMNS ---
         cursor.execute("ALTER TABLE wallets ADD COLUMN IF NOT EXISTS credit_limit DECIMAL DEFAULT 0;")
         cursor.execute("ALTER TABLE wallets ADD COLUMN IF NOT EXISTS credit_balance DECIMAL DEFAULT 0;")
         cursor.execute("ALTER TABLE wallets ADD COLUMN IF NOT EXISTS credit_taps_used INT DEFAULT 0;")
         cursor.execute("ALTER TABLE wallets ADD COLUMN IF NOT EXISTS credit_reset_month VARCHAR(7);")
+        cursor.execute("ALTER TABLE wallets ADD COLUMN IF NOT EXISTS credit_debt DECIMAL DEFAULT 0;")
 
         cursor.execute("ALTER TABLE meters ADD COLUMN IF NOT EXISTS property_id INTEGER REFERENCES properties(id);")
         cursor.execute("ALTER TABLE meters ADD COLUMN IF NOT EXISTS hardware_type VARCHAR(20) DEFAULT 'STS';")

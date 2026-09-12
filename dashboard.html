@@ -245,6 +245,7 @@
                     <input type="text" id="newFirstName" placeholder="First Name">
                     <input type="text" id="newLastName" placeholder="Last Name">
                     <input type="email" id="newEmail" placeholder="Email">
+                    <input type="tel" id="newCellphone" placeholder="Cellphone (e.g., 0821234567)">
                     <input type="number" id="newRentDebt" placeholder="Rent Debt">
                     <input type="number" id="newElecDebt" placeholder="Elec Debt">
                     <input type="number" id="newWaterDebt" placeholder="Water Debt">
@@ -290,7 +291,7 @@
             <table id="tenantsTable" style="display:none;">
                 <thead>
                     <tr>
-                        <th>Unit</th><th>Name</th><th>Email</th><th>Payment Status</th><th>Rent</th><th>Elec</th><th>Water</th><th>Wallet</th><th>Account Status</th><th>Credit Score</th><th>Actions</th>
+                        <th>Unit</th><th>Name</th><th>Email</th><th>Cellphone</th><th>Payment Status</th><th>Rent</th><th>Elec</th><th>Water</th><th>Wallet</th><th>Account Status</th><th>Credit Score</th><th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="tenantsTableBody"></tbody>
@@ -388,7 +389,7 @@
             <div id="touFields" style="display:none;"><input type="number" id="touPeak" placeholder="Peak"><input type="number" id="touOffpeak" placeholder="Off-Peak"></div>
             <button onclick="createTariff()">Create Tariff</button>
             <div id="tariffResult" class="result" style="display:none;"></div>
-            <table id="tariffsTable" style="display:none;"><thead><tr><th>ID</th><th>Name</th><th>Type</th><th>Structure</th><th>Details</th></tr></thead><tbody id="tariffsTableBody"></tbody></table>
+            <table id="tariffsTable" style="display:none;"><thead><tr><th>ID</th><th>Name</th><th>Type</th><th>Structure</th><th>Details</th><th>Actions</th></tr></thead><tbody id="tariffsTableBody"></tbody></table>
         </div>
     </div>
 
@@ -519,6 +520,75 @@
 <div id="docsModal" class="modal"><div class="modal-content"><span class="close" onclick="closeDocs()">&times;</span><h2>Tenant Documents</h2><table id="docsTable"><thead><tr><th>Date</th><th>Type</th><th>File Name</th></tr></thead><tbody id="docsTableBody"></tbody></table></div></div>
 <div id="reportModal" class="modal"><div class="modal-content"><span class="close" onclick="closeReport()">&times;</span><div id="reportContent"></div></div></div>
 <div id="meterHistoryModal" class="modal"><div class="modal-content"><span class="close" onclick="closeMeterHistory()">&times;</span><div id="meterHistoryContent"></div></div></div>
+
+<!-- EDIT TENANT MODAL -->
+<div id="tenantEditModal" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+        <span class="close" onclick="closeTenantEdit()">&times;</span>
+        <h2>Edit Tenant Details</h2>
+        <input type="hidden" id="editTenantId">
+        <label>First Name</label><br>
+        <input type="text" id="editFirstName" style="width: 100%;"><br>
+        <label>Last Name</label><br>
+        <input type="text" id="editLastName" style="width: 100%;"><br>
+        <label>Email</label><br>
+        <input type="email" id="editEmail" style="width: 100%;"><br>
+        <label>Cellphone</label><br>
+        <input type="tel" id="editCellphone" style="width: 100%;"><br>
+        <label>Status</label><br>
+        <select id="editStatus" style="width: 100%;">
+            <option value="ACTIVE">Active</option>
+            <option value="SUSPENDED">Suspended</option>
+            <option value="VACATED">Vacated</option>
+        </select><br><br>
+        <button onclick="saveTenantEdit()" class="btn-download">Save Changes</button>
+    </div>
+</div>
+
+<!-- EDIT TARIFF MODAL -->
+<div id="tariffEditModal" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+        <span class="close" onclick="closeTariffEdit()">&times;</span>
+        <h2>Edit Tariff</h2>
+        <input type="hidden" id="editTariffId">
+        <label>Name</label><br>
+        <input type="text" id="editTariffName" style="width: 100%;"><br>
+        <label>Meter Type</label><br>
+        <select id="editTariffMeterType" style="width: 100%;">
+            <option value="ELECTRICITY">Electricity</option>
+            <option value="WATER_HOT">Water Hot</option>
+            <option value="WATER_COLD">Water Cold</option>
+            <option value="SANITATION">Sanitation</option>
+        </select><br>
+        <label>Structure</label><br>
+        <select id="editTariffStructure" style="width: 100%;" onchange="toggleEditTariffFields()">
+            <option value="FLAT">Flat Rate</option>
+            <option value="TIERED">Tiered (Block)</option>
+            <option value="TOU">Time-of-Use</option>
+        </select><br>
+        
+        <div id="editFlatFields">
+            <label>Flat Rate (R)</label><br>
+            <input type="number" id="editRateFlat" style="width: 100%;"><br>
+        </div>
+        <div id="editTieredFields" style="display:none;">
+            <label>Tier 1 Limit (kWh/kL)</label><br>
+            <input type="number" id="editTier1Limit" style="width: 100%;"><br>
+            <label>Tier 1 Rate (R)</label><br>
+            <input type="number" id="editTier1Rate" style="width: 100%;"><br>
+            <label>Tier 2 Rate (R)</label><br>
+            <input type="number" id="editTier2Rate" style="width: 100%;"><br>
+        </div>
+        <div id="editTouFields" style="display:none;">
+            <label>Peak Rate (R)</label><br>
+            <input type="number" id="editTouPeak" style="width: 100%;"><br>
+            <label>Off-Peak Rate (R)</label><br>
+            <input type="number" id="editTouOffpeak" style="width: 100%;"><br>
+        </div>
+        <br>
+        <button onclick="saveTariffEdit()" class="btn-download">Save Changes</button>
+    </div>
+</div>
 
 <script>
     let authToken = localStorage.getItem('pm_token');
@@ -733,7 +803,17 @@
     async function createTenant() {
         const propId = document.getElementById("propertyFilter").value;
         if(!propId) { alert("Please select a property first."); return; }
-        const payload = { property_id: parseInt(propId), unit_number: document.getElementById("newUnitNumber").value, first_name: document.getElementById("newFirstName").value, last_name: document.getElementById("newLastName").value, email: document.getElementById("newEmail").value, rent_outstanding: parseFloat(document.getElementById("newRentDebt").value || 0), electricity_outstanding: parseFloat(document.getElementById("newElecDebt").value || 0), water_outstanding: parseFloat(document.getElementById("newWaterDebt").value || 0) };
+        const payload = { 
+            property_id: parseInt(propId), 
+            unit_number: document.getElementById("newUnitNumber").value, 
+            first_name: document.getElementById("newFirstName").value, 
+            last_name: document.getElementById("newLastName").value, 
+            email: document.getElementById("newEmail").value,
+            cellphone: document.getElementById("newCellphone").value,
+            rent_outstanding: parseFloat(document.getElementById("newRentDebt").value || 0), 
+            electricity_outstanding: parseFloat(document.getElementById("newElecDebt").value || 0), 
+            water_outstanding: parseFloat(document.getElementById("newWaterDebt").value || 0) 
+        };
         try { const r = await fetch(`/create-tenant/`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); logAction("Created Tenant", `Unit: ${payload.unit_number}`); loadAllTenants(); } catch (e) { alert("Error: " + e.message); }
     }
 
@@ -744,7 +824,50 @@
 
     async function loadAllTenants() {
         const tB = document.getElementById("tenantsTableBody");
-        try { const r = await fetch(`/all-tenants/${getPropertyFilter()}`, { headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error("Failed"); tB.innerHTML = ""; allTenantsCache = d.tenants; d.tenants.forEach(t => { let statusClass = t.status === 'ACTIVE' ? 'status-active' : (t.status === 'VACATED' ? 'status-vacated' : 'status-suspended'); let payStatus = (t.rent_outstanding > 0 || t.electricity_outstanding > 0 || t.water_outstanding > 0) ? '<span style="color:red;font-weight:bold;">IN ARREARS</span>' : '<span style="color:green;font-weight:bold;">CLEAR</span>'; tB.innerHTML += `<tr><td>${t.unit_number || 'N/A'}</td><td>${t.first_name} ${t.last_name}</td><td>${t.email}</td><td>${payStatus}</td><td>R${t.rent_outstanding.toFixed(2)}</td><td>R${t.electricity_outstanding.toFixed(2)}</td><td>R${t.water_outstanding.toFixed(2)}</td><td>R${t.wallet_balance.toFixed(2)}</td><td class="${statusClass}">${t.status}</td><td>${t.credit_status || 'N/A'}</td><td><button onclick="viewStatement(${t.tenant_id})" class="btn-statement">Statement</button> <button onclick="openDocs(${t.tenant_id})" class="btn-docs">Docs</button> <button onclick="grantConsent(${t.tenant_id})" class="btn-popia">Consent</button> <button onclick="anonymize(${t.tenant_id})" class="btn-anonymize">Anonymize</button> <button onclick="runCreditCheck(${t.tenant_id})" class="btn-credit">Credit</button> <button onclick="suspendTenant(${t.tenant_id})" class="btn-suspend">Suspend</button> <button onclick="vacateTenant(${t.tenant_id})" class="btn-danger">Vacate</button></td></tr>`; }); document.getElementById("tenantsTable").style.display = "block"; } catch (e) { console.error(e.message); }
+        try { const r = await fetch(`/all-tenants/${getPropertyFilter()}`, { headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error("Failed"); tB.innerHTML = ""; allTenantsCache = d.tenants; d.tenants.forEach(t => { let statusClass = t.status === 'ACTIVE' ? 'status-active' : (t.status === 'VACATED' ? 'status-vacated' : 'status-suspended'); let payStatus = (t.rent_outstanding > 0 || t.electricity_outstanding > 0 || t.water_outstanding > 0) ? '<span style="color:red;font-weight:bold;">IN ARREARS</span>' : '<span style="color:green;font-weight:bold;">CLEAR</span>'; tB.innerHTML += `<tr><td>${t.unit_number || 'N/A'}</td><td>${t.first_name} ${t.last_name}</td><td>${t.email}</td><td>${t.cellphone || 'N/A'}</td><td>${payStatus}</td><td>R${t.rent_outstanding.toFixed(2)}</td><td>R${t.electricity_outstanding.toFixed(2)}</td><td>R${t.water_outstanding.toFixed(2)}</td><td>R${t.wallet_balance.toFixed(2)}</td><td class="${statusClass}">${t.status}</td><td>${t.credit_status || 'N/A'}</td><td><button onclick="editTenant(${t.tenant_id})" class="btn-edit">Edit</button> <button onclick="viewStatement(${t.tenant_id})" class="btn-statement">Statement</button> <button onclick="openDocs(${t.tenant_id})" class="btn-docs">Docs</button> <button onclick="grantConsent(${t.tenant_id})" class="btn-popia">Consent</button> <button onclick="anonymize(${t.tenant_id})" class="btn-anonymize">Anonymize</button> <button onclick="runCreditCheck(${t.tenant_id})" class="btn-credit">Credit</button> <button onclick="suspendTenant(${t.tenant_id})" class="btn-suspend">Suspend</button> <button onclick="vacateTenant(${t.tenant_id})" class="btn-danger">Vacate</button></td></tr>`; }); document.getElementById("tenantsTable").style.display = "block"; } catch (e) { console.error(e.message); }
+    }
+
+    function editTenant(id) {
+        const t = allTenantsCache.find(t => t.tenant_id === id);
+        if (!t) return;
+        document.getElementById('editTenantId').value = t.tenant_id;
+        document.getElementById('editFirstName').value = t.first_name;
+        document.getElementById('editLastName').value = t.last_name;
+        document.getElementById('editEmail').value = t.email;
+        document.getElementById('editCellphone').value = t.cellphone || '';
+        document.getElementById('editStatus').value = t.status;
+        document.getElementById('tenantEditModal').style.display = 'block';
+    }
+
+    function closeTenantEdit() {
+        document.getElementById('tenantEditModal').style.display = 'none';
+    }
+
+    async function saveTenantEdit() {
+        const id = document.getElementById('editTenantId').value;
+        const payload = {
+            first_name: document.getElementById('editFirstName').value,
+            last_name: document.getElementById('editLastName').value,
+            email: document.getElementById('editEmail').value,
+            cellphone: document.getElementById('editCellphone').value,
+            status: document.getElementById('editStatus').value
+        };
+        
+        try {
+            const r = await fetch(`/update-tenant/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify(payload)
+            });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            alert(d.message);
+            logAction("Updated Tenant", `ID: ${id}`);
+            closeTenantEdit();
+            loadAllTenants();
+        } catch (e) {
+            alert("Error: " + e.message);
+        }
     }
 
     async function viewStatement(id) { try { const r = await fetch(`/tenant-statement/${id}`, { headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error("Failed"); currentStmtTenantId = id; let rows = ""; d.transactions.forEach(t => { rows += `<tr><td>${t.date}</td><td>${t.type}</td><td>R${t.amount.toFixed(2)}</td><td>${t.reference}</td></tr>`; }); document.getElementById("statementContent").innerHTML = `<div class="stmt-header"><h2>Account Statement</h2><h3>${d.tenant_name}</h3><p>${d.email}</p></div><div class="stmt-summary"><div><h3>Arrears</h3><p>Rent: R${d.rent_outstanding.toFixed(2)}</p><p>Elec: R${d.electricity_outstanding.toFixed(2)}</p><p>Water: R${d.water_outstanding.toFixed(2)}</p></div><div><h3>Wallet</h3><p>Balance: R${d.wallet_balance.toFixed(2)}</p><p>Credit Limit: R${d.credit_limit.toFixed(2)}</p></div></div><table><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Reference</th></tr></thead><tbody>${rows}</tbody></table>`; document.getElementById("statementModal").style.display = "block"; } catch (e) { alert(e.message); } }
@@ -809,7 +932,6 @@
             alert(d.message); 
             logAction("Assigned Meter", `Unit: ${unit}`); 
             
-            // Reset fields after successful capture
             document.getElementById('meterUnitNumber').value = '';
             document.getElementById('meterSerial').value = '';
             document.getElementById('meterType').value = 'ELECTRICITY';
@@ -909,9 +1031,85 @@
         document.getElementById("touFields").style.display = s === "TOU" ? "block" : "none";
     }
 
+    // --- TARIFF CRUD FUNCTIONS ---
+    function toggleEditTariffFields() {
+        const s = document.getElementById('editTariffStructure').value;
+        document.getElementById('editFlatFields').style.display = s === 'FLAT' ? 'block' : 'none';
+        document.getElementById('editTieredFields').style.display = s === 'TIERED' ? 'block' : 'none';
+        document.getElementById('editTouFields').style.display = s === 'TOU' ? 'block' : 'none';
+    }
+
     async function loadTariffs() {
         const tB = document.getElementById("tariffsTableBody");
-        try { const r = await fetch(`/tariffs/${getPropertyFilter()}`, { headers: getAuthHeaders() }); if (!r.ok) throw new Error("Failed"); const d = await r.json(); tB.innerHTML = ""; allTariffsCache = d.tariffs; } catch (e) { console.error(e.message); }
+        try { const r = await fetch(`/tariffs/${getPropertyFilter()}`, { headers: getAuthHeaders() }); if (!r.ok) throw new Error("Failed"); const d = await r.json(); tB.innerHTML = ""; allTariffsCache = d.tariffs; d.tariffs.forEach(t => { let det = ""; if (t.structure_type === "FLAT") det = `R${t.rate_flat.toFixed(2)}`; else if (t.structure_type === "TIERED") det = `1-${t.tier_1_limit} @ R${t.tier_1_rate.toFixed(2)}, >${t.tier_1_limit} @ R${t.tier_2_rate.toFixed(2)}`; else if (t.structure_type === "TOU") det = `Peak: R${t.tou_peak_rate.toFixed(2)}, Off: R${t.tou_offpeak_rate.toFixed(2)}`; tB.innerHTML += `<tr><td>${t.tariff_id}</td><td>${t.name}</td><td>${t.meter_type}</td><td>${t.structure_type}</td><td>${det}</td><td><button onclick="editTariff(${t.tariff_id})" class="btn-edit">Edit</button> <button onclick="deleteTariff(${t.tariff_id})" class="btn-danger">Delete</button></td></tr>`; }); document.getElementById("tariffsTable").style.display = "block"; } catch (e) { console.error(e.message); }
+    }
+
+    function editTariff(id) {
+        const t = allTariffsCache.find(t => t.tariff_id === id);
+        if (!t) return;
+        document.getElementById('editTariffId').value = t.tariff_id;
+        document.getElementById('editTariffName').value = t.name;
+        document.getElementById('editTariffMeterType').value = t.meter_type;
+        document.getElementById('editTariffStructure').value = t.structure_type;
+        document.getElementById('editRateFlat').value = t.rate_flat || 0;
+        document.getElementById('editTier1Limit').value = t.tier_1_limit || 0;
+        document.getElementById('editTier1Rate').value = t.tier_1_rate || 0;
+        document.getElementById('editTier2Rate').value = t.tier_2_rate || 0;
+        document.getElementById('editTouPeak').value = t.tou_peak_rate || 0;
+        document.getElementById('editTouOffpeak').value = t.tou_offpeak_rate || 0;
+        toggleEditTariffFields();
+        document.getElementById('tariffEditModal').style.display = 'block';
+    }
+
+    function closeTariffEdit() {
+        document.getElementById('tariffEditModal').style.display = 'none';
+    }
+
+    async function saveTariffEdit() {
+        const id = document.getElementById('editTariffId').value;
+        const payload = {
+            name: document.getElementById('editTariffName').value,
+            meter_type: document.getElementById('editTariffMeterType').value,
+            structure_type: document.getElementById('editTariffStructure').value,
+            rate_flat: parseFloat(document.getElementById('editRateFlat').value || 0),
+            tier_1_limit: parseFloat(document.getElementById('editTier1Limit').value || 0),
+            tier_1_rate: parseFloat(document.getElementById('editTier1Rate').value || 0),
+            tier_2_rate: parseFloat(document.getElementById('editTier2Rate').value || 0),
+            tou_peak_rate: parseFloat(document.getElementById('editTouPeak').value || 0),
+            tou_offpeak_rate: parseFloat(document.getElementById('editTouOffpeak').value || 0)
+        };
+        try {
+            const r = await fetch(`/tariffs/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify(payload)
+            });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            alert(d.message);
+            logAction("Updated Tariff", `ID: ${id}`);
+            closeTariffEdit();
+            loadTariffs();
+        } catch (e) {
+            alert("Error: " + e.message);
+        }
+    }
+
+    async function deleteTariff(id) {
+        if (!confirm("Are you sure you want to delete this tariff?")) return;
+        try {
+            const r = await fetch(`/tariffs/${id}`, {
+                method: 'DELETE',
+                headers: getAuthHeaders()
+            });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            alert(d.message);
+            logAction("Deleted Tariff", `ID: ${id}`);
+            loadTariffs();
+        } catch (e) {
+            alert("Error: " + e.message);
+        }
     }
 
     async function createTariff() {

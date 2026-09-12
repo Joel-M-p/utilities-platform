@@ -43,6 +43,7 @@ def api_create_tenant(payload: dict, current_user: dict = Depends(verify_token))
         first_name = payload.get("first_name")
         last_name = payload.get("last_name")
         email = payload.get("email")
+        cellphone = payload.get("cellphone")
         rent_outstanding = payload.get("rent_outstanding", 0)
         electricity_outstanding = payload.get("electricity_outstanding", 0)
         water_outstanding = payload.get("water_outstanding", 0)
@@ -59,13 +60,13 @@ def api_create_tenant(payload: dict, current_user: dict = Depends(verify_token))
                 raise HTTPException(status_code=400, detail=f"Email {email} is already registered to an active tenant at this property.")
         
         cursor.execute("""
-            INSERT INTO tenants (first_name, last_name, email, rent_outstanding, electricity_outstanding, water_outstanding, property_id, unit_number) 
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
-        """, (first_name, last_name, email, rent_outstanding, electricity_outstanding, water_outstanding, property_id, unit_number))
+            INSERT INTO tenants (first_name, last_name, email, cellphone, rent_outstanding, electricity_outstanding, water_outstanding, property_id, unit_number) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id
+        """, (first_name, last_name, email, cellphone, rent_outstanding, electricity_outstanding, water_outstanding, property_id, unit_number))
         new_tenant_id = cursor.fetchone()[0]
         cursor.execute("INSERT INTO wallets (tenant_id, balance) VALUES (%s, 0.00)", (new_tenant_id,))
         conn.commit()
-        send_notification(f"{first_name} {last_name}", email, "Welcome to the Utilities Platform!")
+        send_notification(f"{first_name} {last_name}", email, cellphone, "Welcome to the Utilities Platform!")
         return {"status": "success", "message": "Tenant created successfully!", "tenant_id": new_tenant_id}
     except Exception as e:
         conn.rollback()
@@ -102,7 +103,8 @@ def api_anonymize_tenant(tenant_id: int, current_user: dict = Depends(verify_tok
             UPDATE tenants 
             SET first_name = 'ANONYMIZED', 
                 last_name = 'TENANT', 
-                email = 'anonymized@redacted.com', 
+                email = 'anonymized@redacted.com',
+                cellphone = '0000000000', 
                 is_anonymized = TRUE 
             WHERE id = %s
         """, (tenant_id,))
@@ -141,7 +143,7 @@ def api_credit_check(tenant_id: int, current_user: dict = Depends(verify_token))
             
         cursor.execute("UPDATE tenants SET credit_status = %s, credit_score = %s WHERE id = %s", (status, score, tenant_id))
         conn.commit()
-        send_notification(f"{first_name} {last_name}", email, f"Credit check completed. Status: {status} (Score: {score}).")
+        send_notification(f"{first_name} {last_name}", email, None, f"Credit check completed. Status: {status} (Score: {score}).")
         return {"status": "success", "message": f"Credit check completed.", "credit_status": status, "credit_score": score}
     except Exception as e:
         conn.rollback()
@@ -163,7 +165,7 @@ def api_lease_reminder(tenant_id: int, current_user: dict = Depends(verify_token
         if not lease_date:
             raise HTTPException(status_code=400, detail="Tenant has no lease expiry date set.")
             
-        send_notification(f"{first_name} {last_name}", email, f"Lease Expiry Reminder: Your lease expires on {lease_date}.", subject="Lease Expiry Reminder")
+        send_notification(f"{first_name} {last_name}", email, None, f"Lease Expiry Reminder: Your lease expires on {lease_date}.", subject="Lease Expiry Reminder")
         return {"status": "success", "message": "Lease expiry reminder sent."}
     except Exception as e:
         conn.rollback()
@@ -189,7 +191,7 @@ def api_notice_to_vacate(tenant_id: int, req: ExitFormRequest, current_user: dic
         """, (req.exit_date, req.exit_reason, tenant_id))
         conn.commit()
         
-        send_notification(f"{first_name} {last_name}", email, f"Notice to Vacate received. Exit scheduled for {req.exit_date}.")
+        send_notification(f"{first_name} {last_name}", email, None, f"Notice to Vacate received. Exit scheduled for {req.exit_date}.")
         
         return {"status": "success", "message": "Notice to Vacate submitted. PM notified for inspection."}
     except Exception as e:
@@ -219,7 +221,7 @@ def api_inspection_result(tenant_id: int, req: InspectionResultRequest, current_
             cursor.execute("UPDATE tenants SET status = 'VACATED', vacated_at = CURRENT_TIMESTAMP WHERE id = %s", (tenant_id,))
             # --- AUTOMATIC METER FREEING ---
             cursor.execute("UPDATE meters SET is_active = FALSE, tenant_id = NULL WHERE tenant_id = %s", (tenant_id,))
-            send_notification(f"{first_name} {last_name}", email, "Inspection passed. Account officially closed. Goodbye!")
+            send_notification(f"{first_name} {last_name}", email, None, "Inspection passed. Account officially closed. Goodbye!")
         
         conn.commit()
         return {"status": "success", "message": f"Inspection result recorded. Status: {req.status.upper()}"}
@@ -245,10 +247,10 @@ def api_update_tenant(tenant_id: int, tenant: TenantUpdateRequest, current_user:
         cursor.execute("SELECT COUNT(*) FROM transactions WHERE wallet_id = %s", (wallet_id,))
         txn_count = cursor.fetchone()[0]
 
-        cursor.execute("SELECT first_name, last_name, email, status FROM tenants WHERE id = %s", (tenant_id,))
+        cursor.execute("SELECT first_name, last_name, email, cellphone, status FROM tenants WHERE id = %s", (tenant_id,))
         current_data = cursor.fetchone()
         
-        curr_first, curr_last, curr_email, curr_status = current_data
+        curr_first, curr_last, curr_email, curr_cell, curr_status = current_data
 
         if txn_count > 0:
             if tenant.first_name != curr_first or tenant.last_name != curr_last:
@@ -265,6 +267,10 @@ def api_update_tenant(tenant_id: int, tenant: TenantUpdateRequest, current_user:
             new_log_entry = f"{curr_email} (changed on {timestamp}); "
             updated_log = prev_log + new_log_entry
             cursor.execute("UPDATE tenants SET email = %s, previous_emails = %s WHERE id = %s", (tenant.email, updated_log, tenant_id))
+
+        # Update cellphone
+        if tenant.cellphone != curr_cell:
+             cursor.execute("UPDATE tenants SET cellphone = %s WHERE id = %s", (tenant.cellphone, tenant_id))
 
         if txn_count == 0:
             cursor.execute("UPDATE tenants SET first_name = %s, last_name = %s WHERE id = %s", (tenant.first_name, tenant.last_name, tenant_id))
@@ -335,23 +341,23 @@ def api_get_tenant_balance(tenant_id: int, current_user: dict = Depends(verify_t
         check_tenant_access(cursor, tenant_id, current_user)
         
         # --- AUTOMATIC SCHEMA FIX ---
-        # Force add the wallet columns in case Render's DB didn't get them
         cursor.execute("ALTER TABLE wallets ADD COLUMN IF NOT EXISTS credit_limit DECIMAL DEFAULT 0;")
         cursor.execute("ALTER TABLE wallets ADD COLUMN IF NOT EXISTS credit_balance DECIMAL DEFAULT 0;")
         cursor.execute("ALTER TABLE wallets ADD COLUMN IF NOT EXISTS credit_debt DECIMAL DEFAULT 0;")
         cursor.execute("ALTER TABLE wallets ADD COLUMN IF NOT EXISTS credit_taps_used INT DEFAULT 0;")
         cursor.execute("ALTER TABLE wallets ADD COLUMN IF NOT EXISTS credit_reset_month VARCHAR(7);")
+        cursor.execute("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS cellphone VARCHAR(20);")
         conn.commit()
 
         cursor.execute("""
-            SELECT t.first_name, t.last_name, t.rent_outstanding, t.electricity_outstanding, t.water_outstanding, t.property_id, p.utility_model 
+            SELECT t.first_name, t.last_name, t.cellphone, t.rent_outstanding, t.electricity_outstanding, t.water_outstanding, t.property_id, p.utility_model 
             FROM tenants t 
             LEFT JOIN properties p ON t.property_id = p.id 
             WHERE t.id = %s
         """, (tenant_id,))
         tenant_data = cursor.fetchone()
             
-        first_name, last_name, rent_owed, elec_owed, water_owed, prop_id, utility_model = tenant_data
+        first_name, last_name, cellphone, rent_owed, elec_owed, water_owed, prop_id, utility_model = tenant_data
         if not utility_model:
             utility_model = "STS_TOKEN"
             
@@ -389,6 +395,7 @@ def api_get_tenant_balance(tenant_id: int, current_user: dict = Depends(verify_t
 
         return {
             "tenant_name": f"{first_name} {last_name}",
+            "cellphone": cellphone or "Not set",
             "rent_outstanding": float(rent_owed),
             "electricity_outstanding": float(elec_owed),
             "water_outstanding": float(water_owed),
@@ -486,7 +493,7 @@ def api_get_all_tenants(property_id: int = None, current_user: dict = Depends(ve
 
         if target_property_id:
             cursor.execute("""
-                SELECT t.id, t.unit_number, t.first_name, t.last_name, t.email, t.rent_outstanding, t.electricity_outstanding, t.water_outstanding, w.balance, w.credit_limit, t.status, t.suspended_at, t.vacated_at, t.credit_status, t.credit_score, t.inspection_status, t.popia_consent, t.is_anonymized, t.lease_expiry_date, t.property_id, p.name
+                SELECT t.id, t.unit_number, t.first_name, t.last_name, t.email, t.cellphone, t.rent_outstanding, t.electricity_outstanding, t.water_outstanding, w.balance, w.credit_limit, t.status, t.suspended_at, t.vacated_at, t.credit_status, t.credit_score, t.inspection_status, t.popia_consent, t.is_anonymized, t.lease_expiry_date, t.property_id, p.name
                 FROM tenants t 
                 JOIN wallets w ON t.id = w.tenant_id 
                 LEFT JOIN properties p ON t.property_id = p.id
@@ -495,7 +502,7 @@ def api_get_all_tenants(property_id: int = None, current_user: dict = Depends(ve
             """, (target_property_id,))
         else:
             cursor.execute("""
-                SELECT t.id, t.unit_number, t.first_name, t.last_name, t.email, t.rent_outstanding, t.electricity_outstanding, t.water_outstanding, w.balance, w.credit_limit, t.status, t.suspended_at, t.vacated_at, t.credit_status, t.credit_score, t.inspection_status, t.popia_consent, t.is_anonymized, t.lease_expiry_date, t.property_id, p.name
+                SELECT t.id, t.unit_number, t.first_name, t.last_name, t.email, t.cellphone, t.rent_outstanding, t.electricity_outstanding, t.water_outstanding, w.balance, w.credit_limit, t.status, t.suspended_at, t.vacated_at, t.credit_status, t.credit_score, t.inspection_status, t.popia_consent, t.is_anonymized, t.lease_expiry_date, t.property_id, p.name
                 FROM tenants t 
                 JOIN wallets w ON t.id = w.tenant_id 
                 LEFT JOIN properties p ON t.property_id = p.id
@@ -507,19 +514,20 @@ def api_get_all_tenants(property_id: int = None, current_user: dict = Depends(ve
         for row in rows:
             tenants_list.append({
                 "tenant_id": row[0], "unit_number": row[1], "first_name": row[2], "last_name": row[3], "email": row[4],
-                "rent_outstanding": float(row[5]), "electricity_outstanding": float(row[6]),
-                "water_outstanding": float(row[7]), "wallet_balance": float(row[8]),
-                "credit_limit": float(row[9] if row[9] is not None else 0),
-                "status": row[10],
-                "suspended_at": row[11].strftime("%Y-%m-%d %H:%M") if row[11] else None,
-                "vacated_at": row[12].strftime("%Y-%m-%d %H:%M") if row[12] else None,
-                "credit_status": row[13], "credit_score": row[14],
-                "inspection_status": row[15],
-                "popia_consent": row[16],
-                "is_anonymized": row[17],
-                "lease_expiry_date": row[18].strftime("%Y-%m-%d") if row[18] else None,
-                "property_id": row[19],
-                "property_name": row[20] if row[20] else "Unassigned"
+                "cellphone": row[5] or "",
+                "rent_outstanding": float(row[6]), "electricity_outstanding": float(row[7]),
+                "water_outstanding": float(row[8]), "wallet_balance": float(row[9]),
+                "credit_limit": float(row[10] if row[10] is not None else 0),
+                "status": row[11],
+                "suspended_at": row[12].strftime("%Y-%m-%d %H:%M") if row[12] else None,
+                "vacated_at": row[13].strftime("%Y-%m-%d %H:%M") if row[13] else None,
+                "credit_status": row[14], "credit_score": row[15],
+                "inspection_status": row[16],
+                "popia_consent": row[17],
+                "is_anonymized": row[18],
+                "lease_expiry_date": row[19].strftime("%Y-%m-%d") if row[19] else None,
+                "property_id": row[20],
+                "property_name": row[21] if row[21] else "Unassigned"
             })
         return {"status": "success", "tenants": tenants_list}
     except Exception as e:
