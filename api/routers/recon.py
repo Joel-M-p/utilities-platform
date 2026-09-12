@@ -1,31 +1,32 @@
 from fastapi import APIRouter, HTTPException, Depends
 from api.database import get_db_connection
-from api.schemas import ReconRequest
 from api.security import verify_token
 from decimal import Decimal
 
 router = APIRouter()
 
-@router.post("/recon/", dependencies=[Depends(verify_token)])
-def api_create_recon(recon: ReconRequest):
+@router.post("/run-recon", dependencies=[Depends(verify_token)])
+def api_create_recon(payload: dict):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        muni_units = Decimal(str(recon.municipal_units))
-        sub_units = Decimal(str(recon.submeter_units))
+        month = payload.get("month")
+        utility_type = payload.get("utility_type", "ELECTRICITY").upper()
+        muni_units = Decimal(str(payload.get("muni_units", 0)))
+        sub_units = Decimal(str(payload.get("sub_units", 0)))
         variance = muni_units - sub_units
         
         if abs(variance) <= (muni_units * Decimal('0.05')): # Allow 5% tolerance for rounding
             status = "BALANCED"
         elif variance > 0:
-            status = "LOSS (Leak/Theft)"
+            status = "LOSS"
         else:
-            status = "GAIN (Meter Fault)"
+            status = "GAIN"
             
         cursor.execute("""
             INSERT INTO recons (utility_type, reading_month, municipal_units, submeter_units, variance, status) 
             VALUES (%s, %s, %s, %s, %s, %s) RETURNING id
-        """, (recon.utility_type.upper(), recon.reading_month, muni_units, sub_units, variance, status))
+        """, (utility_type, month, muni_units, sub_units, variance, status))
         recon_id = cursor.fetchone()[0]
         conn.commit()
         
@@ -43,7 +44,7 @@ def api_create_recon(recon: ReconRequest):
         cursor.close()
         conn.close()
 
-@router.get("/recon/", dependencies=[Depends(verify_token)])
+@router.get("/recons", dependencies=[Depends(verify_token)])
 def api_get_recons():
     conn = get_db_connection()
     cursor = conn.cursor()

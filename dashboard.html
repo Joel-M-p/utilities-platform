@@ -625,19 +625,20 @@
     async function logAction(action, details) {
         try {
             const username = localStorage.getItem('pm_username') || 'Unknown';
-            await fetch(`/audit-log/`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify({ username, action, details }) });
+            await fetch(`/audit-log`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify({ username, action, details }) });
         } catch(e) { console.error("Audit log failed:", e); }
     }
 
     async function loadAuditLog() {
         const tB = document.getElementById("auditTableBody");
         try {
-            const r = await fetch(`/audit-log/`, { headers: getAuthHeaders() });
+            const r = await fetch(`/audit-log`, { headers: getAuthHeaders() });
             const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
             tB.innerHTML = "";
             d.logs.forEach(l => { tB.innerHTML += `<tr><td>${l.timestamp}</td><td>${l.username}</td><td>${l.action}</td><td>${l.details}</td></tr>`; });
             document.getElementById("auditTable").style.display = "block";
-        } catch(e) { alert("Error loading audit log."); }
+        } catch(e) { alert("Error loading audit log: " + e.message); }
     }
 
     function loadAllData() {
@@ -655,26 +656,31 @@
         if(!unitNumber) { alert("Please enter a Unit Number."); return null; }
         const matches = allTenantsCache.filter(t => String(t.unit_number) === String(unitNumber));
         if(matches.length === 0) { alert(`Tenant with Unit Number ${unitNumber} not found in the selected property.`); return null; }
-        const active = matches.find(t => t.status === 'ACTIVE');
+        
+        const active = matches.find(t => t.status && t.status.toUpperCase() === 'ACTIVE');
         if(!active) {
             alert(`Unit ${unitNumber} has no ACTIVE tenant (only past/vacated records). Add a new tenant to this unit first.`);
             return null;
         }
-        if(matches.length > 1) {
-            console.warn(`Unit ${unitNumber} has ${matches.length} tenant records (history). Using the ACTIVE one: tenant_id ${active.tenant_id}.`);
+        
+        const tenantId = active.tenant_id || active.id;
+        if(!tenantId) {
+            alert("Error: Could not find valid Tenant ID for this unit. Check backend response.");
+            return null;
         }
-        return active.tenant_id;
+        return tenantId;
     }
 
     async function loadUsers() {
         const tB = document.getElementById("usersTableBody");
         try {
-            const r = await fetch(`/users/`, { headers: getAuthHeaders() });
+            const r = await fetch(`/users`, { headers: getAuthHeaders() });
             const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
             tB.innerHTML = "";
             d.users.forEach(u => { tB.innerHTML += `<tr><td>${u.id}</td><td>${u.username}</td><td>${u.role}</td><td>${u.property_name || 'All'}</td></tr>`; });
             document.getElementById("usersTable").style.display = "block";
-        } catch (e) { console.error(e); alert("Error loading users"); }
+        } catch (e) { console.error("Error calling /users: " + e.message); }
     }
 
     async function createUser() {
@@ -684,17 +690,17 @@
         const property_id = document.getElementById("newUserProp").value || null;
         if(!username || !password) { alert("Username and password required"); return; }
         try {
-            const r = await fetch(`/users/`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify({username, password, role, property_id}) });
+            const r = await fetch(`/users`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify({username, password, role, property_id}) });
             const d = await r.json();
-            if(!r.ok) throw new Error(d.detail || "Error");
+            if(!r.ok) throw new Error(extractError(d));
             alert(d.message); logAction("Created User", `Username: ${username}, Role: ${role}`); loadUsers();
-        } catch(e) { alert("Error: " + e.message); }
+        } catch(e) { alert("Error calling /users: " + e.message); }
     }
 
     async function loadProperties() {
         try {
-            const r = await fetch(`/properties/`, { headers: getAuthHeaders() });
-            if (!r.ok) throw new Error("Failed to load properties");
+            const r = await fetch(`/properties`, { headers: getAuthHeaders() });
+            if (!r.ok) throw new Error(extractError(await r.json()));
             const d = await r.json();
             const dd = document.getElementById("propertyFilter");
             const tB = document.getElementById("propertiesTableBody");
@@ -710,7 +716,7 @@
             });
             document.getElementById("propertiesTable").style.display = "block";
             if(currentRole !== 'ADMIN' && assignedPropId && assignedPropId !== "null") { dd.value = assignedPropId; dd.disabled = true; }
-        } catch (e) { console.error("Error loading properties:", e.message); }
+        } catch (e) { console.error("Error calling /properties: " + e.message); }
     }
 
     function editProperty(id, name, prov, addr, model) {
@@ -738,14 +744,14 @@
         const utility_model = document.getElementById("propUtilityModel").value;
         if (!name) { alert("Property name is required."); return; }
         const payload = { name, province, address, utility_model };
-        const url = id ? `/properties/${id}` : `/properties/`;
+        const url = id ? `/properties/${id}` : `/properties`;
         const method = id ? 'PUT' : 'POST';
         try {
             const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) });
             const d = await r.json();
-            if (!r.ok) throw new Error(d.detail || "Error");
+            if (!r.ok) throw new Error(extractError(d));
             alert(d.message); logAction("Saved Property", `Name: ${name}, Model: ${utility_model}`); clearPropertyForm(); loadProperties(); 
-        } catch (e) { alert("Error: " + e.message); }
+        } catch (e) { alert(`Error calling ${url}: ` + e.message); }
     }
 
     function switchTab(evt, tabId) {
@@ -758,7 +764,7 @@
     async function login() {
         const user = document.getElementById("loginUser").value, pass = document.getElementById("loginPass").value, errorDiv = document.getElementById("loginError");
         try {
-            const response = await fetch(`/login/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: user, password: pass }) });
+            const response = await fetch(`/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: user, password: pass }) });
             const data = await response.json();
             if (!response.ok) throw new Error(data.detail || "Login failed");
             authToken = data.token; 
@@ -778,8 +784,9 @@
 
     async function loadDashboardStats() {
         try {
-            const response = await fetch(`/dashboard-stats/${getPropertyFilter()}`, { headers: getAuthHeaders() });
-            if (!response.ok) throw new Error("Failed to load stats");
+            const url = `/dashboard-stats/${getPropertyFilter()}`;
+            const response = await fetch(url, { headers: getAuthHeaders() });
+            if (!response.ok) throw new Error(extractError(await response.json()));
             const data = await response.json();
             document.getElementById("kpiRevenue").innerText = `R${data.revenue.total_revenue.toFixed(2)}`;
             document.getElementById("kpiRate").innerText = `${data.revenue.collection_rate.toFixed(1)}%`;
@@ -797,7 +804,7 @@
                 data.trends.forEach(t => { const width = (t.value / maxVal) * 100; html += `<div class="trend-bar"><div class="month">${t.month}</div><div class="bar-bg"><div class="bar-fill" style="width: ${width}%;"></div></div><div class="val">R${t.value.toFixed(0)}</div></div>`; });
                 trendsContainer.innerHTML = html;
             }
-        } catch (error) { console.error("Error loading stats:", error.message); }
+        } catch (error) { console.error("Error calling /dashboard-stats: " + error.message); }
     }
 
     async function createTenant() {
@@ -814,28 +821,43 @@
             electricity_outstanding: parseFloat(document.getElementById("newElecDebt").value || 0), 
             water_outstanding: parseFloat(document.getElementById("newWaterDebt").value || 0) 
         };
-        try { const r = await fetch(`/create-tenant/`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); logAction("Created Tenant", `Unit: ${payload.unit_number}`); loadAllTenants(); } catch (e) { alert("Error: " + e.message); }
+        try { const r = await fetch(`/create-tenant`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); logAction("Created Tenant", `Unit: ${payload.unit_number}`); loadAllTenants(); } catch (e) { alert("Error calling /create-tenant: " + e.message); }
     }
 
     async function checkBalance() {
         const unit = document.getElementById("unitNumberInput").value; const tenantId = getTenantIdByUnit(unit); if(!tenantId) return;
-        try { const r = await fetch(`/tenant-balance/${tenantId}`, { headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); document.getElementById("balanceResult").style.display = "block"; document.getElementById("balanceResult").innerHTML = `<p><strong>${d.tenant_name}</strong><br>Rent: R${d.rent_outstanding.toFixed(2)}<br>Elec: R${d.electricity_outstanding.toFixed(2)}<br>Water: R${d.water_outstanding.toFixed(2)}<br>Wallet: R${d.wallet_balance.toFixed(2)}</p>`; } catch (e) { alert("Error: " + e.message); }
+        try { const r = await fetch(`/tenant-balance/${tenantId}`, { headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); document.getElementById("balanceResult").style.display = "block"; document.getElementById("balanceResult").innerHTML = `<p><strong>${d.tenant_name}</strong><br>Rent: R${d.rent_outstanding.toFixed(2)}<br>Elec: R${d.electricity_outstanding.toFixed(2)}<br>Water: R${d.water_outstanding.toFixed(2)}<br>Wallet: R${d.wallet_balance.toFixed(2)}</p>`; } catch (e) { alert("Error calling /tenant-balance: " + e.message); }
     }
 
     async function loadAllTenants() {
         const tB = document.getElementById("tenantsTableBody");
-        try { const r = await fetch(`/all-tenants/${getPropertyFilter()}`, { headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error("Failed"); tB.innerHTML = ""; allTenantsCache = d.tenants; d.tenants.forEach(t => { let statusClass = t.status === 'ACTIVE' ? 'status-active' : (t.status === 'VACATED' ? 'status-vacated' : 'status-suspended'); let payStatus = (t.rent_outstanding > 0 || t.electricity_outstanding > 0 || t.water_outstanding > 0) ? '<span style="color:red;font-weight:bold;">IN ARREARS</span>' : '<span style="color:green;font-weight:bold;">CLEAR</span>'; tB.innerHTML += `<tr><td>${t.unit_number || 'N/A'}</td><td>${t.first_name} ${t.last_name}</td><td>${t.email}</td><td>${t.cellphone || 'N/A'}</td><td>${payStatus}</td><td>R${t.rent_outstanding.toFixed(2)}</td><td>R${t.electricity_outstanding.toFixed(2)}</td><td>R${t.water_outstanding.toFixed(2)}</td><td>R${t.wallet_balance.toFixed(2)}</td><td class="${statusClass}">${t.status}</td><td>${t.credit_status || 'N/A'}</td><td><button onclick="editTenant(${t.tenant_id})" class="btn-edit">Edit</button> <button onclick="viewStatement(${t.tenant_id})" class="btn-statement">Statement</button> <button onclick="openDocs(${t.tenant_id})" class="btn-docs">Docs</button> <button onclick="grantConsent(${t.tenant_id})" class="btn-popia">Consent</button> <button onclick="anonymize(${t.tenant_id})" class="btn-anonymize">Anonymize</button> <button onclick="runCreditCheck(${t.tenant_id})" class="btn-credit">Credit</button> <button onclick="suspendTenant(${t.tenant_id})" class="btn-suspend">Suspend</button> <button onclick="vacateTenant(${t.tenant_id})" class="btn-danger">Vacate</button></td></tr>`; }); document.getElementById("tenantsTable").style.display = "block"; } catch (e) { console.error(e.message); }
+        try { 
+            const url = `/all-tenants/${getPropertyFilter()}`;
+            const r = await fetch(url, { headers: getAuthHeaders() }); 
+            const d = await r.json(); 
+            if (!r.ok) throw new Error(extractError(d)); 
+            tB.innerHTML = ""; 
+            allTenantsCache = d.tenants; 
+            d.tenants.forEach(t => { 
+                const tId = t.tenant_id || t.id;
+                const upperStatus = (t.status || 'ACTIVE').toUpperCase();
+                let statusClass = upperStatus === 'ACTIVE' ? 'status-active' : (upperStatus === 'VACATED' ? 'status-vacated' : 'status-suspended'); 
+                let payStatus = (t.rent_outstanding > 0 || t.electricity_outstanding > 0 || t.water_outstanding > 0) ? '<span style="color:red;font-weight:bold;">IN ARREARS</span>' : '<span style="color:green;font-weight:bold;">CLEAR</span>'; 
+                tB.innerHTML += `<tr><td>${t.unit_number || 'N/A'}</td><td>${t.first_name || ''} ${t.last_name || ''}</td><td>${t.email || 'N/A'}</td><td>${t.cellphone || 'N/A'}</td><td>${payStatus}</td><td>R${(t.rent_outstanding || 0).toFixed(2)}</td><td>R${(t.electricity_outstanding || 0).toFixed(2)}</td><td>R${(t.water_outstanding || 0).toFixed(2)}</td><td>R${(t.wallet_balance || 0).toFixed(2)}</td><td class="${statusClass}">${upperStatus}</td><td>${t.credit_status || 'N/A'}</td><td><button onclick="editTenant(${tId})" class="btn-edit">Edit</button> <button onclick="viewStatement(${tId})" class="btn-statement">Statement</button> <button onclick="openDocs(${tId})" class="btn-docs">Docs</button> <button onclick="grantConsent(${tId})" class="btn-popia">Consent</button> <button onclick="anonymize(${tId})" class="btn-anonymize">Anonymize</button> <button onclick="runCreditCheck(${tId})" class="btn-credit">Credit</button> <button onclick="suspendTenant(${tId})" class="btn-suspend">Suspend</button> <button onclick="vacateTenant(${tId})" class="btn-danger">Vacate</button></td></tr>`; 
+            }); 
+            document.getElementById("tenantsTable").style.display = "block"; 
+        } catch (e) { console.error("Error calling /all-tenants: " + e.message); }
     }
 
     function editTenant(id) {
-        const t = allTenantsCache.find(t => t.tenant_id === id);
+        const t = allTenantsCache.find(t => (t.tenant_id || t.id) === id);
         if (!t) return;
-        document.getElementById('editTenantId').value = t.tenant_id;
-        document.getElementById('editFirstName').value = t.first_name;
-        document.getElementById('editLastName').value = t.last_name;
-        document.getElementById('editEmail').value = t.email;
+        document.getElementById('editTenantId').value = t.tenant_id || t.id;
+        document.getElementById('editFirstName').value = t.first_name || '';
+        document.getElementById('editLastName').value = t.last_name || '';
+        document.getElementById('editEmail').value = t.email || '';
         document.getElementById('editCellphone').value = t.cellphone || '';
-        document.getElementById('editStatus').value = t.status;
+        document.getElementById('editStatus').value = t.status ? t.status.toUpperCase() : 'ACTIVE';
         document.getElementById('tenantEditModal').style.display = 'block';
     }
 
@@ -854,7 +876,8 @@
         };
         
         try {
-            const r = await fetch(`/update-tenant/${id}`, {
+            const url = `/update-tenant/${id}`;
+            const r = await fetch(url, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
                 body: JSON.stringify(payload)
@@ -866,49 +889,61 @@
             closeTenantEdit();
             loadAllTenants();
         } catch (e) {
-            alert("Error: " + e.message);
+            alert(`Error calling ${url}: ` + e.message);
         }
     }
 
-    async function viewStatement(id) { try { const r = await fetch(`/tenant-statement/${id}`, { headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error("Failed"); currentStmtTenantId = id; let rows = ""; d.transactions.forEach(t => { rows += `<tr><td>${t.date}</td><td>${t.type}</td><td>R${t.amount.toFixed(2)}</td><td>${t.reference}</td></tr>`; }); document.getElementById("statementContent").innerHTML = `<div class="stmt-header"><h2>Account Statement</h2><h3>${d.tenant_name}</h3><p>${d.email}</p></div><div class="stmt-summary"><div><h3>Arrears</h3><p>Rent: R${d.rent_outstanding.toFixed(2)}</p><p>Elec: R${d.electricity_outstanding.toFixed(2)}</p><p>Water: R${d.water_outstanding.toFixed(2)}</p></div><div><h3>Wallet</h3><p>Balance: R${d.wallet_balance.toFixed(2)}</p><p>Credit Limit: R${d.credit_limit.toFixed(2)}</p></div></div><table><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Reference</th></tr></thead><tbody>${rows}</tbody></table>`; document.getElementById("statementModal").style.display = "block"; } catch (e) { alert(e.message); } }
+    async function viewStatement(id) { 
+        try { 
+            const url = `/tenant-statement/${id}`;
+            const r = await fetch(url, { headers: getAuthHeaders() }); 
+            const d = await r.json(); 
+            if (!r.ok) throw new Error(extractError(d)); 
+            currentStmtTenantId = id; 
+            let rows = ""; 
+            d.transactions.forEach(t => { rows += `<tr><td>${t.date}</td><td>${t.type}</td><td>R${t.amount.toFixed(2)}</td><td>${t.reference}</td></tr>`; }); 
+            document.getElementById("statementContent").innerHTML = `<div class="stmt-header"><h2>Account Statement</h2><h3>${d.tenant_name}</h3><p>${d.email}</p></div><div class="stmt-summary"><div><h3>Arrears</h3><p>Rent: R${d.rent_outstanding.toFixed(2)}</p><p>Elec: R${d.electricity_outstanding.toFixed(2)}</p><p>Water: R${d.water_outstanding.toFixed(2)}</p></div><div><h3>Wallet</h3><p>Balance: R${d.wallet_balance.toFixed(2)}</p><p>Credit Limit: R${(d.credit_limit || 0).toFixed(2)}</p></div></div><table><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Reference</th></tr></thead><tbody>${rows}</tbody></table>`; 
+            document.getElementById("statementModal").style.display = "block"; 
+        } catch (e) { alert(`Error calling /tenant-statement: ` + e.message); } 
+    }
     function closeStatement() { document.getElementById("statementModal").style.display = "none"; }
 
-    async function openDocs(id) { try { const r = await fetch(`/get-docs/${id}`, { headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error("Failed"); const tB = document.getElementById("docsTableBody"); tB.innerHTML = ""; d.documents.forEach(doc => { tB.innerHTML += `<tr><td>${doc.uploaded_at}</td><td>${doc.doc_type}</td><td>${doc.file_name}</td></tr>`; }); document.getElementById("docsModal").style.display = "block"; } catch (e) { alert(e.message); } }
+    async function openDocs(id) { try { const url = `/get-docs/${id}`; const r = await fetch(url, { headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); const tB = document.getElementById("docsTableBody"); tB.innerHTML = ""; d.documents.forEach(doc => { tB.innerHTML += `<tr><td>${doc.uploaded_at}</td><td>${doc.doc_type}</td><td>${doc.file_name}</td></tr>`; }); document.getElementById("docsModal").style.display = "block"; } catch (e) { alert("Error calling /get-docs: " + e.message); } }
     function closeDocs() { document.getElementById("docsModal").style.display = "none"; }
 
     async function uploadDoc() {
         const unit = document.getElementById("docUnitNumber").value; const tenantId = getTenantIdByUnit(unit); if(!tenantId) return;
         const file = document.getElementById("docFile").files[0]; if(!file) { alert("Select a file."); return; }
         const formData = new FormData(); formData.append("doc_type", document.getElementById("docType").value); formData.append("file", file);
-        try { const r = await fetch(`/upload-doc/${tenantId}`, { method: 'POST', headers: { 'Authorization': `Bearer ${authToken}` }, body: formData }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); logAction("Uploaded Doc", `Unit: ${unit}`); } catch (e) { alert("Error: " + e.message); }
+        try { const url = `/upload-doc/${tenantId}`; const r = await fetch(url, { method: 'POST', headers: { 'Authorization': `Bearer ${authToken}` }, body: formData }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); logAction("Uploaded Doc", `Unit: ${unit}`); } catch (e) { alert(`Error calling ${url}: ` + e.message); }
     }
 
-    async function grantConsent(id) { try { const r = await fetch(`/grant-consent/${id}`, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllTenants(); } catch (e) { alert("Error: " + e.message); } }
-    async function anonymize(id) { if(!confirm("Anonymize this tenant's data?")) return; try { const r = await fetch(`/anonymize-tenant/${id}`, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllTenants(); } catch (e) { alert("Error: " + e.message); } }
-    async function runCreditCheck(id) { try { const r = await fetch(`/credit-check/${id}`, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllTenants(); } catch (e) { alert("Error: " + e.message); } }
-    async function suspendTenant(id) { if(!confirm("Suspend this tenant?")) return; try { const r = await fetch(`/suspend-tenant/${id}`, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllTenants(); } catch (e) { alert("Error: " + e.message); } }
-    async function vacateTenant(id) { if(!confirm("Vacate this tenant?")) return; try { const r = await fetch(`/vacate-tenant/${id}`, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllTenants(); loadAllMeters(); } catch (e) { alert("Error: " + e.message); } }
+    async function grantConsent(id) { try { const url = `/grant-consent/${id}`; const r = await fetch(url, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllTenants(); } catch (e) { alert(`Error calling /grant-consent: ` + e.message); } }
+    async function anonymize(id) { if(!confirm("Anonymize this tenant's data?")) return; try { const url = `/anonymize-tenant/${id}`; const r = await fetch(url, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllTenants(); } catch (e) { alert(`Error calling /anonymize-tenant: ` + e.message); } }
+    async function runCreditCheck(id) { try { const url = `/credit-check/${id}`; const r = await fetch(url, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllTenants(); } catch (e) { alert(`Error calling /credit-check: ` + e.message); } }
+    async function suspendTenant(id) { if(!confirm("Suspend this tenant?")) return; try { const url = `/suspend-tenant/${id}`; const r = await fetch(url, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllTenants(); } catch (e) { alert(`Error calling /suspend-tenant: ` + e.message); } }
+    async function vacateTenant(id) { if(!confirm("Vacate this tenant?")) return; try { const url = `/vacate-tenant/${id}`; const r = await fetch(url, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllTenants(); loadAllMeters(); } catch (e) { alert(`Error calling /vacate-tenant: ` + e.message); } }
 
     async function submitNTV() {
         const unit = document.getElementById("ntvUnitNumber").value; const tenantId = getTenantIdByUnit(unit); if(!tenantId) return;
         const payload = { exit_date: document.getElementById("ntvExitDate").value, exit_reason: document.getElementById("ntvReason").value };
-        try { const r = await fetch(`/notice-to-vacate/${tenantId}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); } catch (e) { alert("Error: " + e.message); }
+        try { const url = `/notice-to-vacate/${tenantId}`; const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); } catch (e) { alert(`Error calling ${url}: ` + e.message); }
     }
 
     async function submitInspection() {
         const unit = document.getElementById("inspUnitNumber").value; const tenantId = getTenantIdByUnit(unit); if(!tenantId) return;
         const payload = { status: document.getElementById("inspStatus").value, notes: document.getElementById("inspNotes").value };
-        try { const r = await fetch(`/inspection-result/${tenantId}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllTenants(); loadAllMeters(); } catch (e) { alert("Error: " + e.message); }
+        try { const url = `/inspection-result/${tenantId}`; const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllTenants(); loadAllMeters(); } catch (e) { alert(`Error calling ${url}: ` + e.message); }
     }
 
     async function downloadCSV() {
-        try { const r = await fetch(`/export-csv/${getPropertyFilter()}`, { headers: getAuthHeaders() }); const blob = await r.blob(); const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'tenants.csv'; a.click(); window.URL.revokeObjectURL(url); } catch (e) { alert("Error downloading CSV."); }
+        try { const url = `/export-csv/${getPropertyFilter()}`; const r = await fetch(url, { headers: getAuthHeaders() }); if(!r.ok) throw new Error("Failed"); const blob = await r.blob(); const url2 = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url2; a.download = 'tenants.csv'; a.click(); window.URL.revokeObjectURL(url2); } catch (e) { alert("Error calling /export-csv: " + e.message); }
     }
 
     async function setCreditLimit() {
         const unit = document.getElementById("creditUnitNumber").value, limit = document.getElementById("creditLimitInput").value, resultDiv = document.getElementById("creditResult");
         const tenantId = getTenantIdByUnit(unit); if(!tenantId) return;
-        try { const r = await fetch(`/set-credit-limit/${tenantId}?limit=${limit}`, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`; logAction("Set Emergency Fund", `Unit: ${unit}, Limit: ${limit}`); loadAllTenants(); } catch (e) { resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:red;">${e.message}</p>`; }
+        try { const url = `/set-credit-limit/${tenantId}?limit=${limit}`; const r = await fetch(url, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`; logAction("Set Emergency Fund", `Unit: ${unit}, Limit: ${limit}`); loadAllTenants(); } catch (e) { resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:red;">Error calling /set-credit-limit: ${e.message}</p>`; }
     }
 
     async function assignMeter() {
@@ -926,7 +961,8 @@
             billing_type: document.getElementById("billingType").value 
         };
         try { 
-            const r = await fetch(`/assign-meter/`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); 
+            const url = `/assign-meter`;
+            const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); 
             const d = await r.json(); 
             if (!r.ok) throw new Error(extractError(d)); 
             alert(d.message); 
@@ -938,127 +974,225 @@
             document.getElementById('billingType').value = 'PREPAID';
             
             loadAllMeters(); 
-        } catch (e) { alert("Error: " + e.message); }
+        } catch (e) { alert(`Error calling ${url}: ` + e.message); }
     }
 
     async function generateBill() {
         const unit = document.getElementById("billUnitNumber").value; const tenantId = getTenantIdByUnit(unit); if(!tenantId) return;
         const payload = { tenant_id: tenantId, utility_type: document.getElementById("billType").value, amount: parseFloat(document.getElementById("billAmount").value || 0), peak_units: parseFloat(document.getElementById("billPeak").value || 0), offpeak_units: parseFloat(document.getElementById("billOffpeak").value || 0), manual_entry: true };
-        try { const r = await fetch(`/generate-bill/`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllTenants(); } catch (e) { alert("Error: " + e.message); }
+        try { const url = `/generate-bill`; const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllTenants(); } catch (e) { alert(`Error calling ${url}: ` + e.message); }
     }
 
     async function restrictWater() {
-        const unit = document.getElementById("restrictUnitNumber").value; const tenantId = getTenantIdByUnit(unit); if(!tenantId) return;
-        try { const r = await fetch(`/restrict-water/${tenantId}`, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllMeters(); } catch (e) { alert("Error: " + e.message); }
+        const unit = document.getElementById("restrictUnitNumber").value;
+        const tenantId = getTenantIdByUnit(unit); 
+        if(!tenantId) return;
+        try {
+            const url = `/water-control/${tenantId}?action=RESTRICT`;
+            const r = await fetch(url, { method: 'POST', headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            document.getElementById("restrictResult").style.display = "block";
+            document.getElementById("restrictResult").innerHTML = `<p style="color:green;">${d.message}</p>`;
+            loadAllMeters();
+        } catch (e) {
+            document.getElementById("restrictResult").style.display = "block";
+            document.getElementById("restrictResult").innerHTML = `<p style="color:red;">Error calling /water-control: ${e.message}</p>`;
+        }
     }
 
     async function unrestrictWater() {
-        const unit = document.getElementById("restrictUnitNumber").value; const tenantId = getTenantIdByUnit(unit); if(!tenantId) return;
-        try { const r = await fetch(`/unrestrict-water/${tenantId}`, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllMeters(); } catch (e) { alert("Error: " + e.message); }
+        const unit = document.getElementById("restrictUnitNumber").value;
+        const tenantId = getTenantIdByUnit(unit); 
+        if(!tenantId) return;
+        try {
+            const url = `/water-control/${tenantId}?action=RESTORE`;
+            const r = await fetch(url, { method: 'POST', headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            document.getElementById("restrictResult").style.display = "block";
+            document.getElementById("restrictResult").innerHTML = `<p style="color:green;">${d.message}</p>`;
+            loadAllMeters();
+        } catch (e) {
+            document.getElementById("restrictResult").style.display = "block";
+            document.getElementById("restrictResult").innerHTML = `<p style="color:red;">Error calling /water-control: ${e.message}</p>`;
+        }
     }
 
     async function adjustAccount() {
-        const unit = document.getElementById("adjUnitNumber").value; const tenantId = getTenantIdByUnit(unit); if(!tenantId) return;
-        const payload = { target: document.getElementById("adjTarget").value, amount: parseFloat(document.getElementById("adjAmount").value), reason: document.getElementById("adjReason").value };
-        try { const r = await fetch(`/adjust-account/${tenantId}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllTenants(); } catch (e) { alert("Error: " + e.message); }
+        const unit = document.getElementById("adjUnitNumber").value;
+        const tenantId = getTenantIdByUnit(unit); 
+        if(!tenantId) return;
+        const payload = {
+            target: document.getElementById("adjTarget").value,
+            amount: parseFloat(document.getElementById("adjAmount").value || 0),
+            reason: document.getElementById("adjReason").value
+        };
+        try {
+            const url = `/adjust-account/${tenantId}`;
+            const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            document.getElementById("adjResult").style.display = "block";
+            document.getElementById("adjResult").innerHTML = `<p style="color:green;">${d.message}</p>`;
+            logAction("Adjusted Account", `Unit: ${unit}, Target: ${payload.target}`);
+            loadAllTenants();
+        } catch (e) {
+            document.getElementById("adjResult").style.display = "block";
+            document.getElementById("adjResult").innerHTML = `<p style="color:red;">Error calling /adjust-account: ${e.message}</p>`;
+        }
     }
 
     async function loadAllMeters() {
         const tB = document.getElementById("metersTableBody");
-        try { const r = await fetch(`/all-meters/${getPropertyFilter()}`, { headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error("Failed"); tB.innerHTML = ""; d.meters.forEach(m => { tB.innerHTML += `<tr><td>${m.meter_id}</td><td>${m.tenant_name}</td><td>${m.meter_type}</td><td>${m.billing_type}</td><td>${m.serial_number}</td><td>${m.valve_status}</td><td>${m.is_active ? 'Yes' : 'No'}</td><td><button onclick="deactivateMeter(${m.meter_id})" class="btn-danger">Deact</button> <button onclick="logMeterEvent(${m.meter_id})" class="btn-event">Log Event</button> <button onclick="viewMeterHistory(${m.meter_id})" class="btn-history">History</button></td></tr>`; }); document.getElementById("metersTable").style.display = "block"; } catch (e) { console.error(e.message); }
-    }
-
-    async function deactivateMeter(id) { if(!confirm("Deactivate meter?")) return; try { const r = await fetch(`/deactivate-meter/${id}`, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllMeters(); } catch (e) { alert("Error: " + e.message); } }
-
-    async function logMeterEvent(meterId) {
-        const eventType = prompt("Enter Event Type (e.g., TAMPER_DETECTED, BYPASS, PHYSICAL_INSPECTION):");
-        if(!eventType) return;
-        const eventNotes = prompt("Enter details/notes about this event:");
-        try { const r = await fetch(`/log-meter-event/${meterId}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify({ event_type: eventType, event_notes: eventNotes }) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); logAction("Logged Meter Event", `Meter ID: ${meterId}, Type: ${eventType}`); } catch (e) { alert("Error: " + e.message); }
-    }
-
-    async function viewMeterHistory(meterId) {
         try {
-            const r = await fetch(`/meter-audit-history/${meterId}`, { headers: getAuthHeaders() });
-            const d = await r.json(); if (!r.ok) throw new Error(extractError(d));
-            
-            let rows = "";
-            if (d.history.length === 0) {
-                rows = `<tr><td colspan="6" style="text-align:center; color:#7f8c8d;">No history recorded for this meter yet.</td></tr>`;
-            } else {
-                d.history.forEach(h => { 
-                    let catClass = h.category === 'EVENT' ? 'event' : 'transaction'; 
-                    rows += `<tr><td>${h.date}</td><td>${h.tenant || 'N/A'}</td><td><span class="event-category ${catClass}">${h.category}</span></td><td>${h.type}</td><td>${h.details}</td><td>${h.amount > 0 ? 'R' + h.amount.toFixed(2) : '-'}</td></tr>`; 
-                });
-            }
-            
-            let html = `
-                <div class="invoice-paper">
-                    <div class="stmt-header">
-                        <h2>Meter Audit Report</h2>
-                        <p><strong>Serial Number:</strong> ${d.serial_number} | <strong>Type:</strong> ${d.meter_type}</p>
-                    </div>
-                    <table>
-                        <thead>
-                            <tr><th>Date</th><th>Tenant</th><th>Category</th><th>Type</th><th>Details</th><th>Amount</th></tr>
-                        </thead>
-                        <tbody>${rows}</tbody>
-                    </table>
-                    <button onclick="window.print()" class="btn-print">Print Report</button>
-                </div>
-            `;
-            
-            document.getElementById("meterHistoryContent").innerHTML = html;
-            document.getElementById("meterHistoryModal").style.display = "block";
-        } catch (e) { alert("Error loading meter history: " + e.message); }
+            const url = `/all-meters/${getPropertyFilter()}`;
+            const r = await fetch(url, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            tB.innerHTML = "";
+            d.meters.forEach(m => {
+                const mId = m.meter_id || m.id;
+                tB.innerHTML += `<tr>
+                    <td>${mId}</td>
+                    <td>${m.tenant_name || 'N/A'}</td>
+                    <td>${m.meter_type}</td>
+                    <td>${m.billing_type}</td>
+                    <td>${m.serial_number}</td>
+                    <td>${m.valve_status || 'N/A'}</td>
+                    <td>${m.is_active ? 'Yes' : 'No'}</td>
+                    <td>
+                        <button onclick="logMeterEvent(${mId})" class="btn-event">Log Event</button>
+                        <button onclick="viewMeterHistory(${mId})" class="btn-history">History</button>
+                    </td>
+                </tr>`;
+            });
+            document.getElementById("metersTable").style.display = "block";
+        } catch (e) { console.error("Error calling /all-meters: " + e.message); }
     }
+
+    async function logMeterEvent(id) {
+        const eventType = prompt("Enter event type (e.g., TAMPER, BYPASS, FAULT):");
+        if(!eventType) return;
+        const notes = prompt("Enter event notes:");
+        try {
+            const url = `/meter-event/${id}`;
+            const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify({ event_type: eventType.toUpperCase(), notes }) });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            alert(d.message);
+            logAction("Logged Meter Event", `Meter ID: ${id}, Type: ${eventType}`);
+        } catch (e) { alert(`Error calling ${url}: ` + e.message); }
+    }
+
+    async function viewMeterHistory(id) {
+        try {
+            const url = `/meter-history/${id}`;
+            const r = await fetch(url, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            let rows = "";
+            d.history.forEach(h => { rows += `<tr><td>${h.timestamp}</td><td>${h.event_type}</td><td>${h.notes || ''}</td></tr>`; });
+            document.getElementById("meterHistoryContent").innerHTML = `<h2>Meter History</h2><table><thead><tr><th>Timestamp</th><th>Type</th><th>Notes</th></tr></thead><tbody>${rows}</tbody></table>`;
+            document.getElementById("meterHistoryModal").style.display = "block";
+        } catch (e) { alert(`Error calling /meter-history: ` + e.message); }
+    }
+
     function closeMeterHistory() { document.getElementById("meterHistoryModal").style.display = "none"; }
 
-    async function loadCompanySettings() {
-        try { const r = await fetch(`/company/`, { headers: getAuthHeaders() }); if (!r.ok) throw new Error("Failed"); const d = await r.json(); companyData = d; document.getElementById("compName").value = d.name || ""; document.getElementById("compLogo").value = d.logo_path || ""; document.getElementById("compAddress").value = d.address || ""; document.getElementById("compVat").value = d.vat_number || ""; document.getElementById("compVatRate").value = d.vat_percent || 15; document.getElementById("compEmail").value = d.contact_email || ""; document.getElementById("compPhone").value = d.contact_phone || ""; } catch (e) { console.error(e.message); }
-    }
-
-    async function updateCompanySettings() {
-        const p = { name: document.getElementById("compName").value, logo_path: document.getElementById("compLogo").value, address: document.getElementById("compAddress").value, vat_number: document.getElementById("compVat").value, vat_percent: parseFloat(document.getElementById("compVatRate").value || 15), contact_email: document.getElementById("compEmail").value, contact_phone: document.getElementById("compPhone").value };
-        const rD = document.getElementById("compResult");
-        try { const r = await fetch(`/company/`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(p) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); rD.style.display = "block"; rD.innerHTML = `<p style="color:green;">${d.message}</p>`; logAction("Updated Company Settings", `VAT: ${p.vat_percent}%`); loadCompanySettings(); } catch (e) { rD.style.display = "block"; rD.innerHTML = `<p style="color:red;">${e.message}</p>`; }
-    }
-
     function toggleTariffFields() {
-        const s = document.getElementById("tariffStructure").value;
-        document.getElementById("flatFields").style.display = s === "FLAT" ? "block" : "none";
-        document.getElementById("tieredFields").style.display = s === "TIERED" ? "block" : "none";
-        document.getElementById("touFields").style.display = s === "TOU" ? "block" : "none";
+        const val = document.getElementById("tariffStructure").value;
+        document.getElementById("flatFields").style.display = val === 'FLAT' ? 'block' : 'none';
+        document.getElementById("tieredFields").style.display = val === 'TIERED' ? 'block' : 'none';
+        document.getElementById("touFields").style.display = val === 'TOU' ? 'block' : 'none';
     }
 
-    // --- TARIFF CRUD FUNCTIONS ---
-    function toggleEditTariffFields() {
-        const s = document.getElementById('editTariffStructure').value;
-        document.getElementById('editFlatFields').style.display = s === 'FLAT' ? 'block' : 'none';
-        document.getElementById('editTieredFields').style.display = s === 'TIERED' ? 'block' : 'none';
-        document.getElementById('editTouFields').style.display = s === 'TOU' ? 'block' : 'none';
+    async function createTariff() {
+        const propId = document.getElementById("propertyFilter").value;
+        if(!propId) { alert("Please select a property first."); return; }
+        const structure = document.getElementById("tariffStructure").value;
+        const payload = {
+            property_id: parseInt(propId),
+            name: document.getElementById("tariffName").value,
+            meter_type: document.getElementById("tariffMeterType").value,
+            structure: structure,
+            flat_rate: structure === 'FLAT' ? parseFloat(document.getElementById("rateFlat").value || 0) : null,
+            tier1_limit: structure === 'TIERED' ? parseFloat(document.getElementById("tier1Limit").value || 0) : null,
+            tier1_rate: structure === 'TIERED' ? parseFloat(document.getElementById("tier1Rate").value || 0) : null,
+            tier2_rate: structure === 'TIERED' ? parseFloat(document.getElementById("tier2Rate").value || 0) : null,
+            peak_rate: structure === 'TOU' ? parseFloat(document.getElementById("touPeak").value || 0) : null,
+            offpeak_rate: structure === 'TOU' ? parseFloat(document.getElementById("touOffpeak").value || 0) : null
+        };
+        try {
+            const url = `/tariffs`;
+            const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            alert(d.message);
+            loadTariffs();
+        } catch (e) { alert(`Error calling ${url}: ` + e.message); }
     }
 
     async function loadTariffs() {
         const tB = document.getElementById("tariffsTableBody");
-        try { const r = await fetch(`/tariffs/${getPropertyFilter()}`, { headers: getAuthHeaders() }); if (!r.ok) throw new Error("Failed"); const d = await r.json(); tB.innerHTML = ""; allTariffsCache = d.tariffs; d.tariffs.forEach(t => { let det = ""; if (t.structure_type === "FLAT") det = `R${t.rate_flat.toFixed(2)}`; else if (t.structure_type === "TIERED") det = `1-${t.tier_1_limit} @ R${t.tier_1_rate.toFixed(2)}, >${t.tier_1_limit} @ R${t.tier_2_rate.toFixed(2)}`; else if (t.structure_type === "TOU") det = `Peak: R${t.tou_peak_rate.toFixed(2)}, Off: R${t.tou_offpeak_rate.toFixed(2)}`; tB.innerHTML += `<tr><td>${t.tariff_id}</td><td>${t.name}</td><td>${t.meter_type}</td><td>${t.structure_type}</td><td>${det}</td><td><button onclick="editTariff(${t.tariff_id})" class="btn-edit">Edit</button> <button onclick="deleteTariff(${t.tariff_id})" class="btn-danger">Delete</button></td></tr>`; }); document.getElementById("tariffsTable").style.display = "block"; } catch (e) { console.error(e.message); }
+        try {
+            const url = `/tariffs/${getPropertyFilter()}`;
+            const r = await fetch(url, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            allTariffsCache = d.tariffs;
+            tB.innerHTML = "";
+            d.tariffs.forEach(t => {
+                const tId = t.tariff_id || t.id; // FIX: Fallback for ID
+                let details = "";
+                if(t.structure === 'FLAT') details = `Rate: R${t.flat_rate}`;
+                else if(t.structure === 'TIERED') details = `T1: ${t.tier1_limit}@R${t.tier1_rate}, T2: R${t.tier2_rate}`;
+                else if(t.structure === 'TOU') details = `Peak: R${t.peak_rate}, Off: R${t.offpeak_rate}`;
+                
+                tB.innerHTML += `<tr>
+                    <td>${tId}</td>
+                    <td>${t.name}</td>
+                    <td>${t.meter_type}</td>
+                    <td>${t.structure}</td>
+                    <td>${details}</td>
+                    <td>
+                        <button onclick="editTariff(${tId})" class="btn-edit">Edit</button>
+                        <button onclick="deleteTariff(${tId})" class="btn-danger">Delete</button>
+                    </td>
+                </tr>`;
+            });
+            document.getElementById("tariffsTable").style.display = "block";
+        } catch (e) { console.error("Error calling /tariffs: " + e.message); }
     }
 
     function editTariff(id) {
-        const t = allTariffsCache.find(t => t.tariff_id === id);
-        if (!t) return;
-        document.getElementById('editTariffId').value = t.tariff_id;
+        const t = allTariffsCache.find(x => (x.tariff_id || x.id) === id); // FIX: Fallback for ID
+        if(!t) return;
+        document.getElementById('editTariffId').value = t.tariff_id || t.id; // FIX: Fallback for ID
         document.getElementById('editTariffName').value = t.name;
         document.getElementById('editTariffMeterType').value = t.meter_type;
-        document.getElementById('editTariffStructure').value = t.structure_type;
-        document.getElementById('editRateFlat').value = t.rate_flat || 0;
-        document.getElementById('editTier1Limit').value = t.tier_1_limit || 0;
-        document.getElementById('editTier1Rate').value = t.tier_1_rate || 0;
-        document.getElementById('editTier2Rate').value = t.tier_2_rate || 0;
-        document.getElementById('editTouPeak').value = t.tou_peak_rate || 0;
-        document.getElementById('editTouOffpeak').value = t.tou_offpeak_rate || 0;
+        document.getElementById('editTariffStructure').value = t.structure;
+        
+        if(t.structure === 'FLAT') document.getElementById('editRateFlat').value = t.flat_rate || '';
+        if(t.structure === 'TIERED') {
+            document.getElementById('editTier1Limit').value = t.tier1_limit || '';
+            document.getElementById('editTier1Rate').value = t.tier1_rate || '';
+            document.getElementById('editTier2Rate').value = t.tier2_rate || '';
+        }
+        if(t.structure === 'TOU') {
+            document.getElementById('editTouPeak').value = t.peak_rate || '';
+            document.getElementById('editTouOffpeak').value = t.offpeak_rate || '';
+        }
+        
         toggleEditTariffFields();
         document.getElementById('tariffEditModal').style.display = 'block';
+    }
+
+    function toggleEditTariffFields() {
+        const val = document.getElementById("editTariffStructure").value;
+        document.getElementById("editFlatFields").style.display = val === 'FLAT' ? 'block' : 'none';
+        document.getElementById("editTieredFields").style.display = val === 'TIERED' ? 'block' : 'none';
+        document.getElementById("editTouFields").style.display = val === 'TOU' ? 'block' : 'none';
     }
 
     function closeTariffEdit() {
@@ -1067,137 +1201,384 @@
 
     async function saveTariffEdit() {
         const id = document.getElementById('editTariffId').value;
+        const structure = document.getElementById('editTariffStructure').value;
         const payload = {
             name: document.getElementById('editTariffName').value,
             meter_type: document.getElementById('editTariffMeterType').value,
-            structure_type: document.getElementById('editTariffStructure').value,
-            rate_flat: parseFloat(document.getElementById('editRateFlat').value || 0),
-            tier_1_limit: parseFloat(document.getElementById('editTier1Limit').value || 0),
-            tier_1_rate: parseFloat(document.getElementById('editTier1Rate').value || 0),
-            tier_2_rate: parseFloat(document.getElementById('editTier2Rate').value || 0),
-            tou_peak_rate: parseFloat(document.getElementById('editTouPeak').value || 0),
-            tou_offpeak_rate: parseFloat(document.getElementById('editTouOffpeak').value || 0)
+            structure: structure,
+            flat_rate: structure === 'FLAT' ? parseFloat(document.getElementById('editRateFlat').value || 0) : null,
+            tier1_limit: structure === 'TIERED' ? parseFloat(document.getElementById('editTier1Limit').value || 0) : null,
+            tier1_rate: structure === 'TIERED' ? parseFloat(document.getElementById('editTier1Rate').value || 0) : null,
+            tier2_rate: structure === 'TIERED' ? parseFloat(document.getElementById('editTier2Rate').value || 0) : null,
+            peak_rate: structure === 'TOU' ? parseFloat(document.getElementById('editTouPeak').value || 0) : null,
+            offpeak_rate: structure === 'TOU' ? parseFloat(document.getElementById('editTouOffpeak').value || 0) : null
         };
         try {
-            const r = await fetch(`/tariffs/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-                body: JSON.stringify(payload)
-            });
+            const url = `/tariffs/${id}`;
+            const r = await fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) });
             const d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
             alert(d.message);
-            logAction("Updated Tariff", `ID: ${id}`);
             closeTariffEdit();
             loadTariffs();
-        } catch (e) {
-            alert("Error: " + e.message);
-        }
+        } catch (e) { alert(`Error calling ${url}: ` + e.message); }
     }
 
     async function deleteTariff(id) {
-        if (!confirm("Are you sure you want to delete this tariff?")) return;
+        if(!confirm("Delete this tariff?")) return;
         try {
-            const r = await fetch(`/tariffs/${id}`, {
-                method: 'DELETE',
-                headers: getAuthHeaders()
-            });
+            const url = `/tariffs/${id}`;
+            const r = await fetch(url, { method: 'DELETE', headers: getAuthHeaders() });
             const d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
             alert(d.message);
-            logAction("Deleted Tariff", `ID: ${id}`);
             loadTariffs();
-        } catch (e) {
-            alert("Error: " + e.message);
-        }
+        } catch (e) { alert(`Error calling ${url}: ` + e.message); }
     }
 
-    async function createTariff() {
-        const propId = document.getElementById("propertyFilter").value; if(!propId) { alert("Select property first."); return; }
-        const payload = { property_id: parseInt(propId), name: document.getElementById("tariffName").value, meter_type: document.getElementById("tariffMeterType").value, structure_type: document.getElementById("tariffStructure").value, rate_flat: parseFloat(document.getElementById("rateFlat").value || 0), tier_1_limit: parseFloat(document.getElementById("tier1Limit").value || 0), tier_1_rate: parseFloat(document.getElementById("tier1Rate").value || 0), tier_2_rate: parseFloat(document.getElementById("tier2Rate").value || 0), tou_peak_rate: parseFloat(document.getElementById("touPeak").value || 0), tou_offpeak_rate: parseFloat(document.getElementById("touOffpeak").value || 0) };
-        try { const r = await fetch(`/tariffs/`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadTariffs(); } catch (e) { alert("Error: " + e.message); }
+    async function generateInvoice() {
+        const unit = document.getElementById("invUnitNumber").value;
+        const tenantId = getTenantIdByUnit(unit);
+        if(!tenantId) return;
+        const payload = {
+            period: document.getElementById("invPeriod").value,
+            cycle: document.getElementById("invCycle").value
+        };
+        try {
+            const url = `/generate-invoice/${tenantId}`;
+            const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            alert(d.message);
+            loadInvoices();
+        } catch (e) { alert(`Error calling ${url}: ` + e.message); }
+    }
+
+    async function loadInvoices() {
+        const tB = document.getElementById("invoicesTableBody");
+        try {
+            const url = `/invoices/${getPropertyFilter()}`;
+            const r = await fetch(url, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            tB.innerHTML = "";
+            d.invoices.forEach(inv => {
+                tB.innerHTML += `<tr>
+                    <td>${inv.id}</td>
+                    <td>${inv.tenant_name}</td>
+                    <td>${inv.period}</td>
+                    <td>R${inv.total_amount.toFixed(2)}</td>
+                    <td>${inv.status}</td>
+                    <td><button onclick="viewInvoice(${inv.id})" class="btn-invoice">View</button></td>
+                </tr>`;
+            });
+            document.getElementById("invoicesTable").style.display = "block";
+        } catch (e) { console.error("Error calling /invoices: " + e.message); }
+    }
+
+    async function viewInvoice(id) {
+        try {
+            const url = `/invoice/${id}`;
+            const r = await fetch(url, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            let itemsRows = "";
+            d.line_items.forEach(item => {
+                itemsRows += `<tr><td>${item.description}</td><td>${item.qty}</td><td>R${item.rate.toFixed(2)}</td><td>R${item.amount.toFixed(2)}</td></tr>`;
+            });
+            document.getElementById("invoiceContent").innerHTML = `
+                <div class="invoice-paper">
+                    <div class="invoice-branding">
+                        <div class="company-info">
+                            <h2>${companyData.name || 'Company Name'}</h2>
+                            <p>${companyData.address || ''}</p>
+                            <p>VAT: ${companyData.vat_number || ''}</p>
+                        </div>
+                        <div>
+                            <h3>INVOICE</h3>
+                            <p>#${d.id}</p>
+                            <p>Date: ${d.date_generated}</p>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <h3>Bill To:</h3>
+                        <p>${d.tenant_name}</p>
+                        <p>${d.unit_number}</p>
+                    </div>
+                    <table style="width:100%; border-collapse: collapse;">
+                        <thead><tr><th style="text-align:left; border-bottom: 1px solid #ddd;">Desc</th><th style="text-align:left; border-bottom: 1px solid #ddd;">Qty</th><th style="text-align:left; border-bottom: 1px solid #ddd;">Rate</th><th style="text-align:left; border-bottom: 1px solid #ddd;">Amount</th></tr></thead>
+                        <tbody>${itemsRows}</tbody>
+                    </table>
+                    <div style="text-align: right; margin-top: 20px;">
+                        <h3>Total: R${d.total_amount.toFixed(2)}</h3>
+                    </div>
+                </div>
+            `;
+            document.getElementById("invoiceModal").style.display = "block";
+        } catch (e) { alert(`Error calling /invoice: ` + e.message); }
+    }
+
+    function closeInvoice() { document.getElementById("invoiceModal").style.display = "none"; }
+
+    async function loadCompanySettings() {
+        try {
+            const r = await fetch(`/company-settings`, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            companyData = d;
+            document.getElementById("compName").value = d.name || "";
+            document.getElementById("compLogo").value = d.logo_path || "";
+            document.getElementById("compAddress").value = d.address || "";
+            document.getElementById("compVat").value = d.vat_number || "";
+            document.getElementById("compVatRate").value = d.vat_rate || 15;
+            document.getElementById("compEmail").value = d.contact_email || "";
+            document.getElementById("compPhone").value = d.contact_phone || "";
+        } catch (e) { console.error("Error calling /company-settings: " + e.message); }
+    }
+
+    async function updateCompanySettings() {
+        const payload = {
+            name: document.getElementById("compName").value,
+            logo_path: document.getElementById("compLogo").value,
+            address: document.getElementById("compAddress").value,
+            vat_number: document.getElementById("compVat").value,
+            vat_rate: parseFloat(document.getElementById("compVatRate").value || 15),
+            contact_email: document.getElementById("compEmail").value,
+            contact_phone: document.getElementById("compPhone").value
+        };
+        try {
+            const r = await fetch(`/company-settings`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            alert(d.message);
+            loadCompanySettings();
+        } catch (e) { alert("Error calling /company-settings: " + e.message); }
+    }
+
+    async function triggerMockRent() {
+        try {
+            const r = await fetch(`/sync-rent`, { method: 'POST', headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            alert(d.message || "Rent sync triggered.");
+            loadAllTenants();
+        } catch (e) { alert("Error calling /sync-rent: " + e.message); }
     }
 
     async function processPayment() {
-        const unit = document.getElementById("paymentUnitNumber").value; const tenantId = getTenantIdByUnit(unit); if(!tenantId) return;
-        const payload = { tenant_id: tenantId, amount: parseFloat(document.getElementById("paymentAmount").value), rent_pct: parseFloat(document.getElementById("paymentRentPct").value) || null, elec_pct: parseFloat(document.getElementById("paymentElecPct").value) || null, water_pct: parseFloat(document.getElementById("paymentWaterPct").value) || null };
-        try { const r = await fetch(`/process-payment/`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllTenants(); } catch (e) { alert("Error: " + e.message); }
-    }
-
-    async function generateInvoice() { 
-        const unit = document.getElementById("invUnitNumber").value; const tenantId = getTenantIdByUnit(unit); if(!tenantId) return;
-        const p = document.getElementById("invPeriod").value, c = document.getElementById("invCycle").value, rD = document.getElementById("invResult"); if(!p) { alert("Enter Period"); return; } 
-        try { const r = await fetch(`/generate-invoice/`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify({ tenant_id: parseInt(tenantId), billing_period: p, cycle_type: c }) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); rD.style.display = "block"; rD.innerHTML = `<p style="color:green;">${d.message}</p>`; logAction("Generated Invoice", `Unit: ${unit}, Period: ${p}`); if (typeof loadInvoices === 'function') { loadInvoices(); } } catch (e) { rD.style.display = "block"; rD.innerHTML = `<p style="color:red;">${e.message}</p>`; } 
-    }
-
-    async function loadInvoices() { const tB = document.getElementById("invoicesTableBody"); try { const r = await fetch(`/invoices/`, { headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); tB.innerHTML = ""; d.invoices.forEach(iv => { tB.innerHTML += `<tr><td>${iv.id}</td><td>${iv.tenant_name}</td><td>${iv.period}</td><td>R${iv.total.toFixed(2)}</td><td>${iv.status}</td><td><button onclick="viewInvoice(${iv.id})" class="btn-invoice">View</button></td></tr>`; }); document.getElementById("invoicesTable").style.display = "block"; } catch (e) { console.error(e.message); } }
-
-    async function viewInvoice(id) { try { const r = await fetch(`/invoice/${id}`, { headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error("Failed"); let rows = ""; d.items.forEach(it => { rows += `<tr class="invoice-item" onclick="toggleDrillDown('${it.item_id}')"><td>${it.description}</td><td>${it.quantity.toFixed(2)}</td><td>R${it.unit_price.toFixed(2)}</td><td>R${it.total.toFixed(2)}</td></tr><tr><td colspan="4" style="padding:0;border:none;"><div class="drill-down" id="drill-${it.item_id}"><strong>Details:</strong> ${it.drill_down || 'N/A'}</div></td></tr>`; }); document.getElementById("invoiceContent").innerHTML = `<div class="invoice-paper"><div class="invoice-branding"><div class="company-info"><img src="${companyData.logo_path || ''}" style="max-height:80px;max-width:200px;"><h2>${companyData.name || ''}</h2><p style="font-size:0.9em;color:#7f8c8d;">${companyData.address || ''}<br>VAT: ${companyData.vat_number || ''}<br>${companyData.contact_email || ''}</p></div><div style="text-align:right;"><h2>TAX INVOICE</h2><p>#: <strong>${d.id}</strong></p><p>Date: <strong>${d.date}</strong></p><p>Period: <strong>${d.period}</strong></p></div></div><div class="stmt-summary"><div><h3>To:</h3><p><strong>${d.tenant_name}</strong></p><p>${d.email}</p></div><div style="text-align:right;"><h3>Due</h3><h2 style="color:red;">R${d.total.toFixed(2)}</h2><p>Status: <strong>${d.status}</strong></p></div></div><h3>Items (Click to drill down)</h3><table><thead><tr><th>Description</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table><div style="text-align:right;margin-top:20px;"><h3>Total: R${d.total.toFixed(2)}</h3></div><button onclick="window.print()" class="btn-print">Print / Save as PDF</button></div>`; document.getElementById("invoiceModal").style.display = "block"; } catch (e) { alert(e.message); } }
-    function toggleDrillDown(id) { const d = document.getElementById(`drill-${id}`); if(d) d.classList.toggle('visible'); }
-    function closeInvoice() { document.getElementById("invoiceModal").style.display = "none"; }
-
-    async function submitCreditNote() {
-        const unit = document.getElementById("cnUnitNumber").value; const tenantId = getTenantIdByUnit(unit); if(!tenantId) return;
-        const amt = document.getElementById("cnAmount").value, rsn = document.getElementById("cnReason").value, rD = document.getElementById("cnResult");
-        if(!amt || !rsn) { alert("Fill all fields"); return; }
-        try { const r = await fetch(`/generate-credit-note/`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify({ tenant_id: parseInt(tenantId), amount: parseFloat(amt), reason: rsn }) }); const d = await r.json(); if (!r.ok) throw new Error(d.detail || "Error"); rD.style.display = "block"; rD.innerHTML = `<p style="color:green;">${d.message}</p>`; logAction("Credit Note", `Unit: ${unit}, Amount: ${amt}`); loadAllTenants(); } catch (e) { rD.style.display = "block"; rD.innerHTML = `<p style="color:red;">${e.message}</p>`; }
-    }
-
-    async function loadPropertyReport() { const tB = document.getElementById("propTableBody"); try { const r = await fetch(`/property-report/`, { headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error("Error"); tB.innerHTML = ""; d.properties.forEach(p => { tB.innerHTML += `<tr><td>${p.name}</td><td>${p.tenant_count}</td><td>R${p.total_arrears.toFixed(2)}</td><td>R${p.wallet_balance.toFixed(2)}</td></tr>`; }); document.getElementById("propTable").style.display = "block"; } catch (e) { alert(e.message); } }
-    async function loadMgmtInvoice() { const rD = document.getElementById("mgmtResult"); try { const r = await fetch(`/management-fee-invoice/`, { headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error("Error"); let rows = ""; d.items.forEach(i => { rows += `<tr><td>${i.desc}</td><td>R${i.amount.toFixed(2)}</td></tr>`; }); rD.style.display = "block"; rD.innerHTML = `<h3>Management Fee Invoice</h3><table><thead><tr><th>Description</th><th>Amount</th></tr></thead><tbody>${rows}</tbody></table><h3>Total Due: R${d.total.toFixed(2)}</h3>`; } catch (e) { rD.style.display = "block"; rD.innerHTML = `<p style="color:red;">${e.message}</p>`; } }
-    async function loadBankRecon() { const rD = document.getElementById("bankResult"); try { const r = await fetch(`/bank-reconciliation/`, { headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error("Error"); rD.style.display = "block"; rD.innerHTML = `<h3>Bank Reconciliation</h3><p>Net Balance: <strong>R${d.net_balance.toFixed(2)}</strong></p>`; } catch (e) { rD.style.display = "block"; rD.innerHTML = `<p style="color:red;">${e.message}</p>`; } }
-    async function load3MonthStats() { const tB = document.getElementById("statsTableBody"); try { const r = await fetch(`/three-month-stats/`, { headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error("Error"); tB.innerHTML = ""; d.stats.forEach(s => { tB.innerHTML += `<tr><td>${s.month}</td><td>R${s.elec.toFixed(2)}</td><td>R${s.water.toFixed(2)}</td></tr>`; }); document.getElementById("statsTable").style.display = "block"; } catch (e) { alert(e.message); } }
-
-    async function triggerMockRent() {
-        const unit = prompt("Enter Unit Number to sync rent for a SPECIFIC tenant.\n\nLeave blank and click OK to sync rent for ALL tenants.");
-        let url = `/trigger-mock-rent/`;
-        if(unit) { const tenantId = getTenantIdByUnit(unit); if(!tenantId) return; url = `/trigger-mock-rent/${tenantId}`; }
-        try { const r = await fetch(url, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); logAction("Synced Rent from ERP", unit ? `Unit: ${unit}` : `All Tenants`); loadAllTenants(); loadDashboardStats(); } catch (e) { alert("Error syncing rent: " + e.message); }
-    }
-
-    async function loadAging() { const tB = document.getElementById("agingTableBody"); try { const r = await fetch(`/arrears-aging/`, { headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error("Failed"); tB.innerHTML = ""; d.aging.forEach(t => { tB.innerHTML += `<tr><td>${t.tenant_name}</td><td>R${t.total_arrears.toFixed(2)}</td><td>R${t.current.toFixed(2)}</td><td>R${t.days_30.toFixed(2)}</td><td>R${t.days_60.toFixed(2)}</td><td>R${t.days_90.toFixed(2)}</td></tr>`; }); document.getElementById("agingTable").style.display = "block"; } catch (e) { alert(e.message); } }
-
-    async function generateFinancialReport() {
+        const unit = document.getElementById("paymentUnitNumber").value;
+        const tenantId = getTenantIdByUnit(unit);
+        if(!tenantId) return;
+        const payload = {
+            amount: parseFloat(document.getElementById("paymentAmount").value || 0),
+            rent_pct: document.getElementById("paymentRentPct").value ? parseFloat(document.getElementById("paymentRentPct").value) : null,
+            elec_pct: document.getElementById("paymentElecPct").value ? parseFloat(document.getElementById("paymentElecPct").value) : null,
+            water_pct: document.getElementById("paymentWaterPct").value ? parseFloat(document.getElementById("paymentWaterPct").value) : null
+        };
         try {
-            const response = await fetch(`/financial-report/`, { headers: getAuthHeaders() });
-            if (!response.ok) throw new Error("Failed to load report");
-            const data = await response.json();
-            let monthlyRows = ""; data.revenue.monthly.forEach(m => { monthlyRows += `<tr><td>${m.month}</td><td>R${m.billed.toFixed(2)}</td><td>R${m.revenue.toFixed(2)}</td><td>R${(m.billed - m.revenue).toFixed(2)}</td></tr>`; });
-            let consRows = ""; data.consumption.forEach(c => { consRows += `<tr><td>${c.tenant}</td><td>R${c.value.toFixed(2)}</td></tr>`; });
-            document.getElementById("reportContent").innerHTML = `<div class="invoice-paper"><div class="invoice-branding"><div class="company-info"><img src="${companyData.logo_path || ''}" style="max-height:80px;max-width:200px;"><h2>${companyData.name || ''}</h2></div><div style="text-align:right;"><h2>FINANCIAL REPORT</h2></div></div><h3>Monthly Revenue</h3><table><thead><tr><th>Month</th><th>Billed</th><th>Collected</th><th>Variance</th></tr></thead><tbody>${monthlyRows}</tbody></table><button onclick="window.print()" class="btn-print">Print</button></div>`;
-            document.getElementById("reportModal").style.display = "block";
-        } catch (error) { alert("Error generating report: " + error.message); }
+            const url = `/process-payment/${tenantId}`;
+            const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            document.getElementById("paymentResult").style.display = "block";
+            document.getElementById("paymentResult").innerHTML = `<p style="color:green;">${d.message}</p>`;
+            logAction("Processed Payment", `Unit: ${unit}, Amount: ${payload.amount}`);
+            loadAllTenants();
+        } catch (e) {
+            document.getElementById("paymentResult").style.display = "block";
+            document.getElementById("paymentResult").innerHTML = `<p style="color:red;">Error calling /process-payment: ${e.message}</p>`;
+        }
     }
-    function closeReport() { document.getElementById("reportModal").style.display = "none"; }
 
-    async function loadPaymentRecon() { const tableBody = document.getElementById("reconReportTableBody"); try { const r = await fetch(`/payment-reconciliation/`, { headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error("Failed"); tableBody.innerHTML = ""; d.reconciliation.forEach(t => { tableBody.innerHTML += `<tr><td>${t.tenant_name}</td><td>R${t.total_billed.toFixed(2)}</td><td>R${t.total_paid.toFixed(2)}</td><td>R${t.wallet_balance.toFixed(2)}</td><td>R${t.rent_arrears.toFixed(2)}</td><td>R${t.elec_arrears.toFixed(2)}</td><td>R${t.water_arrears.toFixed(2)}</td><td>R${t.balance_due.toFixed(2)}</td></tr>`; }); document.getElementById("reconReportTable").style.display = "block"; } catch (e) { alert("Error loading reconciliation: " + e.message); } }
-
-    async function downloadExcel() { const month = document.getElementById("excelMonth").value; if(!month) { alert("Enter month"); return; } try { const response = await fetch(`/export-excel/?month=${month}`, { headers: getAuthHeaders() }); if (!response.ok) throw new Error("Failed"); const blob = await response.blob(); const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `Report_${month}.xlsx`; a.click(); window.URL.revokeObjectURL(url); } catch (error) { alert("Error: " + error.message); } }
-
+    // --- REPORTS FUNCTIONS ---
     async function loadFraudAnalysis() {
         const tB = document.getElementById("fraudTableBody");
         try {
-            const r = await fetch(`/fraud-analysis/${getPropertyFilter()}`, { headers: getAuthHeaders() });
-            const d = await r.json(); if (!r.ok) throw new Error(extractError(d));
+            const url = `/fraud-analysis/${getPropertyFilter()}`;
+            const r = await fetch(url, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
             tB.innerHTML = "";
-            if (d.flags.length === 0) {
-                tB.innerHTML = `<tr><td colspan="6" style="text-align:center; color:green; font-weight:bold;">No anomalies detected! All purchasing patterns look normal.</td></tr>`;
-            } else {
-                d.flags.forEach(f => {
-                    let sevClass = f.severity === 'HIGH' ? 'sev-high' : (f.severity === 'MEDIUM' ? 'sev-medium' : 'sev-low');
-                    tB.innerHTML += `<tr>
-                        <td>${f.unit_number || 'N/A'}</td>
-                        <td>${f.tenant_name}</td>
-                        <td><strong>${f.flag_type}</strong></td>
-                        <td><span class="sev-badge ${sevClass}">${f.severity}</span></td>
-                        <td>${f.details}</td>
-                        <td><button onclick="viewStatement(${f.tenant_id})" class="btn-statement">Inspect</button></td>
-                    </tr>`;
-                });
-            }
+            d.flags.forEach(f => {
+                let sevClass = f.severity === 'HIGH' ? 'sev-high' : (f.severity === 'MEDIUM' ? 'sev-medium' : 'sev-low');
+                const fTid = f.tenant_id || f.id;
+                tB.innerHTML += `<tr>
+                    <td>${f.unit_number}</td>
+                    <td>${f.tenant_name}</td>
+                    <td>${f.flag_type}</td>
+                    <td><span class="sev-badge ${sevClass}">${f.severity}</span></td>
+                    <td>${f.details}</td>
+                    <td><button onclick="suspendTenant(${fTid})" class="btn-suspend">Suspend</button></td>
+                </tr>`;
+            });
             document.getElementById("fraudTable").style.display = "block";
-            logAction("Ran Fraud Analysis", `Found ${d.flags.length} flags.`);
-        } catch (e) { alert("Error loading fraud analysis: " + e.message); }
+        } catch (e) { alert("Error calling /fraud-analysis: " + e.message); }
+    }
+
+    async function loadAging() {
+        const tB = document.getElementById("agingTableBody");
+        try {
+            const url = `/aging-report/${getPropertyFilter()}`;
+            const r = await fetch(url, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            tB.innerHTML = "";
+            d.report.forEach(t => {
+                tB.innerHTML += `<tr>
+                    <td>${t.tenant_name}</td>
+                    <td>R${t.total_arrears.toFixed(2)}</td>
+                    <td>R${t.bucket_30.toFixed(2)}</td>
+                    <td>R${t.bucket_60.toFixed(2)}</td>
+                    <td>R${t.bucket_90.toFixed(2)}</td>
+                    <td>R${t.bucket_over_90.toFixed(2)}</td>
+                </tr>`;
+            });
+            document.getElementById("agingTable").style.display = "block";
+        } catch (e) { alert("Error calling /aging-report: " + e.message); }
+    }
+
+    async function runRecon() {
+        const tB = document.getElementById("reconTableBody");
+        const payload = {
+            month: document.getElementById("reconMonth").value,
+            utility_type: document.getElementById("reconType").value,
+            muni_units: parseFloat(document.getElementById("reconMuni").value || 0),
+            sub_units: parseFloat(document.getElementById("reconSub").value || 0)
+        };
+        try {
+            const url = `/run-recon`;
+            const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            document.getElementById("reconResult").style.display = "block";
+            document.getElementById("reconResult").innerHTML = `<p style="color:green;">${d.message}</p>`;
+            loadRecons();
+        } catch (e) { alert(`Error calling ${url}: ` + e.message); }
+    }
+
+    async function loadRecons() {
+        const tB = document.getElementById("reconTableBody");
+        try {
+            const r = await fetch(`/recons`, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            tB.innerHTML = "";
+            d.recons.forEach(r => {
+                let statusClass = r.status === 'BALANCED' ? 'recon-balanced' : (r.status === 'LOSS' ? 'recon-loss' : 'recon-gain');
+                tB.innerHTML += `<tr>
+                    <td>${r.date}</td>
+                    <td>${r.month}</td>
+                    <td>${r.utility_type}</td>
+                    <td>${r.muni_units}</td>
+                    <td>${r.sub_units}</td>
+                    <td>${r.variance}</td>
+                    <td class="${statusClass}">${r.status}</td>
+                </tr>`;
+            });
+            document.getElementById("reconTable").style.display = "block";
+        } catch (e) { console.error("Error calling /recons: " + e.message); }
+    }
+
+    async function generateFinancialReport() {
+        try {
+            const url = `/financial-report/${getPropertyFilter()}`;
+            const r = await fetch(url, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            document.getElementById("reportContent").innerHTML = `<h2>Financial Report</h2><pre>${JSON.stringify(d, null, 2)}</pre>`;
+            document.getElementById("reportModal").style.display = "block";
+        } catch (e) { alert(`Error calling /financial-report: ` + e.message); }
+    }
+
+    function closeReport() { document.getElementById("reportModal").style.display = "none"; }
+
+    async function loadPaymentRecon() {
+        const tB = document.getElementById("reconReportTableBody");
+        try {
+            const url = `/payment-recon/${getPropertyFilter()}`;
+            const r = await fetch(url, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            tB.innerHTML = "";
+            d.report.forEach(t => {
+                tB.innerHTML += `<tr>
+                    <td>${t.tenant_name}</td>
+                    <td>R${t.total_billed.toFixed(2)}</td>
+                    <td>R${t.total_paid.toFixed(2)}</td>
+                    <td>R${t.wallet_balance.toFixed(2)}</td>
+                    <td>R${t.rent_arrears.toFixed(2)}</td>
+                    <td>R${t.elec_arrears.toFixed(2)}</td>
+                    <td>R${t.water_arrears.toFixed(2)}</td>
+                    <td>R${t.net_balance.toFixed(2)}</td>
+                </tr>`;
+            });
+            document.getElementById("reconReportTable").style.display = "block";
+        } catch (e) { alert("Error calling /payment-recon: " + e.message); }
+    }
+
+    async function downloadExcel() {
+        const month = document.getElementById("excelMonth").value;
+        if(!month) { alert("Please enter a month (e.g., 2024-05)"); return; }
+        try {
+            const url = `/export-excel/${month}`;
+            const r = await fetch(url, { headers: getAuthHeaders() });
+            if(!r.ok) throw new Error("Failed");
+            const blob = await r.blob();
+            const url2 = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url2;
+            a.download = `report_${month}.xlsx`;
+            a.click();
+            window.URL.revokeObjectURL(url2);
+        } catch (e) { alert("Error calling /export-excel: " + e.message); }
+    }
+
+    async function loadBankRecon() {
+        document.getElementById("bankResult").style.display = "block";
+        document.getElementById("bankResult").innerHTML = "<p>Generating Bank Recon... (Mock)</p>";
+    }
+
+    async function loadMgmtInvoice() {
+        document.getElementById("mgmtResult").style.display = "block";
+        document.getElementById("mgmtResult").innerHTML = "<p>Generating Management Fee Invoice... (Mock)</p>";
+    }
+
+    async function load3MonthStats() {
+        const tB = document.getElementById("statsTableBody");
+        try {
+            const url = `/stats-3month/${getPropertyFilter()}`;
+            const r = await fetch(url, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            tB.innerHTML = "";
+            d.stats.forEach(s => {
+                tB.innerHTML += `<tr>
+                    <td>${s.month}</td>
+                    <td>R${s.elec.toFixed(2)}</td>
+                    <td>R${s.water.toFixed(2)}</td>
+                </tr>`;
+            });
+            document.getElementById("statsTable").style.display = "block";
+        } catch (e) { alert("Error calling /stats-3month: " + e.message); }
+    }
+
+    async function loadPropertyReport() {
+        const tB = document.getElementById("propTableBody");
+        try {
+            const r = await fetch(`/property-report`, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            tB.innerHTML = "";
+            d.report.forEach(p => {
+                tB.innerHTML += `<tr>
+                    <td>${p.property_name}</td>
+                    <td>${p.tenant_count}</td>
+                    <td>R${p.total_arrears.toFixed(2)}</td>
+                    <td>R${p.wallet_balances.toFixed(2)}</td>
+                </tr>`;
+            });
+            document.getElementById("propTable").style.display = "block";
+        } catch (e) { alert("Error calling /property-report: " + e.message); }
     }
 </script>
 </body>
