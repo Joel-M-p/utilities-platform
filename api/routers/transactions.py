@@ -32,7 +32,6 @@ def api_process_payment(payload: dict, current_user: dict = Depends(verify_token
 
         result = process_waterfall_payment(cursor, tenant_id, amount, rent_pct, elec_pct, water_pct, idempotency_key)
         
-        # --- NEW: Fetch cellphone along with name and email ---
         cursor.execute("SELECT first_name, last_name, email, cellphone FROM tenants WHERE id = %s", (tenant_id,))
         tenant = cursor.fetchone()
         first_name, last_name, email, cellphone = tenant
@@ -43,8 +42,6 @@ def api_process_payment(payload: dict, current_user: dict = Depends(verify_token
         conn.commit()
         
         receipt_message = f"Payment of R{amount:.2f} received. Receipt No: {receipt_no}. Date: {receipt_date}. Thank you for your payment!"
-        
-        # --- NEW: Pass cellphone to send_notification ---
         send_notification(f"{first_name} {last_name}", email, cellphone, receipt_message, subject=f"Payment Receipt - {receipt_no}")
         
         return {
@@ -81,7 +78,6 @@ def api_buy_utility(req: dict, current_user: dict = Depends(verify_token)):
         if cursor.fetchone():
             return {"status": "success", "message": "Purchase already processed."}
 
-        # --- NEW: Fetch cellphone along with name, email, rent ---
         cursor.execute("SELECT first_name, last_name, email, rent_outstanding, cellphone FROM tenants WHERE id = %s FOR UPDATE", (tenant_id,))
         tenant_data = cursor.fetchone()
         first_name, last_name, email, rent_owed, cellphone = tenant_data
@@ -142,11 +138,17 @@ def api_buy_utility(req: dict, current_user: dict = Depends(verify_token)):
         
         cursor.execute("SELECT rate_flat FROM tariffs WHERE id = %s", (tariff_id,))
         tariff_data = cursor.fetchone()
-        rate = Decimal(str(tariff_data[0])) if tariff_data and tariff_data[0] else Decimal('1.0')
+        if tariff_data and tariff_data[0]:
+            rate = Decimal(str(tariff_data[0]))
+        else:
+            rate = Decimal('1.0')
 
         cursor.execute("SELECT vat_percent FROM company WHERE id = 1")
         company_vat = cursor.fetchone()
-        vat_percent = (Decimal(str(company_vat[0])) / Decimal(100)) if company_vat and company_vat[0] else Decimal('0.15')
+        if company_vat and company_vat[0]:
+            vat_percent = Decimal(str(company_vat[0])) / Decimal(100)
+        else:
+            vat_percent = Decimal('0.15')
 
         if hardware_type == 'STS':
             token = generate_token()
@@ -155,8 +157,12 @@ def api_buy_utility(req: dict, current_user: dict = Depends(verify_token)):
             amount_ex_vat = amount_decimal - vat_amount
             if rate > 0:
                 units_purchased = amount_ex_vat / rate
-            reference_text = f"Token: {token} | {units_purchased:.2f} kWh"
-            message = f"Purchase Successful!\nAmount Paid: R{amount_decimal:.2f}\nVAT ({int(vat_percent * 100)}%): R{vat_amount:.2f}\nNet Energy: {units_purchased:.2f} kWh\nToken: {token}"
+            
+            # --- FIX: Dynamic label based on utility type ---
+            unit_name = "kWh" if utility_type == "ELECTRICITY" else "kL"
+            label = "Net Energy" if utility_type == "ELECTRICITY" else "Net Volume"
+            reference_text = f"Token: {token} | {units_purchased:.2f} {unit_name}"
+            message = f"Purchase Successful!\nAmount Paid: R{amount_decimal:.2f}\nVAT ({int(vat_percent * 100)}%): R{vat_amount:.2f}\n{label}: {units_purchased:.2f} {unit_name}\nToken: {token}"
             
         elif hardware_type == 'SMART_IOT':
             txn_status = "WALLET_CREDITED"
@@ -173,7 +179,9 @@ def api_buy_utility(req: dict, current_user: dict = Depends(verify_token)):
             vat_amount = (amount_decimal / (Decimal('1') + vat_percent)) * vat_percent
             amount_ex_vat = amount_decimal - vat_amount
             units_purchased = amount_ex_vat / rate if rate > 0 else Decimal('0')
-            reference_text = f"Token: {token} | {units_purchased:.2f} kWh"
+            unit_name = "kWh" if utility_type == "ELECTRICITY" else "kL"
+            label = "Net Energy" if utility_type == "ELECTRICITY" else "Net Volume"
+            reference_text = f"Token: {token} | {units_purchased:.2f} {unit_name}"
             message = f"Purchase Successful! Token: {token}"
 
         cursor.execute("""
@@ -183,11 +191,9 @@ def api_buy_utility(req: dict, current_user: dict = Depends(verify_token)):
         
         if current_valve_status in ['TRICKLE', 'DISCONNECTED']:
             cursor.execute("UPDATE meters SET valve_status = 'OPEN' WHERE tenant_id = %s AND meter_type = %s", (tenant_id, utility_type))
-            # --- NEW: Pass cellphone to send_notification ---
             send_notification(f"{first_name} {last_name}", email, cellphone, f"Your {utility_type} has been reconnected.")
         
         conn.commit()
-        # --- NEW: Pass cellphone to send_notification ---
         send_notification(f"{first_name} {last_name}", email, cellphone, message)
         return {
             "status": "success", 
