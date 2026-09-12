@@ -227,6 +227,8 @@ def api_inspection_result(tenant_id: int, req: InspectionResultRequest, current_
         
         if req.status.upper() == "PASSED":
             cursor.execute("UPDATE tenants SET status = 'VACATED', vacated_at = CURRENT_TIMESTAMP WHERE id = %s", (tenant_id,))
+            # --- AUTOMATIC SCHEMA FIX ---
+            cursor.execute("ALTER TABLE meters ALTER COLUMN tenant_id DROP NOT NULL;")
             # --- AUTOMATIC METER FREEING ---
             cursor.execute("UPDATE meters SET is_active = FALSE, tenant_id = NULL WHERE tenant_id = %s", (tenant_id,))
             send_notification(f"{first_name} {last_name}", email, None, "Inspection passed. Account officially closed. Goodbye!")
@@ -280,7 +282,6 @@ def api_update_tenant(tenant_id: int, tenant: TenantUpdateRequest, current_user:
             updated_log = prev_log + new_log_entry
             cursor.execute("UPDATE tenants SET email = %s, previous_emails = %s WHERE id = %s", (tenant.email, updated_log, tenant_id))
 
-        # Update cellphone
         if tenant.cellphone != curr_cell:
              cursor.execute("UPDATE tenants SET cellphone = %s WHERE id = %s", (tenant.cellphone, tenant_id))
 
@@ -294,6 +295,8 @@ def api_update_tenant(tenant_id: int, tenant: TenantUpdateRequest, current_user:
                 cursor.execute("UPDATE meters SET is_active = FALSE WHERE tenant_id = %s", (tenant_id,))
             elif new_status == 'VACATED':
                 cursor.execute("UPDATE tenants SET status = 'VACATED', vacated_at = CURRENT_TIMESTAMP, suspended_at = NULL WHERE id = %s", (tenant_id,))
+                # --- AUTOMATIC SCHEMA FIX ---
+                cursor.execute("ALTER TABLE meters ALTER COLUMN tenant_id DROP NOT NULL;")
                 # --- AUTOMATIC METER FREEING ---
                 cursor.execute("UPDATE meters SET is_active = FALSE, tenant_id = NULL WHERE tenant_id = %s", (tenant_id,))
             elif new_status == 'ACTIVE':
@@ -334,6 +337,8 @@ def api_vacate_tenant(tenant_id: int, current_user: dict = Depends(verify_token)
     try:
         check_tenant_access(cursor, tenant_id, current_user)
         cursor.execute("UPDATE tenants SET status = 'VACATED', vacated_at = CURRENT_TIMESTAMP, suspended_at = NULL WHERE id = %s", (tenant_id,))
+        # --- AUTOMATIC SCHEMA FIX ---
+        cursor.execute("ALTER TABLE meters ALTER COLUMN tenant_id DROP NOT NULL;")
         # --- AUTOMATIC METER FREEING (PRODUCTION SAFE) ---
         cursor.execute("UPDATE meters SET is_active = FALSE, tenant_id = NULL WHERE tenant_id = %s", (tenant_id,))
         conn.commit()
@@ -684,6 +689,8 @@ def api_assign_meter(payload: dict, current_user: dict = Depends(verify_token)):
         if cursor.fetchone():
             raise HTTPException(status_code=400, detail=f"Tenant already has an active {meter_type} meter. Deactivate the existing one first if you need to replace it.")
 
+        # --- PREVENT DEPLOYING DUPLICATE METERS ---
+        # If a meter with this serial number already exists for the property, reassign it to the new tenant.
         cursor.execute("""
             SELECT id FROM meters 
             WHERE serial_number = %s AND property_id = %s
@@ -698,6 +705,20 @@ def api_assign_meter(payload: dict, current_user: dict = Depends(verify_token)):
                 WHERE id = %s
             """, (tenant_id, tariff_id, billing_type, meter_id))
         else:
+            # --- ENFORCE "ONE METER PER UNIT" RULE ---
+            # If no meter with this serial number exists, check if there is a VACANT meter of this type for the property.
+            # If there is, block creation and tell the user to use the existing vacant meter's serial number.
+            cursor.execute("""
+                SELECT id, serial_number FROM meters 
+                WHERE property_id = %s AND meter_type = %s AND tenant_id IS NULL
+            """, (prop_id, meter_type))
+            vacant_meter = cursor.fetchone()
+            if vacant_meter:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"A vacant {meter_type} meter (Serial: {vacant_meter[1]}) already exists for this property. Do not deploy a new meter. Please use serial number {vacant_meter[1]} instead."
+                )
+
             cursor.execute("""
                 INSERT INTO meters (tenant_id, meter_type, billing_type, serial_number, tariff_id, property_id) 
                 VALUES (%s, %s, %s, %s, %s, %s) RETURNING id

@@ -37,6 +37,9 @@ def fix_cloud_schema():
         print("Adding missing tenant columns (Cellphone)...")
         cursor.execute("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS cellphone VARCHAR(20);")
         
+        print("Dropping NOT NULL constraint on meters.tenant_id (so meters can be vacant)...")
+        cursor.execute("ALTER TABLE meters ALTER COLUMN tenant_id DROP NOT NULL;")
+        
         print("Creating missing meter_events table...")
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS meter_events (
@@ -51,7 +54,7 @@ def fix_cloud_schema():
             );
         """)
         
-        print("\n✅ Success! The missing columns (including cellphone) have been added to your cloud database.")
+        print("\n✅ Success! All missing columns and constraints have been fixed on your cloud database.")
         
         cursor.close()
         conn.close()
