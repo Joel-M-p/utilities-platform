@@ -54,12 +54,14 @@ def api_create_tenant(payload: dict, current_user: dict = Depends(verify_token))
         unit_number = payload.get("unit_number")
         
         if unit_number and property_id:
-            cursor.execute("SELECT id FROM tenants WHERE unit_number = %s AND property_id = %s AND status = 'ACTIVE'", (unit_number, property_id))
+            # FIX: Case-insensitive check for 'ACTIVE'
+            cursor.execute("SELECT id FROM tenants WHERE unit_number = %s AND property_id = %s AND UPPER(status) = 'ACTIVE'", (unit_number, property_id))
             if cursor.fetchone():
                 raise HTTPException(status_code=400, detail=f"Unit {unit_number} is currently occupied by an active tenant.")
         
         if email and property_id:
-            cursor.execute("SELECT id FROM tenants WHERE email = %s AND property_id = %s AND status = 'ACTIVE'", (email, property_id))
+            # FIX: Case-insensitive check for 'ACTIVE'
+            cursor.execute("SELECT id FROM tenants WHERE email = %s AND property_id = %s AND UPPER(status) = 'ACTIVE'", (email, property_id))
             if cursor.fetchone():
                 raise HTTPException(status_code=400, detail=f"Email {email} is already registered to an active tenant at this property.")
         
@@ -271,7 +273,8 @@ def api_update_tenant(tenant_id: int, tenant: TenantUpdateRequest, current_user:
                 raise HTTPException(status_code=400, detail="Cannot change Tenant Name once billing information exists.")
         
         if tenant.email != curr_email:
-            cursor.execute("SELECT id FROM tenants WHERE email = %s AND property_id = %s AND status = 'ACTIVE' AND id != %s", (tenant.email, prop_id, tenant_id))
+            # FIX: Case-insensitive check for 'ACTIVE'
+            cursor.execute("SELECT id FROM tenants WHERE email = %s AND property_id = %s AND UPPER(status) = 'ACTIVE' AND id != %s", (tenant.email, prop_id, tenant_id))
             if cursor.fetchone():
                 raise HTTPException(status_code=400, detail=f"Email {tenant.email} is already registered to an active tenant at this property.")
 
@@ -289,7 +292,7 @@ def api_update_tenant(tenant_id: int, tenant: TenantUpdateRequest, current_user:
             cursor.execute("UPDATE tenants SET first_name = %s, last_name = %s WHERE id = %s", (tenant.first_name, tenant.last_name, tenant_id))
         
         new_status = tenant.status.upper()
-        if new_status != curr_status:
+        if new_status != curr_status.upper():
             if new_status == 'SUSPENDED':
                 cursor.execute("UPDATE tenants SET status = 'SUSPENDED', suspended_at = CURRENT_TIMESTAMP, vacated_at = NULL WHERE id = %s", (tenant_id,))
                 cursor.execute("UPDATE meters SET is_active = FALSE WHERE tenant_id = %s", (tenant_id,))
@@ -663,7 +666,9 @@ def api_assign_meter(payload: dict, current_user: dict = Depends(verify_token)):
 
         cursor.execute("SELECT status, unit_number FROM tenants WHERE id = %s", (tenant_id,))
         tenant_status_row = cursor.fetchone()
-        if not tenant_status_row or tenant_status_row[0] != 'ACTIVE':
+        
+        # FIX: Case-insensitive check for 'ACTIVE'
+        if not tenant_status_row or tenant_status_row[0].upper() != 'ACTIVE':
             raise HTTPException(
                 status_code=400,
                 detail=f"Cannot assign a meter to tenant {tenant_id}: tenant status is "
@@ -690,7 +695,6 @@ def api_assign_meter(payload: dict, current_user: dict = Depends(verify_token)):
             raise HTTPException(status_code=400, detail=f"Tenant already has an active {meter_type} meter. Deactivate the existing one first if you need to replace it.")
 
         # --- PREVENT DEPLOYING DUPLICATE METERS ---
-        # If a meter with this serial number already exists for the property, reassign it to the new tenant.
         cursor.execute("""
             SELECT id FROM meters 
             WHERE serial_number = %s AND property_id = %s
@@ -706,8 +710,6 @@ def api_assign_meter(payload: dict, current_user: dict = Depends(verify_token)):
             """, (tenant_id, tariff_id, billing_type, meter_id))
         else:
             # --- ENFORCE "ONE METER PER UNIT" RULE ---
-            # If no meter with this serial number exists, check if there is a VACANT meter of this type for the property.
-            # If there is, block creation and tell the user to use the existing vacant meter's serial number.
             cursor.execute("""
                 SELECT id, serial_number FROM meters 
                 WHERE property_id = %s AND meter_type = %s AND tenant_id IS NULL
