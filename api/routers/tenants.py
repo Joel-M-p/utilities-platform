@@ -37,6 +37,10 @@ def api_create_tenant(payload: dict, current_user: dict = Depends(verify_token))
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
+        # --- AUTOMATIC SCHEMA FIX ---
+        cursor.execute("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS cellphone VARCHAR(20);")
+        conn.commit()
+
         property_id = payload.get("property_id")
         enforce_property_access(current_user, property_id)
 
@@ -98,6 +102,10 @@ def api_anonymize_tenant(tenant_id: int, current_user: dict = Depends(verify_tok
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
+        # --- AUTOMATIC SCHEMA FIX ---
+        cursor.execute("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS cellphone VARCHAR(20);")
+        conn.commit()
+
         check_tenant_access(cursor, tenant_id, current_user)
         cursor.execute("""
             UPDATE tenants 
@@ -237,6 +245,10 @@ def api_update_tenant(tenant_id: int, tenant: TenantUpdateRequest, current_user:
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
+        # --- AUTOMATIC SCHEMA FIX ---
+        cursor.execute("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS cellphone VARCHAR(20);")
+        conn.commit()
+
         prop_id = check_tenant_access(cursor, tenant_id, current_user)
         cursor.execute("SELECT id FROM wallets WHERE tenant_id = %s", (tenant_id,))
         wallet_data = cursor.fetchone()
@@ -468,6 +480,10 @@ def api_get_all_tenants(property_id: int = None, current_user: dict = Depends(ve
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
+        # --- AUTOMATIC SCHEMA FIX ---
+        cursor.execute("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS cellphone VARCHAR(20);")
+        conn.commit()
+
         user_role = current_user.get("role")
         user_prop_id = current_user.get("property_id")
 

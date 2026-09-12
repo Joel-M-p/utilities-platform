@@ -1,26 +1,21 @@
-import os
 import psycopg2
 
-def fix_schema():
-    print("Connecting to database...")
-    db_url = os.getenv("postgresql://neondb_owner:npg_uoBzf2j4TDCF@ep-shy-star-ayefo4p7-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require")
+def fix_cloud_schema():
+    print("Please paste your exact Render DATABASE_URL and press Enter:")
+    db_url = input()
+    
+    if not db_url:
+        print("No URL entered. Exiting.")
+        return
+
+    print("\nConnecting to database...")
     
     try:
-        if db_url:
-            print("Found DATABASE_URL. Connecting to CLOUD (Render) database...")
-            if "?sslmode=" not in db_url:
-                db_url += "?sslmode=require"
-            conn = psycopg2.connect(db_url)
-        else:
-            print("No DATABASE_URL found. Connecting to LOCAL database...")
-            conn = psycopg2.connect(
-                dbname="utilities_platform",
-                user="postgres",
-                password="5432",
-                host="localhost",
-                port="5432"
-            )
+        # Ensure SSL is required for cloud databases
+        if "?sslmode=" not in db_url:
+            db_url += "?sslmode=require"
             
+        conn = psycopg2.connect(db_url)
         conn.autocommit = True
         cursor = conn.cursor()
         
@@ -56,11 +51,12 @@ def fix_schema():
             );
         """)
         
-        print("\n✅ Success! All missing columns (including cellphone) have been added.")
+        print("\n✅ Success! The missing columns (including cellphone) have been added to your cloud database.")
+        
         cursor.close()
         conn.close()
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"\nError: {e}")
 
 if __name__ == "__main__":
-    fix_schema()
+    fix_cloud_schema()
