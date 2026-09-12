@@ -653,22 +653,26 @@
     }
 
     function getTenantIdByUnit(unitNumber) {
-        if(!unitNumber) { alert("Please enter a Unit Number."); return null; }
+        if(!unitNumber) { return { error: "Please enter a Unit Number." }; }
+        
+        // Ensure allTenantsCache is populated
+        if(!allTenantsCache || allTenantsCache.length === 0) {
+            return { error: "Tenant list is still loading. Please wait a few seconds and try again." };
+        }
+
         const matches = allTenantsCache.filter(t => String(t.unit_number) === String(unitNumber));
-        if(matches.length === 0) { alert(`Tenant with Unit Number ${unitNumber} not found in the selected property.`); return null; }
+        if(matches.length === 0) { return { error: `Tenant with Unit Number ${unitNumber} not found in the selected property.` }; }
         
         const active = matches.find(t => t.status && t.status.toUpperCase() === 'ACTIVE');
         if(!active) {
-            alert(`Unit ${unitNumber} has no ACTIVE tenant (only past/vacated records). Add a new tenant to this unit first.`);
-            return null;
+            return { error: `Unit ${unitNumber} has no ACTIVE tenant (only past/vacated records). Add a new tenant to this unit first.` };
         }
         
         const tenantId = active.tenant_id || active.id;
         if(!tenantId) {
-            alert("Error: Could not find valid Tenant ID for this unit. Check backend response.");
-            return null;
+            return { error: "Error: Could not find valid Tenant ID for this unit. Check backend response." };
         }
-        return tenantId;
+        return { id: tenantId };
     }
 
     async function loadUsers() {
@@ -825,8 +829,27 @@
     }
 
     async function checkBalance() {
-        const unit = document.getElementById("unitNumberInput").value; const tenantId = getTenantIdByUnit(unit); if(!tenantId) return;
-        try { const r = await fetch(`/tenant-balance/${tenantId}`, { headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); document.getElementById("balanceResult").style.display = "block"; document.getElementById("balanceResult").innerHTML = `<p><strong>${d.tenant_name}</strong><br>Rent: R${d.rent_outstanding.toFixed(2)}<br>Elec: R${d.electricity_outstanding.toFixed(2)}<br>Water: R${d.water_outstanding.toFixed(2)}<br>Wallet: R${d.wallet_balance.toFixed(2)}</p>`; } catch (e) { alert("Error calling /tenant-balance: " + e.message); }
+        const unit = document.getElementById("unitNumberInput").value;
+        const resultDiv = document.getElementById("balanceResult");
+        const tenantCheck = getTenantIdByUnit(unit);
+        
+        if(tenantCheck.error) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">${tenantCheck.error}</p>`;
+            return;
+        }
+        const tenantId = tenantCheck.id;
+
+        try { 
+            const r = await fetch(`/tenant-balance/${tenantId}`, { headers: getAuthHeaders() }); 
+            const d = await r.json(); 
+            if (!r.ok) throw new Error(extractError(d)); 
+            resultDiv.style.display = "block"; 
+            resultDiv.innerHTML = `<p><strong>${d.tenant_name}</strong><br>Rent: R${d.rent_outstanding.toFixed(2)}<br>Elec: R${d.electricity_outstanding.toFixed(2)}<br>Water: R${d.water_outstanding.toFixed(2)}<br>Wallet: R${d.wallet_balance.toFixed(2)}</p>`; 
+        } catch (e) { 
+            resultDiv.style.display = "block"; 
+            resultDiv.innerHTML = `<p style="color:red;">Error calling /tenant-balance: ${e.message}</p>`;
+        }
     }
 
     async function loadAllTenants() {
@@ -912,10 +935,30 @@
     function closeDocs() { document.getElementById("docsModal").style.display = "none"; }
 
     async function uploadDoc() {
-        const unit = document.getElementById("docUnitNumber").value; const tenantId = getTenantIdByUnit(unit); if(!tenantId) return;
-        const file = document.getElementById("docFile").files[0]; if(!file) { alert("Select a file."); return; }
+        const unit = document.getElementById("docUnitNumber").value;
+        const resultDiv = document.getElementById("docResult");
+        const tenantCheck = getTenantIdByUnit(unit);
+        if(tenantCheck.error) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">${tenantCheck.error}</p>`;
+            return;
+        }
+        const tenantId = tenantCheck.id;
+        const file = document.getElementById("docFile").files[0]; 
+        if(!file) { alert("Select a file."); return; }
         const formData = new FormData(); formData.append("doc_type", document.getElementById("docType").value); formData.append("file", file);
-        try { const url = `/upload-doc/${tenantId}`; const r = await fetch(url, { method: 'POST', headers: { 'Authorization': `Bearer ${authToken}` }, body: formData }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); logAction("Uploaded Doc", `Unit: ${unit}`); } catch (e) { alert(`Error calling ${url}: ` + e.message); }
+        try { 
+            const url = `/upload-doc/${tenantId}`; 
+            const r = await fetch(url, { method: 'POST', headers: { 'Authorization': `Bearer ${authToken}` }, body: formData }); 
+            const d = await r.json(); 
+            if (!r.ok) throw new Error(extractError(d)); 
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`;
+            logAction("Uploaded Doc", `Unit: ${unit}`); 
+        } catch (e) { 
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">Error calling /upload-doc: ${e.message}</p>`;
+        }
     }
 
     async function grantConsent(id) { try { const url = `/grant-consent/${id}`; const r = await fetch(url, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllTenants(); } catch (e) { alert(`Error calling /grant-consent: ` + e.message); } }
@@ -925,15 +968,31 @@
     async function vacateTenant(id) { if(!confirm("Vacate this tenant?")) return; try { const url = `/vacate-tenant/${id}`; const r = await fetch(url, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllTenants(); loadAllMeters(); } catch (e) { alert(`Error calling /vacate-tenant: ` + e.message); } }
 
     async function submitNTV() {
-        const unit = document.getElementById("ntvUnitNumber").value; const tenantId = getTenantIdByUnit(unit); if(!tenantId) return;
+        const unit = document.getElementById("ntvUnitNumber").value;
+        const resultDiv = document.getElementById("ntvResult");
+        const tenantCheck = getTenantIdByUnit(unit);
+        if(tenantCheck.error) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">${tenantCheck.error}</p>`;
+            return;
+        }
+        const tenantId = tenantCheck.id;
         const payload = { exit_date: document.getElementById("ntvExitDate").value, exit_reason: document.getElementById("ntvReason").value };
-        try { const url = `/notice-to-vacate/${tenantId}`; const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); } catch (e) { alert(`Error calling ${url}: ` + e.message); }
+        try { const url = `/notice-to-vacate/${tenantId}`; const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`; } catch (e) { resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:red;">${e.message}</p>`; }
     }
 
     async function submitInspection() {
-        const unit = document.getElementById("inspUnitNumber").value; const tenantId = getTenantIdByUnit(unit); if(!tenantId) return;
+        const unit = document.getElementById("inspUnitNumber").value;
+        const resultDiv = document.getElementById("inspResult");
+        const tenantCheck = getTenantIdByUnit(unit);
+        if(tenantCheck.error) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">${tenantCheck.error}</p>`;
+            return;
+        }
+        const tenantId = tenantCheck.id;
         const payload = { status: document.getElementById("inspStatus").value, notes: document.getElementById("inspNotes").value };
-        try { const url = `/inspection-result/${tenantId}`; const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllTenants(); loadAllMeters(); } catch (e) { alert(`Error calling ${url}: ` + e.message); }
+        try { const url = `/inspection-result/${tenantId}`; const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`; loadAllTenants(); loadAllMeters(); } catch (e) { resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:red;">${e.message}</p>`; }
     }
 
     async function downloadCSV() {
@@ -942,17 +1001,34 @@
 
     async function setCreditLimit() {
         const unit = document.getElementById("creditUnitNumber").value, limit = document.getElementById("creditLimitInput").value, resultDiv = document.getElementById("creditResult");
-        const tenantId = getTenantIdByUnit(unit); if(!tenantId) return;
+        const tenantCheck = getTenantIdByUnit(unit);
+        if(tenantCheck.error) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">${tenantCheck.error}</p>`;
+            return;
+        }
+        const tenantId = tenantCheck.id;
         try { const url = `/set-credit-limit/${tenantId}?limit=${limit}`; const r = await fetch(url, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`; logAction("Set Emergency Fund", `Unit: ${unit}, Limit: ${limit}`); loadAllTenants(); } catch (e) { resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:red;">Error calling /set-credit-limit: ${e.message}</p>`; }
     }
 
     async function assignMeter() {
         const unit = document.getElementById("meterUnitNumber").value; 
-        const tenantId = getTenantIdByUnit(unit); 
-        if(!tenantId) return;
+        const resultDiv = document.getElementById("meterResult");
+        
+        const tenantCheck = getTenantIdByUnit(unit);
+        if(tenantCheck.error) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">${tenantCheck.error}</p>`;
+            return;
+        }
+        const tenantId = tenantCheck.id;
         
         const serial = document.getElementById("meterSerial").value;
-        if(!serial) { alert("Error: Please enter a Meter Serial Number."); return; }
+        if(!serial) { 
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">Error: Please enter a Meter Serial Number.</p>`;
+            return; 
+        }
 
         const payload = { 
             tenant_id: tenantId, 
@@ -965,7 +1041,9 @@
             const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); 
             const d = await r.json(); 
             if (!r.ok) throw new Error(extractError(d)); 
-            alert(d.message); 
+            
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`;
             logAction("Assigned Meter", `Unit: ${unit}`); 
             
             document.getElementById('meterUnitNumber').value = '';
@@ -974,55 +1052,84 @@
             document.getElementById('billingType').value = 'PREPAID';
             
             loadAllMeters(); 
-        } catch (e) { alert(`Error calling ${url}: ` + e.message); }
+        } catch (e) { 
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">Error calling /assign-meter: ${e.message}</p>`;
+        }
     }
 
     async function generateBill() {
-        const unit = document.getElementById("billUnitNumber").value; const tenantId = getTenantIdByUnit(unit); if(!tenantId) return;
+        const unit = document.getElementById("billUnitNumber").value;
+        const resultDiv = document.getElementById("billResult");
+        const tenantCheck = getTenantIdByUnit(unit);
+        if(tenantCheck.error) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">${tenantCheck.error}</p>`;
+            return;
+        }
+        const tenantId = tenantCheck.id;
         const payload = { tenant_id: tenantId, utility_type: document.getElementById("billType").value, amount: parseFloat(document.getElementById("billAmount").value || 0), peak_units: parseFloat(document.getElementById("billPeak").value || 0), offpeak_units: parseFloat(document.getElementById("billOffpeak").value || 0), manual_entry: true };
-        try { const url = `/generate-bill`; const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllTenants(); } catch (e) { alert(`Error calling ${url}: ` + e.message); }
+        try { const url = `/generate-bill`; const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`; loadAllTenants(); } catch (e) { resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:red;">Error calling /generate-bill: ${e.message}</p>`; }
     }
 
     async function restrictWater() {
         const unit = document.getElementById("restrictUnitNumber").value;
-        const tenantId = getTenantIdByUnit(unit); 
-        if(!tenantId) return;
+        const resultDiv = document.getElementById("restrictResult");
+        const tenantCheck = getTenantIdByUnit(unit);
+        if(tenantCheck.error) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">${tenantCheck.error}</p>`;
+            return;
+        }
+        const tenantId = tenantCheck.id;
         try {
             const url = `/water-control/${tenantId}?action=RESTRICT`;
             const r = await fetch(url, { method: 'POST', headers: getAuthHeaders() });
             const d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
-            document.getElementById("restrictResult").style.display = "block";
-            document.getElementById("restrictResult").innerHTML = `<p style="color:green;">${d.message}</p>`;
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`;
             loadAllMeters();
         } catch (e) {
-            document.getElementById("restrictResult").style.display = "block";
-            document.getElementById("restrictResult").innerHTML = `<p style="color:red;">Error calling /water-control: ${e.message}</p>`;
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">Error calling /water-control: ${e.message}</p>`;
         }
     }
 
     async function unrestrictWater() {
         const unit = document.getElementById("restrictUnitNumber").value;
-        const tenantId = getTenantIdByUnit(unit); 
-        if(!tenantId) return;
+        const resultDiv = document.getElementById("restrictResult");
+        const tenantCheck = getTenantIdByUnit(unit);
+        if(tenantCheck.error) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">${tenantCheck.error}</p>`;
+            return;
+        }
+        const tenantId = tenantCheck.id;
         try {
             const url = `/water-control/${tenantId}?action=RESTORE`;
             const r = await fetch(url, { method: 'POST', headers: getAuthHeaders() });
             const d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
-            document.getElementById("restrictResult").style.display = "block";
-            document.getElementById("restrictResult").innerHTML = `<p style="color:green;">${d.message}</p>`;
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`;
             loadAllMeters();
         } catch (e) {
-            document.getElementById("restrictResult").style.display = "block";
-            document.getElementById("restrictResult").innerHTML = `<p style="color:red;">Error calling /water-control: ${e.message}</p>`;
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">Error calling /water-control: ${e.message}</p>`;
         }
     }
 
     async function adjustAccount() {
         const unit = document.getElementById("adjUnitNumber").value;
-        const tenantId = getTenantIdByUnit(unit); 
-        if(!tenantId) return;
+        const resultDiv = document.getElementById("adjResult");
+        const tenantCheck = getTenantIdByUnit(unit);
+        if(tenantCheck.error) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">${tenantCheck.error}</p>`;
+            return;
+        }
+        const tenantId = tenantCheck.id;
         const payload = {
             target: document.getElementById("adjTarget").value,
             amount: parseFloat(document.getElementById("adjAmount").value || 0),
@@ -1033,13 +1140,13 @@
             const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) });
             const d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
-            document.getElementById("adjResult").style.display = "block";
-            document.getElementById("adjResult").innerHTML = `<p style="color:green;">${d.message}</p>`;
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`;
             logAction("Adjusted Account", `Unit: ${unit}, Target: ${payload.target}`);
             loadAllTenants();
         } catch (e) {
-            document.getElementById("adjResult").style.display = "block";
-            document.getElementById("adjResult").innerHTML = `<p style="color:red;">Error calling /adjust-account: ${e.message}</p>`;
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">Error calling /adjust-account: ${e.message}</p>`;
         }
     }
 
@@ -1367,8 +1474,14 @@
 
     async function processPayment() {
         const unit = document.getElementById("paymentUnitNumber").value;
-        const tenantId = getTenantIdByUnit(unit);
-        if(!tenantId) return;
+        const resultDiv = document.getElementById("paymentResult");
+        const tenantCheck = getTenantIdByUnit(unit);
+        if(tenantCheck.error) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">${tenantCheck.error}</p>`;
+            return;
+        }
+        const tenantId = tenantCheck.id;
         const payload = {
             amount: parseFloat(document.getElementById("paymentAmount").value || 0),
             rent_pct: document.getElementById("paymentRentPct").value ? parseFloat(document.getElementById("paymentRentPct").value) : null,
@@ -1380,13 +1493,13 @@
             const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) });
             const d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
-            document.getElementById("paymentResult").style.display = "block";
-            document.getElementById("paymentResult").innerHTML = `<p style="color:green;">${d.message}</p>`;
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`;
             logAction("Processed Payment", `Unit: ${unit}, Amount: ${payload.amount}`);
             loadAllTenants();
         } catch (e) {
-            document.getElementById("paymentResult").style.display = "block";
-            document.getElementById("paymentResult").innerHTML = `<p style="color:red;">Error calling /process-payment: ${e.message}</p>`;
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">Error calling /process-payment: ${e.message}</p>`;
         }
     }
 
