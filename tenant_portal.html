@@ -494,7 +494,8 @@
             if (d.utility_model === 'WALLET_CONSUMPTION') {
                 document.getElementById('walletView').style.display = 'block';
                 document.getElementById('stsView').style.display = 'none';
-                document.getElementById('stsTopupView').style.display = 'none';
+                // FIX: Changed from 'none' to 'block' so Smart Meter users can also buy utilities manually
+                document.getElementById('stsTopupView').style.display = 'block';
                 
                 document.getElementById("kpiWallet").innerText = `R ${mainBalance.toFixed(2)}`;
                 document.getElementById("kpiForecast").innerText = forecastText;
