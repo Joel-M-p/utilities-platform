@@ -287,7 +287,11 @@
             <h2>All Tenants Overview <span class="help-icon" title="This table shows all tenants for the selected property. Use the action buttons to manage them.">ℹ️</span></h2>
             <button onclick="loadAllTenants()">Refresh Tenant List</button>
             <button onclick="downloadCSV()" class="btn-download">Download CSV</button>
-            <button onclick="triggerMockRent()" class="btn-restrict">Sync Rent from ERP (Test)</button>
+            
+            <!-- FIX: Added input for unit-specific rent sync -->
+            <input type="text" id="syncRentUnitNumber" placeholder="Unit No (Leave blank for ALL)" style="width: 250px; margin-bottom: 0px;">
+            <button onclick="triggerMockRent()" class="btn-restrict">Sync Rent</button>
+            
             <table id="tenantsTable" style="display:none;">
                 <thead>
                     <tr>
@@ -329,7 +333,9 @@
                     <select id="meterType"><option value="ELECTRICITY">Electricity</option><option value="WATER_HOT">Hot Water</option><option value="WATER_COLD">Cold Water</option></select>
                     <select id="billingType"><option value="PREPAID">Prepaid</option><option value="POSTPAID">Postpaid</option></select>
                     <button onclick="assignMeter()">Assign Meter</button>
+                    <button onclick="loadAvailableMeters()" class="btn-statement" style="padding:10px 15px; font-size:12px;">View Available</button>
                     <div id="meterResult" class="result" style="display:none;"></div>
+                    <div id="availableMetersResult" class="result" style="display:none; background: #fff3cd; border-left-color: #f1c40f;"></div>
                 </div>
                 <div>
                     <h3>Generate Utility Bill (Manual)</h3>
@@ -367,7 +373,7 @@
             <h2>Installed Meters Overview <span class="help-icon" title="View all meters assigned to tenants for this property. Use 'Log Event' to record tamper or bypass incidents. Use 'History' to view the full audit trail.">ℹ️</span></h2>
             <button onclick="loadAllMeters()">Refresh Meters List</button>
             <table id="metersTable" style="display:none;">
-                <thead><tr><th>Meter ID</th><th>Tenant</th><th>Type</th><th>Billing</th><th>Serial</th><th>Valve</th><th>Active?</th><th>Actions</th></tr></thead>
+                <thead><tr><th>Meter ID</th><th>Unit</th><th>Tenant</th><th>Type</th><th>Billing</th><th>Serial</th><th>Valve</th><th>Active?</th><th>Actions</th></tr></thead>
                 <tbody id="metersTableBody"></tbody>
             </table>
         </div>
@@ -1011,6 +1017,29 @@
         try { const url = `/set-credit-limit/${tenantId}?limit=${limit}`; const r = await fetch(url, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`; logAction("Set Emergency Fund", `Unit: ${unit}, Limit: ${limit}`); loadAllTenants(); } catch (e) { resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:red;">Error calling /set-credit-limit: ${e.message}</p>`; }
     }
 
+    async function loadAvailableMeters() {
+        const resultDiv = document.getElementById("availableMetersResult");
+        try {
+            const r = await fetch(`/available-meters`, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            if (d.meters.length === 0) {
+                resultDiv.innerHTML = `<p style="color:green; margin:0;">No vacant meters available. You can deploy a new one.</p>`;
+            } else {
+                let html = "<p style='color:green; margin:0 0 5px 0;'>Vacant meters available to reuse (do not create new ones):</p><ul style='margin:0; padding-left:20px;'>";
+                d.meters.forEach(m => {
+                    html += `<li><strong>${m.meter_type}</strong> - Serial: ${m.serial_number} (${m.billing_type})</li>`;
+                });
+                html += "</ul>";
+                resultDiv.innerHTML = html;
+            }
+            resultDiv.style.display = "block";
+        } catch (e) {
+            resultDiv.innerHTML = `<p style="color:red; margin:0;">Error: ${e.message}</p>`;
+            resultDiv.style.display = "block";
+        }
+    }
+
     async function assignMeter() {
         const unit = document.getElementById("meterUnitNumber").value; 
         const resultDiv = document.getElementById("meterResult");
@@ -1162,7 +1191,8 @@
                 const mId = m.meter_id || m.id;
                 tB.innerHTML += `<tr>
                     <td>${mId}</td>
-                    <td>${m.tenant_name || 'N/A'}</td>
+                    <td>${m.unit_number || 'N/A'}</td>
+                    <td>${m.tenant_name || 'Vacant'}</td>
                     <td>${m.meter_type}</td>
                     <td>${m.billing_type}</td>
                     <td>${m.serial_number}</td>
@@ -1250,17 +1280,25 @@
             allTariffsCache = d.tariffs;
             tB.innerHTML = "";
             d.tariffs.forEach(t => {
-                const tId = t.tariff_id || t.id; // FIX: Fallback for ID
+                const tId = t.tariff_id || t.id;
+                const structure = t.structure || t.structure_type || t.tariff_structure || 'FLAT';
+                const flat_rate = t.flat_rate || t.rate_flat;
+                const tier1_limit = t.tier1_limit || t.tier_1_limit;
+                const tier1_rate = t.tier1_rate || t.tier_1_rate;
+                const tier2_rate = t.tier2_rate || t.tier_2_rate;
+                const peak_rate = t.peak_rate || t.tou_peak_rate;
+                const offpeak_rate = t.offpeak_rate || t.tou_offpeak_rate;
+                
                 let details = "";
-                if(t.structure === 'FLAT') details = `Rate: R${t.flat_rate}`;
-                else if(t.structure === 'TIERED') details = `T1: ${t.tier1_limit}@R${t.tier1_rate}, T2: R${t.tier2_rate}`;
-                else if(t.structure === 'TOU') details = `Peak: R${t.peak_rate}, Off: R${t.offpeak_rate}`;
+                if(structure === 'FLAT') details = `Rate: R${flat_rate || 0}`;
+                else if(structure === 'TIERED') details = `T1: ${tier1_limit || 0}@R${tier1_rate || 0}, T2: R${tier2_rate || 0}`;
+                else if(structure === 'TOU') details = `Peak: R${peak_rate || 0}, Off: R${offpeak_rate || 0}`;
                 
                 tB.innerHTML += `<tr>
                     <td>${tId}</td>
                     <td>${t.name}</td>
                     <td>${t.meter_type}</td>
-                    <td>${t.structure}</td>
+                    <td>${structure}</td>
                     <td>${details}</td>
                     <td>
                         <button onclick="editTariff(${tId})" class="btn-edit">Edit</button>
@@ -1273,22 +1311,30 @@
     }
 
     function editTariff(id) {
-        const t = allTariffsCache.find(x => (x.tariff_id || x.id) === id); // FIX: Fallback for ID
+        const t = allTariffsCache.find(x => (x.tariff_id || x.id) === id);
         if(!t) return;
-        document.getElementById('editTariffId').value = t.tariff_id || t.id; // FIX: Fallback for ID
+        const structure = t.structure || t.structure_type || t.tariff_structure || 'FLAT';
+        const flat_rate = t.flat_rate || t.rate_flat;
+        const tier1_limit = t.tier1_limit || t.tier_1_limit;
+        const tier1_rate = t.tier1_rate || t.tier_1_rate;
+        const tier2_rate = t.tier2_rate || t.tier_2_rate;
+        const peak_rate = t.peak_rate || t.tou_peak_rate;
+        const offpeak_rate = t.offpeak_rate || t.tou_offpeak_rate;
+
+        document.getElementById('editTariffId').value = t.tariff_id || t.id;
         document.getElementById('editTariffName').value = t.name;
         document.getElementById('editTariffMeterType').value = t.meter_type;
-        document.getElementById('editTariffStructure').value = t.structure;
+        document.getElementById('editTariffStructure').value = structure;
         
-        if(t.structure === 'FLAT') document.getElementById('editRateFlat').value = t.flat_rate || '';
-        if(t.structure === 'TIERED') {
-            document.getElementById('editTier1Limit').value = t.tier1_limit || '';
-            document.getElementById('editTier1Rate').value = t.tier1_rate || '';
-            document.getElementById('editTier2Rate').value = t.tier2_rate || '';
+        if(structure === 'FLAT') document.getElementById('editRateFlat').value = flat_rate || '';
+        if(structure === 'TIERED') {
+            document.getElementById('editTier1Limit').value = tier1_limit || '';
+            document.getElementById('editTier1Rate').value = tier1_rate || '';
+            document.getElementById('editTier2Rate').value = tier2_rate || '';
         }
-        if(t.structure === 'TOU') {
-            document.getElementById('editTouPeak').value = t.peak_rate || '';
-            document.getElementById('editTouOffpeak').value = t.offpeak_rate || '';
+        if(structure === 'TOU') {
+            document.getElementById('editTouPeak').value = peak_rate || '';
+            document.getElementById('editTouOffpeak').value = offpeak_rate || '';
         }
         
         toggleEditTariffFields();
@@ -1462,14 +1508,24 @@
         } catch (e) { alert("Error calling /company-settings: " + e.message); }
     }
 
+    // --- FIX: Updated triggerMockRent to send payload ---
     async function triggerMockRent() {
+        const unitNumber = document.getElementById("syncRentUnitNumber").value.trim();
+        const payload = unitNumber ? { unit_number: unitNumber } : {};
+        
         try {
-            const r = await fetch(`/sync-rent`, { method: 'POST', headers: getAuthHeaders() });
+            const r = await fetch(`/sync-rent`, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, 
+                body: JSON.stringify(payload) 
+            });
             const d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
             alert(d.message || "Rent sync triggered.");
             loadAllTenants();
-        } catch (e) { alert("Error calling /sync-rent: " + e.message); }
+        } catch (e) { 
+            alert("Error calling /sync-rent: " + e.message); 
+        }
     }
 
     async function processPayment() {
