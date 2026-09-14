@@ -91,7 +91,8 @@
         .utility-card input { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; box-sizing: border-box; text-align: center; font-weight: bold; }
         .btn-buy { width: 100%; padding: 12px; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
         .btn-elec { background: var(--warning); }
-        .btn-water { background: var(--secondary); }
+        .btn-water-cold { background: var(--secondary); }
+        .btn-water-hot { background: #e74c3c; }
 
         .txn-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f1f1; font-size: 0.95em; }
         .txn-item:last-child { border-bottom: none; }
@@ -200,6 +201,23 @@
             </div>
         </div>
 
+        <!-- My Installed Meters Card -->
+        <div class="card">
+            <h3>My Installed Meters</h3>
+            <div class="txn-item">
+                <span>Electricity Meter No.</span>
+                <span class="txn-amount" id="meterElec" style="color: var(--dark);">N/A</span>
+            </div>
+            <div class="txn-item">
+                <span>Cold Water Meter No.</span>
+                <span class="txn-amount" id="meterWaterCold" style="color: var(--dark);">N/A</span>
+            </div>
+            <div class="txn-item">
+                <span>Hot Water Meter No.</span>
+                <span class="txn-amount" id="meterWaterHot" style="color: var(--dark);">N/A</span>
+            </div>
+        </div>
+
         <!-- Account Summary -->
         <div class="card">
             <h3>Account Summary</h3>
@@ -240,6 +258,13 @@
     <!-- SCREEN 3: TOP UP -->
     <div id="screen-topup" class="screen">
         
+        <!-- Smart Meter Info Banner (Only shown for WALLET_CONSUMPTION) -->
+        <div id="smartMeterInfo" class="card" style="display:none; text-align:center; background: #e8f4f8; border-left: 4px solid var(--secondary);">
+            <p style="margin:0; color: var(--dark); font-size: 0.9em;">
+                <strong>Smart Meter Property:</strong> Your electricity and water (including hot water, if applicable) are deducted automatically from your wallet balance. No manual tokens required!
+            </p>
+        </div>
+
         <div class="card">
             <h3>Payment Options</h3>
             <div class="paygate-logo" style="text-align:center;">PayGate</div>
@@ -264,18 +289,26 @@
                     <button class="btn-buy" style="background: var(--success);" onclick="tPayRent()">Submit Payment</button>
                 </div>
 
-                <div class="utility-card">
+                <!-- Dynamic Utility Cards (Hidden by default, shown based on assigned meters) -->
+                <div class="utility-card" id="buyElecCard" style="display:none;">
                     <h4>⚡ Buy Electricity (Tariff Redeem)</h4>
                     <div class="helper-text">Enter amount in Rand (e.g., 50). Note: Rent is paid first!</div>
                     <input type="number" id="elec_amount" placeholder="Amount (R)">
                     <button class="btn-buy btn-elec" onclick="tBuyUtility('ELECTRICITY')">Redeem Electricity</button>
                 </div>
 
-                <div class="utility-card" style="margin-bottom:0;">
-                    <h4>💧 Pay Municipal Charges</h4>
+                <div class="utility-card" id="buyWaterColdCard" style="display:none;">
+                    <h4>💧 Buy Cold Water</h4>
                     <div class="helper-text">Enter amount in Rand (e.g., 30). Note: Rent is paid first!</div>
-                    <input type="number" id="water_amount" placeholder="Amount (R)">
-                    <button class="btn-buy btn-water" onclick="tBuyUtility('WATER_COLD')">Redeem Municipal</button>
+                    <input type="number" id="water_cold_amount" placeholder="Amount (R)">
+                    <button class="btn-buy btn-water-cold" onclick="tBuyUtility('WATER_COLD')">Buy Cold Water</button>
+                </div>
+
+                <div class="utility-card" id="buyWaterHotCard" style="display:none; margin-bottom:0;">
+                    <h4>♨️ Buy Hot Water</h4>
+                    <div class="helper-text">Enter amount in Rand (e.g., 30). Note: Rent is paid first!</div>
+                    <input type="number" id="water_hot_amount" placeholder="Amount (R)">
+                    <button class="btn-buy btn-water-hot" onclick="tBuyUtility('WATER_HOT')">Buy Hot Water</button>
                 </div>
             </div>
         </div>
@@ -421,6 +454,62 @@
             const tapsUsed = d.credit_taps_used || 0;
             const tapsLeft = 3 - tapsUsed;
             
+            // --- DYNAMIC METER DISPLAY LOGIC ---
+            const buyElecCard = document.getElementById('buyElecCard');
+            const buyWaterColdCard = document.getElementById('buyWaterColdCard');
+            const buyWaterHotCard = document.getElementById('buyWaterHotCard');
+            
+            // Hide all manual utility cards first
+            buyElecCard.style.display = 'none';
+            buyWaterColdCard.style.display = 'none';
+            buyWaterHotCard.style.display = 'none';
+            
+            let hasElec = false;
+            let hasColdWater = false;
+            let hasHotWater = false;
+
+            // Meter Serial Numbers
+            let elecSerial = "Not Installed";
+            let coldWaterSerial = "Not Installed";
+            let hotWaterSerial = "Not Installed";
+
+            // Check assigned meters to decide which cards to show and get serials
+            if (d.assigned_meters && d.assigned_meters.length > 0) {
+                d.assigned_meters.forEach(m => {
+                    if (m.meter_type === 'ELECTRICITY') {
+                        hasElec = true;
+                        elecSerial = m.serial_number || 'N/A';
+                    }
+                    if (m.meter_type === 'WATER_COLD') {
+                        hasColdWater = true;
+                        coldWaterSerial = m.serial_number || 'N/A';
+                    }
+                    if (m.meter_type === 'WATER_HOT') {
+                        hasHotWater = true;
+                        hotWaterSerial = m.serial_number || 'N/A';
+                    }
+                });
+            } else {
+                // Fallback for STS Dumb meters if assigned_meters is missing, assume they have Elec and Cold Water at minimum
+                hasElec = true;
+                hasColdWater = true;
+                elecSerial = "N/A";
+                coldWaterSerial = "N/A";
+            }
+
+            // Show the manual buy cards based on the meters assigned to the unit (Only matters if it's STS_TOKEN property)
+            if (d.utility_model === 'STS_TOKEN') {
+                if (hasElec) buyElecCard.style.display = 'flex';
+                if (hasColdWater) buyWaterColdCard.style.display = 'flex';
+                if (hasHotWater) buyWaterHotCard.style.display = 'flex';
+            }
+
+            // Populate the meter serial numbers in the Home screen card
+            document.getElementById("meterElec").innerText = elecSerial;
+            document.getElementById("meterWaterCold").innerText = coldWaterSerial;
+            document.getElementById("meterWaterHot").innerText = hotWaterSerial;
+            // --- END DYNAMIC METER LOGIC ---
+
             let dailyRate = 0;
             let forecastText = "No recent usage to forecast.";
             let daysLeft = 0;
@@ -494,8 +583,10 @@
             if (d.utility_model === 'WALLET_CONSUMPTION') {
                 document.getElementById('walletView').style.display = 'block';
                 document.getElementById('stsView').style.display = 'none';
-                // FIX: Changed from 'none' to 'block' so Smart Meter users can also buy utilities manually
-                document.getElementById('stsTopupView').style.display = 'block';
+                // Smart meters deduct automatically, so hide manual token redeem section entirely
+                document.getElementById('stsTopupView').style.display = 'none';
+                // Show the smart meter info banner
+                document.getElementById('smartMeterInfo').style.display = 'block';
                 
                 document.getElementById("kpiWallet").innerText = `R ${mainBalance.toFixed(2)}`;
                 document.getElementById("kpiForecast").innerText = forecastText;
@@ -503,7 +594,10 @@
             } else {
                 document.getElementById('walletView').style.display = 'none';
                 document.getElementById('stsView').style.display = 'block';
+                // STS dumb meters require manual token purchase
                 document.getElementById('stsTopupView').style.display = 'block';
+                // Hide the smart meter info banner
+                document.getElementById('smartMeterInfo').style.display = 'none';
                 
                 document.getElementById("kpiWalletSts").innerText = `R ${mainBalance.toFixed(2)}`;
                 document.getElementById("kpiArrearsSts").innerText = `R ${totalArrears.toFixed(2)}`;
@@ -689,7 +783,8 @@
             const d = await r.json();
             if (!r.ok) throw new Error(d.detail || "Payment failed");
             
-            alert("Payment successful! Funds added to wallet. Rent has been cleared automatically.");
+            // FIX: Updated message to accurately reflect that rent is reduced, not necessarily cleared
+            alert("Payment successful! Funds added to wallet. Any rent arrears have been reduced automatically.");
             tLogAction("Wallet Top Up (PayGate)", `Tenant: ${currentTenantId} topped up R${amount}.`);
             tLoadDashboard();
             tLoadTransactions();
@@ -727,7 +822,10 @@
     }
 
     async function tBuyUtility(type) {
-        const inputId = type === 'ELECTRICITY' ? 'elec_amount' : 'water_amount';
+        let inputId = 'elec_amount';
+        if (type === 'WATER_COLD') inputId = 'water_cold_amount';
+        if (type === 'WATER_HOT') inputId = 'water_hot_amount';
+        
         const amount = document.getElementById(inputId).value;
         
         if (!amount || amount <= 0) { alert("Please enter a valid amount."); return; }

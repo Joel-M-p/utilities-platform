@@ -119,6 +119,18 @@
         .sev-high { background: #c0392b; }
         .sev-medium { background: #e67e22; }
         .sev-low { background: #7f8c8d; }
+
+        /* FIX: Property Utility Model Badges */
+        .badge { padding: 4px 8px; border-radius: 12px; font-size: 0.75em; font-weight: bold; color: white; text-transform: uppercase; }
+        .badge-smart { background: #27ae60; }
+        .badge-dumb { background: #e67e22; }
+
+        /* FIX: Hot Water Calculator Box */
+        .hw-calc-box { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 10px; border: 1px solid #e1e4e8; width: 300px; }
+        .hw-calc-box label { font-size: 0.85em; color: #7f8c8d; display: block; margin-bottom: 5px; }
+        .hw-calc-box input { width: 100%; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; }
+        .hw-calc-box input[readonly] { background-color: #e9ecef; font-weight: bold; color: #2c3e50; }
+        .hw-calc-box .final-rate { font-size: 1.2em; font-weight: bold; color: #27ae60; text-align: center; background: white; padding: 10px; border-radius: 4px; border: 1px dashed #27ae60; }
     </style>
 </head>
 <body>
@@ -287,8 +299,6 @@
             <h2>All Tenants Overview <span class="help-icon" title="This table shows all tenants for the selected property. Use the action buttons to manage them.">ℹ️</span></h2>
             <button onclick="loadAllTenants()">Refresh Tenant List</button>
             <button onclick="downloadCSV()" class="btn-download">Download CSV</button>
-            
-            <!-- FIX: Added input for unit-specific rent sync -->
             <input type="text" id="syncRentUnitNumber" placeholder="Unit No (Leave blank for ALL)" style="width: 250px; margin-bottom: 0px;">
             <button onclick="triggerMockRent()" class="btn-restrict">Sync Rent</button>
             
@@ -333,7 +343,7 @@
                     <select id="meterType"><option value="ELECTRICITY">Electricity</option><option value="WATER_HOT">Hot Water</option><option value="WATER_COLD">Cold Water</option></select>
                     <select id="billingType"><option value="PREPAID">Prepaid</option><option value="POSTPAID">Postpaid</option></select>
                     <button onclick="assignMeter()">Assign Meter</button>
-                    <button onclick="loadAvailableMeters()" class="btn-statement" style="padding:10px 15px; font-size:12px;">View Available</button>
+                    <button onclick="loadUnitMeters()" class="btn-statement" style="padding:10px 15px; font-size:12px;">Check Unit Meters</button>
                     <div id="meterResult" class="result" style="display:none;"></div>
                     <div id="availableMetersResult" class="result" style="display:none; background: #fff3cd; border-left-color: #f1c40f;"></div>
                 </div>
@@ -373,7 +383,7 @@
             <h2>Installed Meters Overview <span class="help-icon" title="View all meters assigned to tenants for this property. Use 'Log Event' to record tamper or bypass incidents. Use 'History' to view the full audit trail.">ℹ️</span></h2>
             <button onclick="loadAllMeters()">Refresh Meters List</button>
             <table id="metersTable" style="display:none;">
-                <thead><tr><th>Meter ID</th><th>Unit</th><th>Tenant</th><th>Type</th><th>Billing</th><th>Serial</th><th>Valve</th><th>Active?</th><th>Actions</th></tr></thead>
+                <thead><tr><th>Meter ID</th><th>Unit</th><th>Property</th><th>Tenant</th><th>Type</th><th>Billing</th><th>Serial</th><th>Valve</th><th>Active?</th><th>Actions</th></tr></thead>
                 <tbody id="metersTableBody"></tbody>
             </table>
         </div>
@@ -382,7 +392,7 @@
             <h2>Tariff Management (Complex Structures) <span class="help-icon" title="Create Flat, Tiered, or Time-of-Use tariffs. Sanitation is a fixed daily charge. You must select a property first.">ℹ️</span></h2>
             <div id="tariffWarning" class="prop-warning">Please select a specific property from the top right dropdown first!</div>
             <input type="text" id="tariffName" placeholder="Tariff Name">
-            <select id="tariffMeterType">
+            <select id="tariffMeterType" onchange="toggleTariffFields()">
                 <option value="ELECTRICITY">Electricity (Consumption)</option>
                 <option value="WATER_HOT">Water Hot (Consumption)</option>
                 <option value="WATER_COLD">Water Cold (Consumption)</option>
@@ -390,7 +400,20 @@
             </select>
             <select id="tariffStructure" onchange="toggleTariffFields()"><option value="FLAT">Flat Rate</option><option value="TIERED">Tiered (Block)</option><option value="TOU">Time-of-Use</option></select>
             <br>
-            <div id="flatFields"><input type="number" id="rateFlat" placeholder="Flat Rate (e.g., 2.50 for Elec, 4.14 for Daily Sani)"></div>
+            
+            <div id="flatFields">
+                <input type="number" id="rateFlat" placeholder="Flat Rate (e.g., 2.50 for Elec, 4.14 for Daily Sani)">
+                
+                <div id="hotWaterCalc" class="hw-calc-box" style="display:none;">
+                    <label>Cold Water Base Rate (Auto-fetched)</label>
+                    <input type="text" id="hwBaseRate" placeholder="N/A" readonly>
+                    <label>Surcharge (X) - Defaults to 227.26</label>
+                    <input type="number" id="hwSurcharge" value="227.26" oninput="calcHotWater()">
+                    <label>Final Hot Water Rate (R)</label>
+                    <input type="text" id="hwFinalRate" placeholder="Auto-calculated" readonly class="final-rate">
+                </div>
+            </div>
+            
             <div id="tieredFields" style="display:none;"><input type="number" id="tier1Limit" placeholder="Limit"><input type="number" id="tier1Rate" placeholder="Rate 1"><input type="number" id="tier2Rate" placeholder="Rate 2"></div>
             <div id="touFields" style="display:none;"><input type="number" id="touPeak" placeholder="Peak"><input type="number" id="touOffpeak" placeholder="Off-Peak"></div>
             <button onclick="createTariff()">Create Tariff</button>
@@ -660,8 +683,6 @@
 
     function getTenantIdByUnit(unitNumber) {
         if(!unitNumber) { return { error: "Please enter a Unit Number." }; }
-        
-        // Ensure allTenantsCache is populated
         if(!allTenantsCache || allTenantsCache.length === 0) {
             return { error: "Tenant list is still loading. Please wait a few seconds and try again." };
         }
@@ -718,11 +739,14 @@
             dd.innerHTML = '<option value="">All Properties (Owner View)</option>';
             tB.innerHTML = "";
             userPropDD.innerHTML = '<option value="">Select Property...</option>';
+            
             d.properties.forEach(p => {
-                dd.innerHTML += `<option value="${p.id}">${p.name} (${p.province})</option>`;
+                let modelText = p.utility_model === 'WALLET_CONSUMPTION' ? 'Smart Meters' : 'Dumb Meters';
+                dd.innerHTML += `<option value="${p.id}">${p.name} (${modelText})</option>`;
                 userPropDD.innerHTML += `<option value="${p.id}">${p.name}</option>`;
-                let modelText = p.utility_model === 'WALLET_CONSUMPTION' ? 'Smart Meters (Wallet)' : 'STS Token (Dumb)';
-                tB.innerHTML += `<tr><td>${p.id}</td><td>${p.name}</td><td>${p.province}</td><td>${modelText}</td><td><button onclick="editProperty(${p.id}, '${p.name}', '${p.province}', '${p.address}', '${p.utility_model}')" class="btn-edit">Edit</button></td></tr>`;
+                
+                let modelBadge = p.utility_model === 'WALLET_CONSUMPTION' ? '<span class="badge badge-smart">Smart</span>' : '<span class="badge badge-dumb">Dumb</span>';
+                tB.innerHTML += `<tr><td>${p.id}</td><td>${p.name}</td><td>${p.province}</td><td>${modelBadge}</td><td><button onclick="editProperty(${p.id}, '${p.name}', '${p.province}', '${p.address}', '${p.utility_model}')" class="btn-edit">Edit</button></td></tr>`;
             });
             document.getElementById("propertiesTable").style.display = "block";
             if(currentRole !== 'ADMIN' && assignedPropId && assignedPropId !== "null") { dd.value = assignedPropId; dd.disabled = true; }
@@ -1017,20 +1041,33 @@
         try { const url = `/set-credit-limit/${tenantId}?limit=${limit}`; const r = await fetch(url, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`; logAction("Set Emergency Fund", `Unit: ${unit}, Limit: ${limit}`); loadAllTenants(); } catch (e) { resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:red;">Error calling /set-credit-limit: ${e.message}</p>`; }
     }
 
-    async function loadAvailableMeters() {
+    // FIX: Fetch ONLY the meters assigned to the specific unit
+    async function loadUnitMeters() {
+        const unit = document.getElementById("meterUnitNumber").value;
         const resultDiv = document.getElementById("availableMetersResult");
+        const tenantCheck = getTenantIdByUnit(unit);
+
+        if(tenantCheck.error) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">${tenantCheck.error}</p>`;
+            return;
+        }
+        const tenantId = tenantCheck.id;
+
         try {
-            const r = await fetch(`/available-meters`, { headers: getAuthHeaders() });
+            const r = await fetch(`/tenant-balance/${tenantId}`, { headers: getAuthHeaders() });
             const d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
-            if (d.meters.length === 0) {
-                resultDiv.innerHTML = `<p style="color:green; margin:0;">No vacant meters available. You can deploy a new one.</p>`;
+
+            if (!d.assigned_meters || d.assigned_meters.length === 0) {
+                resultDiv.innerHTML = `<p style="color:green; margin:0;">No meters assigned to Unit ${unit}. You can deploy a new one.</p>`;
             } else {
-                let html = "<p style='color:green; margin:0 0 5px 0;'>Vacant meters available to reuse (do not create new ones):</p><ul style='margin:0; padding-left:20px;'>";
-                d.meters.forEach(m => {
-                    html += `<li><strong>${m.meter_type}</strong> - Serial: ${m.serial_number} (${m.billing_type})</li>`;
+                let html = `<p style='color:#2c3e50; margin:0 0 5px 0; font-weight:bold;'>Meters for Unit ${unit}:</p><ul style='margin:0; padding-left:20px;'>`;
+                d.assigned_meters.forEach(m => {
+                    html += `<li><strong>${m.meter_type}</strong> - Serial: ${m.serial_number}</li>`;
                 });
                 html += "</ul>";
+                html += "<p style='font-size:0.85em; color:#c0392b; margin-top:5px; font-weight:bold;'>⚠️ To assign a new meter, you must deactivate the existing one first from the 'Installed Meters Overview' table below.</p>";
                 resultDiv.innerHTML = html;
             }
             resultDiv.style.display = "block";
@@ -1192,6 +1229,7 @@
                 tB.innerHTML += `<tr>
                     <td>${mId}</td>
                     <td>${m.unit_number || 'N/A'}</td>
+                    <td>${m.property_name || 'N/A'}</td>
                     <td>${m.tenant_name || 'Vacant'}</td>
                     <td>${m.meter_type}</td>
                     <td>${m.billing_type}</td>
@@ -1201,11 +1239,24 @@
                     <td>
                         <button onclick="logMeterEvent(${mId})" class="btn-event">Log Event</button>
                         <button onclick="viewMeterHistory(${mId})" class="btn-history">History</button>
+                        ${m.is_active ? `<button onclick="deactivateMeter(${mId})" class="btn-danger">Deactivate</button>` : ''}
                     </td>
                 </tr>`;
             });
             document.getElementById("metersTable").style.display = "block";
         } catch (e) { console.error("Error calling /all-meters: " + e.message); }
+    }
+
+    async function deactivateMeter(id) {
+        if(!confirm("Deactivate this meter? The tenant will be free to receive a new meter.")) return;
+        try {
+            const url = `/deactivate-meter/${id}`;
+            const r = await fetch(url, { method: 'POST', headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            alert(d.message);
+            loadAllMeters();
+        } catch (e) { alert(`Error calling ${url}: ` + e.message); }
     }
 
     async function logMeterEvent(id) {
@@ -1239,26 +1290,88 @@
 
     function toggleTariffFields() {
         const val = document.getElementById("tariffStructure").value;
+        const mType = document.getElementById("tariffMeterType").value;
+        
         document.getElementById("flatFields").style.display = val === 'FLAT' ? 'block' : 'none';
         document.getElementById("tieredFields").style.display = val === 'TIERED' ? 'block' : 'none';
         document.getElementById("touFields").style.display = val === 'TOU' ? 'block' : 'none';
+        
+        if(val === 'FLAT' && mType === 'WATER_HOT') {
+            document.getElementById("rateFlat").style.display = 'none';
+            document.getElementById("hotWaterCalc").style.display = 'block';
+            
+            let coldWaterTariff = allTariffsCache.find(t => (t.meter_type === 'WATER_COLD') && ((t.structure || t.structure_type) === 'FLAT'));
+            if(coldWaterTariff) {
+                let cwRate = coldWaterTariff.rate_flat || coldWaterTariff.flat_rate || 0;
+                document.getElementById("hwBaseRate").value = parseFloat(cwRate).toFixed(2);
+            } else {
+                document.getElementById("hwBaseRate").value = "0.00";
+                alert("Warning: No Flat Rate 'Water Cold' tariff found for this property. Please create one first. Defaulting base to 0.00.");
+            }
+            calcHotWater();
+        } else {
+            document.getElementById("rateFlat").style.display = 'block';
+            document.getElementById("hotWaterCalc").style.display = 'none';
+        }
+    }
+
+    function calcHotWater() {
+        let base = parseFloat(document.getElementById("hwBaseRate").value || 0);
+        if (isNaN(base)) base = 0;
+        let surcharge = parseFloat(document.getElementById("hwSurcharge").value || 227.26);
+        if (isNaN(surcharge)) surcharge = 227.26;
+        document.getElementById("hwFinalRate").value = (base + surcharge).toFixed(2);
     }
 
     async function createTariff() {
         const propId = document.getElementById("propertyFilter").value;
         if(!propId) { alert("Please select a property first."); return; }
         const structure = document.getElementById("tariffStructure").value;
+        const mType = document.getElementById("tariffMeterType").value;
+        
+        let flat_rate_val = 0;
+        let tier_1_limit_val = 0;
+        let tier_1_rate_val = 0;
+        let tier_2_rate_val = 0;
+        let tou_peak_rate_val = 0;
+        let tou_offpeak_rate_val = 0;
+
+        if (structure === 'FLAT') {
+            if (mType === 'WATER_HOT') {
+                let base = parseFloat(document.getElementById("hwBaseRate").value || 0);
+                if (isNaN(base)) base = 0;
+                let surcharge = parseFloat(document.getElementById("hwSurcharge").value || 227.26);
+                if (isNaN(surcharge)) surcharge = 227.26;
+                flat_rate_val = base + surcharge;
+            } else {
+                flat_rate_val = parseFloat(document.getElementById("rateFlat").value || 0);
+                if (isNaN(flat_rate_val)) flat_rate_val = 0;
+            }
+        } else if (structure === 'TIERED') {
+            tier_1_limit_val = parseFloat(document.getElementById("tier1Limit").value || 0);
+            if (isNaN(tier_1_limit_val)) tier_1_limit_val = 0;
+            tier_1_rate_val = parseFloat(document.getElementById("tier1Rate").value || 0);
+            if (isNaN(tier_1_rate_val)) tier_1_rate_val = 0;
+            tier_2_rate_val = parseFloat(document.getElementById("tier2Rate").value || 0);
+            if (isNaN(tier_2_rate_val)) tier_2_rate_val = 0;
+        } else if (structure === 'TOU') {
+            tou_peak_rate_val = parseFloat(document.getElementById("touPeak").value || 0);
+            if (isNaN(tou_peak_rate_val)) tou_peak_rate_val = 0;
+            tou_offpeak_rate_val = parseFloat(document.getElementById("touOffpeak").value || 0);
+            if (isNaN(tou_offpeak_rate_val)) tou_offpeak_rate_val = 0;
+        }
+
         const payload = {
             property_id: parseInt(propId),
             name: document.getElementById("tariffName").value,
-            meter_type: document.getElementById("tariffMeterType").value,
-            structure: structure,
-            flat_rate: structure === 'FLAT' ? parseFloat(document.getElementById("rateFlat").value || 0) : null,
-            tier1_limit: structure === 'TIERED' ? parseFloat(document.getElementById("tier1Limit").value || 0) : null,
-            tier1_rate: structure === 'TIERED' ? parseFloat(document.getElementById("tier1Rate").value || 0) : null,
-            tier2_rate: structure === 'TIERED' ? parseFloat(document.getElementById("tier2Rate").value || 0) : null,
-            peak_rate: structure === 'TOU' ? parseFloat(document.getElementById("touPeak").value || 0) : null,
-            offpeak_rate: structure === 'TOU' ? parseFloat(document.getElementById("touOffpeak").value || 0) : null
+            meter_type: mType,
+            structure_type: structure,
+            rate_flat: flat_rate_val,
+            tier_1_limit: tier_1_limit_val,
+            tier_1_rate: tier_1_rate_val,
+            tier_2_rate: tier_2_rate_val,
+            tou_peak_rate: tou_peak_rate_val,
+            tou_offpeak_rate: tou_offpeak_rate_val
         };
         try {
             const url = `/tariffs`;
@@ -1283,16 +1396,16 @@
                 const tId = t.tariff_id || t.id;
                 const structure = t.structure || t.structure_type || t.tariff_structure || 'FLAT';
                 const flat_rate = t.flat_rate || t.rate_flat;
-                const tier1_limit = t.tier1_limit || t.tier_1_limit;
-                const tier1_rate = t.tier1_rate || t.tier_1_rate;
-                const tier2_rate = t.tier2_rate || t.tier_2_rate;
-                const peak_rate = t.peak_rate || t.tou_peak_rate;
-                const offpeak_rate = t.offpeak_rate || t.tou_offpeak_rate;
+                const tier_1_limit = t.tier_1_limit || t.tier1_limit;
+                const tier_1_rate = t.tier_1_rate || t.tier1_rate;
+                const tier_2_rate = t.tier_2_rate || t.tier2_rate;
+                const tou_peak_rate = t.tou_peak_rate || t.peak_rate;
+                const tou_offpeak_rate = t.tou_offpeak_rate || t.offpeak_rate;
                 
                 let details = "";
                 if(structure === 'FLAT') details = `Rate: R${flat_rate || 0}`;
-                else if(structure === 'TIERED') details = `T1: ${tier1_limit || 0}@R${tier1_rate || 0}, T2: R${tier2_rate || 0}`;
-                else if(structure === 'TOU') details = `Peak: R${peak_rate || 0}, Off: R${offpeak_rate || 0}`;
+                else if(structure === 'TIERED') details = `T1: ${tier_1_limit || 0}@R${tier_1_rate || 0}, T2: R${tier_2_rate || 0}`;
+                else if(structure === 'TOU') details = `Peak: R${tou_peak_rate || 0}, Off: R${tou_offpeak_rate || 0}`;
                 
                 tB.innerHTML += `<tr>
                     <td>${tId}</td>
@@ -1315,11 +1428,11 @@
         if(!t) return;
         const structure = t.structure || t.structure_type || t.tariff_structure || 'FLAT';
         const flat_rate = t.flat_rate || t.rate_flat;
-        const tier1_limit = t.tier1_limit || t.tier_1_limit;
-        const tier1_rate = t.tier1_rate || t.tier_1_rate;
-        const tier2_rate = t.tier2_rate || t.tier_2_rate;
-        const peak_rate = t.peak_rate || t.tou_peak_rate;
-        const offpeak_rate = t.offpeak_rate || t.tou_offpeak_rate;
+        const tier_1_limit = t.tier_1_limit || t.tier1_limit;
+        const tier_1_rate = t.tier_1_rate || t.tier1_rate;
+        const tier_2_rate = t.tier_2_rate || t.tier2_rate;
+        const tou_peak_rate = t.tou_peak_rate || t.peak_rate;
+        const tou_offpeak_rate = t.tou_offpeak_rate || t.offpeak_rate;
 
         document.getElementById('editTariffId').value = t.tariff_id || t.id;
         document.getElementById('editTariffName').value = t.name;
@@ -1328,13 +1441,13 @@
         
         if(structure === 'FLAT') document.getElementById('editRateFlat').value = flat_rate || '';
         if(structure === 'TIERED') {
-            document.getElementById('editTier1Limit').value = tier1_limit || '';
-            document.getElementById('editTier1Rate').value = tier1_rate || '';
-            document.getElementById('editTier2Rate').value = tier2_rate || '';
+            document.getElementById('editTier1Limit').value = tier_1_limit || '';
+            document.getElementById('editTier1Rate').value = tier_1_rate || '';
+            document.getElementById('editTier2Rate').value = tier_2_rate || '';
         }
         if(structure === 'TOU') {
-            document.getElementById('editTouPeak').value = peak_rate || '';
-            document.getElementById('editTouOffpeak').value = offpeak_rate || '';
+            document.getElementById('editTouPeak').value = tou_peak_rate || '';
+            document.getElementById('editTouOffpeak').value = tou_offpeak_rate || '';
         }
         
         toggleEditTariffFields();
@@ -1355,16 +1468,41 @@
     async function saveTariffEdit() {
         const id = document.getElementById('editTariffId').value;
         const structure = document.getElementById('editTariffStructure').value;
+        
+        let flat_rate_val = 0;
+        let tier_1_limit_val = 0;
+        let tier_1_rate_val = 0;
+        let tier_2_rate_val = 0;
+        let tou_peak_rate_val = 0;
+        let tou_offpeak_rate_val = 0;
+
+        if (structure === 'FLAT') {
+            flat_rate_val = parseFloat(document.getElementById('editRateFlat').value || 0);
+            if (isNaN(flat_rate_val)) flat_rate_val = 0;
+        } else if (structure === 'TIERED') {
+            tier_1_limit_val = parseFloat(document.getElementById('editTier1Limit').value || 0);
+            if (isNaN(tier_1_limit_val)) tier_1_limit_val = 0;
+            tier_1_rate_val = parseFloat(document.getElementById('editTier1Rate').value || 0);
+            if (isNaN(tier_1_rate_val)) tier_1_rate_val = 0;
+            tier_2_rate_val = parseFloat(document.getElementById('editTier2Rate').value || 0);
+            if (isNaN(tier_2_rate_val)) tier_2_rate_val = 0;
+        } else if (structure === 'TOU') {
+            tou_peak_rate_val = parseFloat(document.getElementById('editTouPeak').value || 0);
+            if (isNaN(tou_peak_rate_val)) tou_peak_rate_val = 0;
+            tou_offpeak_rate_val = parseFloat(document.getElementById('editTouOffpeak').value || 0);
+            if (isNaN(tou_offpeak_rate_val)) tou_offpeak_rate_val = 0;
+        }
+
         const payload = {
             name: document.getElementById('editTariffName').value,
             meter_type: document.getElementById('editTariffMeterType').value,
-            structure: structure,
-            flat_rate: structure === 'FLAT' ? parseFloat(document.getElementById('editRateFlat').value || 0) : null,
-            tier1_limit: structure === 'TIERED' ? parseFloat(document.getElementById('editTier1Limit').value || 0) : null,
-            tier1_rate: structure === 'TIERED' ? parseFloat(document.getElementById('editTier1Rate').value || 0) : null,
-            tier2_rate: structure === 'TIERED' ? parseFloat(document.getElementById('editTier2Rate').value || 0) : null,
-            peak_rate: structure === 'TOU' ? parseFloat(document.getElementById('editTouPeak').value || 0) : null,
-            offpeak_rate: structure === 'TOU' ? parseFloat(document.getElementById('editTouOffpeak').value || 0) : null
+            structure_type: structure,
+            rate_flat: flat_rate_val,
+            tier_1_limit: tier_1_limit_val,
+            tier_1_rate: tier_1_rate_val,
+            tier_2_rate: tier_2_rate_val,
+            tou_peak_rate: tou_peak_rate_val,
+            tou_offpeak_rate: tou_offpeak_rate_val
         };
         try {
             const url = `/tariffs/${id}`;
@@ -1508,7 +1646,6 @@
         } catch (e) { alert("Error calling /company-settings: " + e.message); }
     }
 
-    // --- FIX: Updated triggerMockRent to send payload ---
     async function triggerMockRent() {
         const unitNumber = document.getElementById("syncRentUnitNumber").value.trim();
         const payload = unitNumber ? { unit_number: unitNumber } : {};

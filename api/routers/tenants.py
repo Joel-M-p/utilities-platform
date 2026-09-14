@@ -392,7 +392,8 @@ def api_get_tenant_balance(tenant_id: int, current_user: dict = Depends(verify_t
         meters_data = cursor.fetchall()
         
         elec_balance_kwh = 0
-        water_balance_kl = 0
+        water_cold_balance_kl = 0
+        water_hot_balance_kl = 0
         assigned_meters = []
         
         for m in meters_data:
@@ -405,10 +406,19 @@ def api_get_tenant_balance(tenant_id: int, current_user: dict = Depends(verify_t
                 "balance": float(m_balance or 0),
                 "hardware_type": m_hardware
             })
-            if m_type == 'ELECTRICITY' and m_hardware == 'SMART_IOT':
-                elec_balance_kwh = float(m_balance)
-            elif m_type.startswith('WATER') and m_hardware == 'SMART_IOT':
-                water_balance_kl = float(m_balance)
+            # Properties can have BOTH a Smart cold-water meter and a Smart hot-water
+            # meter (central-heating properties on the Smart model), so these must
+            # accumulate independently rather than share one overwritten variable -
+            # otherwise whichever meter the DB happens to return last silently wins.
+            if m_hardware == 'SMART_IOT':
+                if m_type == 'ELECTRICITY':
+                    elec_balance_kwh = float(m_balance)
+                elif m_type == 'WATER_COLD':
+                    water_cold_balance_kl = float(m_balance)
+                elif m_type == 'WATER_HOT':
+                    water_hot_balance_kl = float(m_balance)
+
+        water_balance_kl = water_cold_balance_kl + water_hot_balance_kl
 
         credit_limit = wallet_data[1] if wallet_data[1] is not None else 0
         tap_size = (Decimal(str(credit_limit)) / Decimal(3)).quantize(Decimal('0.01')) if credit_limit > 0 else 0
@@ -426,6 +436,8 @@ def api_get_tenant_balance(tenant_id: int, current_user: dict = Depends(verify_t
             "tap_size": float(tap_size),
             "elec_meter_balance_kwh": elec_balance_kwh,
             "water_meter_balance_kl": water_balance_kl,
+            "water_cold_balance_kl": water_cold_balance_kl,
+            "water_hot_balance_kl": water_hot_balance_kl,
             "utility_model": utility_model,
             "property_id": prop_id,
             "assigned_meters": assigned_meters
@@ -779,9 +791,10 @@ def api_get_all_meters(property_id: int = None, current_user: dict = Depends(ver
         else:
             target_property_id = user_prop_id
 
+        # FIX: Added t.unit_number to the SELECT statement
         if target_property_id:
             cursor.execute("""
-                SELECT m.id, t.first_name, t.last_name, m.meter_type, m.billing_type, m.serial_number, m.valve_status, m.is_active, m.tariff_id, m.property_id, p.name
+                SELECT m.id, t.unit_number, t.first_name, t.last_name, m.meter_type, m.billing_type, m.serial_number, m.valve_status, m.is_active, m.tariff_id, m.property_id, p.name
                 FROM meters m
                 LEFT JOIN tenants t ON m.tenant_id = t.id
                 LEFT JOIN properties p ON m.property_id = p.id
@@ -790,7 +803,7 @@ def api_get_all_meters(property_id: int = None, current_user: dict = Depends(ver
             """, (target_property_id,))
         else:
             cursor.execute("""
-                SELECT m.id, t.first_name, t.last_name, m.meter_type, m.billing_type, m.serial_number, m.valve_status, m.is_active, m.tariff_id, m.property_id, p.name
+                SELECT m.id, t.unit_number, t.first_name, t.last_name, m.meter_type, m.billing_type, m.serial_number, m.valve_status, m.is_active, m.tariff_id, m.property_id, p.name
                 FROM meters m
                 LEFT JOIN tenants t ON m.tenant_id = t.id
                 LEFT JOIN properties p ON m.property_id = p.id
@@ -801,11 +814,13 @@ def api_get_all_meters(property_id: int = None, current_user: dict = Depends(ver
         meters_list = []
         for row in rows:
             meters_list.append({
-                "meter_id": row[0], "tenant_name": f"{row[1] or 'Vacant'} {row[2] or ''}".strip(),
-                "meter_type": row[3], "billing_type": row[4], "serial_number": row[5],
-                "valve_status": row[6], "is_active": row[7], "tariff_id": row[8],
-                "property_id": row[9],
-                "property_name": row[10] if row[10] else "Unassigned"
+                "meter_id": row[0], 
+                "unit_number": row[1] or 'N/A', # FIX: Added unit_number to response
+                "tenant_name": f"{row[2] or 'Vacant'} {row[3] or ''}".strip(),
+                "meter_type": row[4], "billing_type": row[5], "serial_number": row[6],
+                "valve_status": row[7], "is_active": row[8], "tariff_id": row[9],
+                "property_id": row[10],
+                "property_name": row[11] if row[11] else "Unassigned"
             })
         return {"status": "success", "meters": meters_list}
     except Exception as e:
