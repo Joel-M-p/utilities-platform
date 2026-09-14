@@ -343,7 +343,7 @@
                     <select id="meterType"><option value="ELECTRICITY">Electricity</option><option value="WATER_HOT">Hot Water</option><option value="WATER_COLD">Cold Water</option></select>
                     <select id="billingType"><option value="PREPAID">Prepaid</option><option value="POSTPAID">Postpaid</option></select>
                     <button onclick="assignMeter()">Assign Meter</button>
-                    <button onclick="loadUnitMeters()" class="btn-statement" style="padding:10px 15px; font-size:12px;">Check Unit Meters</button>
+                    <button onclick="loadAvailableMeters()" class="btn-statement" style="padding:10px 15px; font-size:12px;">View Available</button>
                     <div id="meterResult" class="result" style="display:none;"></div>
                     <div id="availableMetersResult" class="result" style="display:none; background: #fff3cd; border-left-color: #f1c40f;"></div>
                 </div>
@@ -1041,33 +1041,20 @@
         try { const url = `/set-credit-limit/${tenantId}?limit=${limit}`; const r = await fetch(url, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`; logAction("Set Emergency Fund", `Unit: ${unit}, Limit: ${limit}`); loadAllTenants(); } catch (e) { resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:red;">Error calling /set-credit-limit: ${e.message}</p>`; }
     }
 
-    // FIX: Fetch ONLY the meters assigned to the specific unit
-    async function loadUnitMeters() {
-        const unit = document.getElementById("meterUnitNumber").value;
+    async function loadAvailableMeters() {
         const resultDiv = document.getElementById("availableMetersResult");
-        const tenantCheck = getTenantIdByUnit(unit);
-
-        if(tenantCheck.error) {
-            resultDiv.style.display = "block";
-            resultDiv.innerHTML = `<p style="color:red;">${tenantCheck.error}</p>`;
-            return;
-        }
-        const tenantId = tenantCheck.id;
-
         try {
-            const r = await fetch(`/tenant-balance/${tenantId}`, { headers: getAuthHeaders() });
+            const r = await fetch(`/available-meters`, { headers: getAuthHeaders() });
             const d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
-
-            if (!d.assigned_meters || d.assigned_meters.length === 0) {
-                resultDiv.innerHTML = `<p style="color:green; margin:0;">No meters assigned to Unit ${unit}. You can deploy a new one.</p>`;
+            if (d.meters.length === 0) {
+                resultDiv.innerHTML = `<p style="color:green; margin:0;">No vacant meters available. You can deploy a new one.</p>`;
             } else {
-                let html = `<p style='color:#2c3e50; margin:0 0 5px 0; font-weight:bold;'>Meters for Unit ${unit}:</p><ul style='margin:0; padding-left:20px;'>`;
-                d.assigned_meters.forEach(m => {
-                    html += `<li><strong>${m.meter_type}</strong> - Serial: ${m.serial_number}</li>`;
+                let html = "<p style='color:green; margin:0 0 5px 0;'>Vacant meters available to reuse (do not create new ones):</p><ul style='margin:0; padding-left:20px;'>";
+                d.meters.forEach(m => {
+                    html += `<li><strong>${m.meter_type}</strong> - Serial: ${m.serial_number} (${m.billing_type})</li>`;
                 });
                 html += "</ul>";
-                html += "<p style='font-size:0.85em; color:#c0392b; margin-top:5px; font-weight:bold;'>⚠️ To assign a new meter, you must deactivate the existing one first from the 'Installed Meters Overview' table below.</p>";
                 resultDiv.innerHTML = html;
             }
             resultDiv.style.display = "block";
