@@ -351,8 +351,15 @@
         </div>
 
         <div class="card">
-            <h3>Recent Transactions</h3>
-            <div id="txnList">
+            <h3>Income & Top-ups</h3>
+            <div id="incomeTxnList">
+                <p style="text-align:center; color:var(--gray);">Loading transactions...</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Expenses & Deductions</h3>
+            <div id="expenseTxnList">
                 <p style="text-align:center; color:var(--gray);">Loading transactions...</p>
             </div>
         </div>
@@ -568,7 +575,10 @@
                 let totalSpend30Days = 0;
                 if (txData.transactions) {
                     txData.transactions.forEach(t => {
-                        if (t.amount < 0) {
+                        // FIX: Determine if it's an expense by checking the type string (Case-Insensitive)
+                        const typeUpper = (t.type || '').toUpperCase();
+                        const isExpense = typeUpper.includes('PURCHASE') || typeUpper.includes('USAGE') || typeUpper.includes('BILL') || typeUpper.includes('RENT');
+                        if (isExpense) {
                             const txDate = new Date(t.date);
                             if (txDate >= thirtyDaysAgo) {
                                 totalSpend30Days += Math.abs(t.amount);
@@ -748,7 +758,8 @@
     }
     
     async function tLoadTransactions() {
-        const listDiv = document.getElementById('txnList');
+        const incomeList = document.getElementById('incomeTxnList');
+        const expenseList = document.getElementById('expenseTxnList');
         const pieChart = document.getElementById('monthPieChart');
         const legendDiv = document.getElementById('monthLegend');
         
@@ -758,13 +769,15 @@
             const d = await r.json();
             
             if (d.transactions.length === 0) {
-                listDiv.innerHTML = "<p style='text-align:center; color:var(--gray);'>No transactions yet.</p>";
+                incomeList.innerHTML = "<p style='text-align:center; color:var(--gray);'>No transactions yet.</p>";
+                expenseList.innerHTML = "";
                 pieChart.style.background = '#eee';
                 legendDiv.innerHTML = "<p style='color:var(--gray); margin:0; font-size:0.9em; text-align:center;'>No spending data for this month yet.</p>";
                 return;
             }
             
-            let html = "";
+            let incomeHtml = "";
+            let expenseHtml = "";
             const now = new Date();
             let monthElec = 0;
             let monthWater = 0;
@@ -772,33 +785,44 @@
             let totalMonthSpend = 0;
             
             d.transactions.slice(0, 20).forEach(t => {
-                let colorClass = t.amount > 0 ? 'text-success' : 'text-danger';
-                let sign = t.amount > 0 ? '+' : '';
+                // FIX: Determine if it's an expense by checking the transaction type string (Case-Insensitive)
+                const typeUpper = (t.type || '').toUpperCase();
+                const isExpense = typeUpper.includes('PURCHASE') || typeUpper.includes('USAGE') || typeUpper.includes('BILL') || typeUpper.includes('RENT');
+                
+                let colorClass = isExpense ? 'text-danger' : 'text-success';
+                let sign = isExpense ? '- R ' : '+ R ';
                 let typeText = t.type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
                 if (typeText.includes('Water')) {
                     typeText = typeText.replace('Water', 'Municipal');
                 }
                 
-                // Calculate for pie chart
                 const txDate = new Date(t.date);
                 if (txDate.getMonth() === now.getMonth() && txDate.getFullYear() === now.getFullYear()) {
-                    if (t.amount < 0) {
+                    if (isExpense) {
                         totalMonthSpend += Math.abs(t.amount);
-                        if (t.type.includes('ELEC')) monthElec += Math.abs(t.amount);
-                        else if (t.type.includes('WATER')) monthWater += Math.abs(t.amount);
-                        else if (t.type.includes('RENT')) monthRent += Math.abs(t.amount);
+                        if (typeUpper.includes('ELEC')) monthElec += Math.abs(t.amount);
+                        else if (typeUpper.includes('WATER')) monthWater += Math.abs(t.amount);
+                        else if (typeUpper.includes('RENT')) monthRent += Math.abs(t.amount);
                     }
                 }
                 
-                html += `<div class="txn-item">
+                const itemHtml = `<div class="txn-item">
                     <div>
                         <div style="font-weight:600;">${typeText}</div>
                         <div class="txn-date">${t.date}</div>
                     </div>
-                    <div class="txn-amount ${colorClass}">${sign}R ${Math.abs(t.amount).toFixed(2)}</div>
+                    <div class="txn-amount ${colorClass}">${sign}${Math.abs(t.amount).toFixed(2)}</div>
                 </div>`;
+                
+                if (isExpense) {
+                    expenseHtml += itemHtml;
+                } else {
+                    incomeHtml += itemHtml;
+                }
             });
-            listDiv.innerHTML = html;
+            
+            incomeList.innerHTML = incomeHtml || "<p style='text-align:center; color:var(--gray);'>No income transactions yet.</p>";
+            expenseList.innerHTML = expenseHtml || "<p style='text-align:center; color:var(--gray);'>No expense transactions yet.</p>";
             
             // Render Pie Chart
             if (totalMonthSpend > 0) {
@@ -806,7 +830,6 @@
                 const waterPct = (monthWater / totalMonthSpend) * 100;
                 const rentPct = (monthRent / totalMonthSpend) * 100;
                 
-                // Using conic-gradient for the pie chart
                 pieChart.style.background = `conic-gradient(
                     #f39c12 0% ${elecPct}%, 
                     #3498db ${elecPct}% ${elecPct + waterPct}%, 
@@ -825,7 +848,8 @@
             }
 
         } catch (e) { 
-            listDiv.innerHTML = "<p style='text-align:center; color:var(--danger);'>Error loading transactions.</p>"; 
+            incomeList.innerHTML = "<p style='text-align:center; color:var(--danger);'>Error loading transactions.</p>"; 
+            expenseList.innerHTML = "";
         }
     }
 
@@ -848,7 +872,7 @@
                             <div style="font-weight:600;">${t.units || 'Electricity Purchase'}</div>
                             <div class="txn-date">${t.date} ${tokenBtn}</div>
                         </div>
-                        <div class="txn-amount text-danger">R ${t.amount.toFixed(2)}</div>
+                        <div class="txn-amount text-danger">- R ${t.amount.toFixed(2)}</div>
                     </div>`;
                 });
                 elecList.innerHTML = html;
@@ -864,7 +888,7 @@
                             <div style="font-weight:600;">${t.units || 'Water/Municipal Charge'}</div>
                             <div class="txn-date">${t.date}</div>
                         </div>
-                        <div class="txn-amount text-danger">R ${t.amount.toFixed(2)}</div>
+                        <div class="txn-amount text-danger">- R ${t.amount.toFixed(2)}</div>
                     </div>`;
                 });
                 waterList.innerHTML = html;
@@ -896,7 +920,6 @@
             const d = await r.json();
             if (!r.ok) throw new Error(d.detail || "Payment failed");
             
-            // FIX: Updated message to accurately reflect that rent is reduced, not necessarily cleared
             alert("Payment successful! Funds added to wallet. Any rent arrears have been reduced automatically.");
             tLogAction("Wallet Top Up (PayGate)", `Tenant: ${currentTenantId} topped up R${amount}.`);
             tLoadDashboard();
