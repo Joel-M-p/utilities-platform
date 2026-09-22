@@ -1,102 +1,16 @@
-import os
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
-import json
+import shutil
 
-# Import your modular routers (INCLUDING AUDIT AND METER EVENTS)
-from api.routers import (
-    auth, tenants, billing, transactions, tariffs, recon, invoices, 
-    company, aging, stats, reports, bulk, bi, advanced_reports, export, 
-    properties, erp, users, audit, meter_events, fraud
-)
+print("Adding /setup-all endpoint to api/main.py...")
 
-app = FastAPI(title="Utilities Platform API")
+shutil.copy('api/main.py', 'api/main.py.bak')
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+with open('api/main.py', 'r', encoding='utf-8') as f:
+    c = f.read()
 
-# Include all routers
-app.include_router(auth.router)
-app.include_router(tenants.router)
-app.include_router(billing.router)
-app.include_router(transactions.router)
-app.include_router(tariffs.router)
-app.include_router(recon.router)
-app.include_router(invoices.router)
-app.include_router(company.router)
-app.include_router(aging.router)
-app.include_router(stats.router)
-app.include_router(reports.router)
-app.include_router(bulk.router)
-app.include_router(bi.router)
-app.include_router(advanced_reports.router)
-app.include_router(export.router)
-app.include_router(properties.router)
-app.include_router(erp.router)
-app.include_router(users.router)
-app.include_router(audit.router)     
-app.include_router(meter_events.router) 
-app.include_router(fraud.router)
-
-if not os.path.exists("static"):
-    os.makedirs("static")
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
-@app.get("/")
-def read_root():
-    return {"message": "Welcome to the Modular Utilities Platform API! The server is running."}
-
-@app.get("/setup")
-def setup_database():
-    try:
-        from api.models import init_db
-        init_db()
-        return {"status": "success", "message": "Database tables created successfully in the cloud!"}
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
-
-# --- PWA MANIFEST ENDPOINT ---
-@app.get("/manifest.json")
-def get_manifest():
-    try:
-        with open("manifest.json", "r") as f:
-            manifest_data = json.load(f)
-        return JSONResponse(content=manifest_data, media_type="application/manifest+json")
-    except Exception as e:
-        return JSONResponse(content={"error": str(e)}, status_code=404)
-
-# --- Serve the Web Pages ---
-@app.get("/dashboard", response_class=HTMLResponse)
-def serve_dashboard():
-    with open("dashboard.html", "r", encoding="utf-8") as f:
-        return HTMLResponse(content=f.read())
-
-@app.get("/m", response_class=HTMLResponse)
-def serve_mobile_pm():
-    with open("mobile_pm.html", "r", encoding="utf-8") as f:
-        return HTMLResponse(content=f.read())
-
-@app.get("/tenant", response_class=HTMLResponse)
-def serve_tenant():
-    with open("tenant_portal.html", "r", encoding="utf-8") as f:
-        return HTMLResponse(content=f.read())
-
-@app.get("/bi", response_class=HTMLResponse)
-def serve_bi():
-    with open("bi_dashboard.html", "r", encoding="utf-8") as f:
-        return HTMLResponse(content=f.read())
-
-@app.get("/reports", response_class=HTMLResponse)
-def serve_reports():
-    with open("reports_dashboard.html", "r", encoding="utf-8") as f:
-        return HTMLResponse(content=f.read())
+if 'setup-all' in c:
+    print("  Endpoint already exists. Skipping.")
+else:
+    endpoint = '''
 
 @app.get("/setup-all")
 def setup_all():
@@ -218,3 +132,16 @@ def setup_all():
     
     return HTMLResponse(content=html)
 
+'''
+    
+    c = c + endpoint
+    print("  Added /setup-all endpoint.")
+
+with open('api/main.py', 'w', encoding='utf-8') as f:
+    f.write(c)
+
+print("\nDone! Now:")
+print("  1. Commit and push to GitHub")
+print("  2. Wait for Render to rebuild (5-10 min)")
+print("  3. Visit: https://utilities-platform.onrender.com/setup-all")
+print("  4. You'll see all setup results + temp passwords on screen")
