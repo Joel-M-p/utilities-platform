@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from api.database import get_db_connection
-from api.security import verify_token
+from api.security import verify_token, require_staff, resolve_property_scope
 from api.services.notifications import send_notification
 from pydantic import BaseModel
 from decimal import Decimal
@@ -18,15 +18,35 @@ class BulkNotifyRequest(BaseModel):
 class BulkBillingRequest(BaseModel):
     month: str
 
-@router.post("/bulk-update-tariff/", dependencies=[Depends(verify_token)])
-def api_bulk_update_tariff(req: BulkTariffUpdate):
+# SECURITY: staff-only and property-scoped. This previously rewrote tariff_id on every
+# active meter of the given type across the ENTIRE portfolio, so one Manager could change
+# every other property's billing rate in a single call.
+@router.post("/bulk-update-tariff/")
+def api_bulk_update_tariff(req: BulkTariffUpdate, property_id: int = None, current_user: dict = Depends(require_staff)):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute("UPDATE meters SET tariff_id = %s WHERE meter_type = %s AND is_active = TRUE", (req.tariff_id, req.meter_type.upper()))
+        scope_id = resolve_property_scope(current_user, property_id)
+        if not scope_id:
+            # Refuse an unscoped portfolio-wide rate change even for an admin: it must be a
+            # deliberate, explicit choice of property rather than an accidental global update.
+            raise HTTPException(status_code=400, detail="A property_id is required for bulk tariff updates.")
+
+        # The tariff being applied must itself belong to that property, otherwise meters
+        # would be billed against another property's rate card.
+        cursor.execute("SELECT id FROM tariffs WHERE id = %s AND property_id = %s", (req.tariff_id, scope_id))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=400, detail="That tariff does not exist for this property.")
+
+        cursor.execute(
+            "UPDATE meters SET tariff_id = %s WHERE meter_type = %s AND is_active = TRUE AND property_id = %s",
+            (req.tariff_id, req.meter_type.upper(), scope_id)
+        )
         affected = cursor.rowcount
         conn.commit()
         return {"status": "success", "message": f"Tariff updated for {affected} active {req.meter_type} meters."}
+    except HTTPException:
+        conn.rollback(); raise
     except Exception as e:
         conn.rollback()
         raise HTTPException(status_code=400, detail=str(e))
@@ -34,35 +54,51 @@ def api_bulk_update_tariff(req: BulkTariffUpdate):
         cursor.close()
         conn.close()
 
-@router.post("/bulk-notify/", dependencies=[Depends(verify_token)])
-def api_bulk_notify(req: BulkNotifyRequest):
+# SECURITY: staff-only and property-scoped. This previously messaged every active tenant
+# in every property in the system.
+@router.post("/bulk-notify/")
+def api_bulk_notify(req: BulkNotifyRequest, property_id: int = None, current_user: dict = Depends(require_staff)):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT first_name, last_name, email FROM tenants WHERE status = 'ACTIVE' AND is_anonymized = FALSE")
+        scope_id = resolve_property_scope(current_user, property_id)
+        base_query = "SELECT first_name, last_name, email, cellphone FROM tenants WHERE UPPER(status) = 'ACTIVE' AND is_anonymized = FALSE"
+        if scope_id:
+            cursor.execute(base_query + " AND property_id = %s", (scope_id,))
+        else:
+            cursor.execute(base_query)
         tenants = cursor.fetchall()
         count = 0
         for t in tenants:
-            send_notification(f"{t[0]} {t[1]}", t[2], req.message, subject="Important Notice from Management")
+            send_notification(f"{t[0]} {t[1]}", t[2], t[3], req.message, subject="Important Notice from Management")
             count += 1
         return {"status": "success", "message": f"Notification sent to {count} active tenants."}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     finally:
         cursor.close()
         conn.close()
 
-@router.post("/bulk-generate-bills/", dependencies=[Depends(verify_token)])
-def api_bulk_generate_bills(req: BulkBillingRequest):
+# SECURITY: staff-only and property-scoped. This previously raised bills against every
+# postpaid meter in the entire portfolio.
+@router.post("/bulk-generate-bills/")
+def api_bulk_generate_bills(req: BulkBillingRequest, property_id: int = None, current_user: dict = Depends(require_staff)):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        # Get all active POSTPAID meters
+        scope_id = resolve_property_scope(current_user, property_id)
+        if not scope_id:
+            # Billing the whole portfolio in one unscoped call is never a safe default.
+            raise HTTPException(status_code=400, detail="A property_id is required for bulk billing.")
+
+        # Get active POSTPAID meters for this property only
         cursor.execute("""
             SELECT m.id, m.tenant_id, m.meter_type, m.tariff_id 
             FROM meters m 
-            WHERE m.billing_type = 'POSTPAID' AND m.is_active = TRUE
-        """)
+            WHERE m.billing_type = 'POSTPAID' AND m.is_active = TRUE AND m.property_id = %s
+        """, (scope_id,))
         meters = cursor.fetchall()
         billed_count = 0
         
@@ -113,6 +149,8 @@ def api_bulk_generate_bills(req: BulkBillingRequest):
             
         conn.commit()
         return {"status": "success", "message": f"Bulk billing complete for {req.month}. {billed_count} postpaid meters billed."}
+    except HTTPException:
+        conn.rollback(); raise
     except Exception as e:
         conn.rollback()
         raise HTTPException(status_code=400, detail=str(e))

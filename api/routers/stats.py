@@ -1,15 +1,19 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from api.database import get_db_connection
-from api.security import verify_token
+from api.security import verify_token, resolve_property_scope
 from fastapi.responses import JSONResponse
 
 router = APIRouter()
 
-@router.get("/dashboard-stats/", dependencies=[Depends(verify_token)])
-def api_get_dashboard_stats(property_id: int = None):
+@router.get("/dashboard-stats/")
+def api_get_dashboard_stats(property_id: int = None, current_user: dict = Depends(verify_token)):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
+        # The client-supplied property_id was previously trusted as-is, which let a Manager
+        # read another property's KPIs by changing the query string (or omitting it to get
+        # portfolio-wide figures). Resolve it against the caller's own assignment instead.
+        property_id = resolve_property_scope(current_user, property_id)
         # --- AUTOMATIC SCHEMA FIX ---
         # Ensure required columns exist to prevent crashes on older databases
         cursor.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS property_id INTEGER;")
@@ -159,6 +163,8 @@ def api_get_dashboard_stats(property_id: int = None):
                 "active": active_tenants
             }
         }
+    except HTTPException:
+        raise
     except Exception as e:
         return JSONResponse(status_code=400, content={"detail": str(e)})
     finally:

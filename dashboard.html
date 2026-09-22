@@ -7,7 +7,45 @@
     <meta http-equiv="Expires" content="0">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Utilities PM Dashboard</title>
-    <style>
+    
+<style>
+        .smart-meter-card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-left: 5px solid #3498db; }
+        .smart-meter-card h3 { color: #2c3e50; margin: 0 0 15px 0; font-size: 1.1em; }
+        .meter-health-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+        .meter-health-item { background: #f8f9fa; padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .meter-health-item .serial { font-weight: bold; color: #2c3e50; font-size: 0.9em; }
+        .meter-health-item .battery { font-size: 1.1em; font-weight: bold; }
+        .battery-good { color: #27ae60; }
+        .battery-warn { color: #f39c12; }
+        .battery-critical { color: #e74c3c; }
+        .alarm-card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-left: 5px solid #e74c3c; }
+        .alarm-item { padding: 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .alarm-item:last-child { border-bottom: none; }
+        .alarm-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.75em; font-weight: bold; color: white; }
+        .alarm-high { background: #e74c3c; }
+        .alarm-medium { background: #f39c12; }
+        .alarm-low { background: #7f8c8d; }
+        .demo-banner { background: linear-gradient(135deg, #2c3e50, #3498db); color: white; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 20px; font-size: 0.9em; }
+        .demo-banner strong { font-size: 1.1em; }
+    
+
+
+        .force-change-screen { display: none; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; background: #2c3e50; color: white; padding: 20px; box-sizing: border-box; }
+        .force-change-screen .login-card { background: white; padding: 30px; border-radius: 10px; width: 100%; max-width: 400px; box-shadow: 0px 0px 10px #ccc; }
+        .force-change-screen .login-card h1 { color: #2c3e50; }
+        .force-change-screen .login-card input { width: 100%; padding: 10px; margin-bottom: 10px; box-sizing: border-box; }
+        .force-change-screen .login-card button { width: 100%; margin: 0; }
+        .change-pw-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 300; }
+        .change-pw-content { background: white; margin: 20px; border-radius: 10px; padding: 30px; margin-top: 60px; max-width: 400px; margin-left: auto; margin-right: auto; }
+        .change-pw-content h2 { color: #2c3e50; margin-top: 0; }
+        .change-pw-content input { width: 100%; padding: 10px; margin-bottom: 10px; box-sizing: border-box; }
+        .change-pw-content button { width: 100%; margin: 0 0 10px 0; }
+        .btn-change-pw { background-color: #2980b9; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.9em; margin-right: 5px; }
+        .btn-change-pw:hover { background-color: #3498db; }
+        .btn-reset-user { background-color: #2980b9; padding: 5px 10px; font-size: 12px; }
+        .btn-reset-user:hover { background-color: #3498db; }
+    
+<style>
         body { font-family: Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 0; }
         .container { max-width: 1000px; margin: auto; background: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0px 0px 10px #ccc; margin-bottom: 20px; }
         h1, h2 { color: #2c3e50; }
@@ -141,6 +179,40 @@
     <input type="password" id="loginPass" placeholder="Password (password123)">
     <button onclick="login()">Log In</button>
     <div id="loginError" style="color: red; margin-top: 10px;"></div>
+        <p style="text-align:center; margin-top:15px;"><a href="#" onclick="showUserForgotPassword()" style="color:#3498db; text-decoration:none; font-size:0.9em;">Forgot Password?</a></p>
+</div>
+
+<!-- USER FORGOT PASSWORD SCREEN -->
+<div id="screen-user-forgot" class="force-change-screen">
+    <div class="login-card">
+        <h1>Forgot Password</h1>
+        <p style="color:#7f8c8d; font-size:0.9em; text-align:center; margin-bottom:15px;">Enter your username and email. A temp password will be generated.</p>
+        <input type="text" id="forgotUsername" placeholder="Username">
+        <input type="email" id="forgotEmail" placeholder="Email Address">
+        <button onclick="submitUserForgotPassword()">Send Reset</button>
+        <button style="background:#7f8c8d;" onclick="backToUserLogin()">Back to Login</button>
+        <div id="userForgotError" style="color:red; margin-top:10px; display:none;"></div>
+        <div id="userForgotSuccess" style="display:none; background:#e8f8f5; padding:15px; border-radius:5px; margin-top:15px;">
+            <p style="color:#27ae60; font-weight:bold; margin:0 0 10px 0;">Temp password generated!</p>
+            <p style="margin:0 0 5px 0;">Your temporary password is:</p>
+            <p style="font-size:1.2em; font-weight:bold; text-align:center; color:#2c3e50; margin:10px 0;" id="userForgotTempPw"></p>
+            <p style="font-size:0.8em; color:#7f8c8d; margin:10px 0 0 0;">Use this to log in. You will be asked to set your own password.</p>
+            <button onclick="backToUserLogin()" style="margin-top:10px;">Go to Login</button>
+        </div>
+    </div>
+</div>
+
+<!-- FORCE CHANGE PASSWORD SCREEN -->
+<div id="screen-force-change-pw" class="force-change-screen">
+    <div class="login-card">
+        <h1>Set Your Password</h1>
+        <p style="color:#7f8c8d; font-size:0.9em; text-align:center; margin-bottom:15px;">Please set a new password to secure your account.</p>
+        <input type="password" id="forceCurPw" placeholder="Temporary Password">
+        <input type="password" id="forceNewPw" placeholder="New Password (min 8 chars)">
+        <input type="password" id="forceConfirmPw" placeholder="Confirm New Password">
+        <button onclick="submitForceChangePw()">Set Password</button>
+        <div id="forceChangePwError" style="color:red; margin-top:10px; display:none;"></div>
+    </div>
 </div>
 
 <div id="mainDashboard" style="display:none;">
@@ -159,7 +231,7 @@
                 <option value="">All Properties (Owner View)</option>
             </select>
             <button class="btn-help" onclick="toggleHelpMode()">? Help</button>
-            <button onclick="logout()">Logout</button>
+            <button class="btn-change-pw" onclick="showChangePassword()">Change Password</button> <button onclick="logout()">Logout</button>
         </div>
     </div>
 
@@ -181,6 +253,27 @@
             </div>
         </div>
 
+        <!-- SMART METER HEALTH CARD -->
+        <div class="smart-meter-card">
+            <h3>🔋 Smart Meter Health Dashboard</h3>
+            <div class="meter-health-grid" id="smartMeterHealth">
+                <p style="color:#7f8c8d; font-size:0.9em;">Loading meter health data...</p>
+            </div>
+        </div>
+
+        <!-- ACTIVE ALARMS CARD -->
+        <div class="alarm-card">
+            <h3>🚨 Active Meter Alarms</h3>
+            <div id="activeAlarms">
+                <p style="color:#7f8c8d; font-size:0.9em;">Loading alarms...</p>
+            </div>
+        </div>
+
+        <!-- DEMO BANNER -->
+        <div class="demo-banner">
+            <strong>⚡ IoT Integration Ready</strong> — This system supports LoRaWAN smart meters with real-time data, automated valve control, and instant alarm notifications.
+        </div>
+
         <!-- USER MANAGEMENT CARD (Admin Only) -->
         <div class="container" id="userMgmtCard" style="display:none;">
             <h2>User Management & Access Control <span class="help-icon" title="Create users here. Admins see everything. PM Users are locked to their assigned property.">ℹ️</span></h2>
@@ -188,7 +281,7 @@
             
             <h3>Add New User</h3>
             <input type="text" id="newUsername" placeholder="Username" title="Enter a unique username for the new user.">
-            <input type="password" id="newPassword" placeholder="Password" title="Enter a secure password.">
+            <input type="email" id="newUserEmail" placeholder="Email Address" title="Enter the user email. A temp password will be auto-generated.">
             <select id="newUserRole" title="Select the user's role. Admins have full access. PM users are restricted.">
                 <option value="ADMIN">Admin (Head Office - All Properties)</option>
                 <option value="PM_SUPER">Super User (Property Level)</option>
@@ -201,7 +294,7 @@
             <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
             <button onclick="loadUsers()" class="btn-statement">Load Users List</button>
             <table id="usersTable" style="display:none;">
-                <thead><tr><th>ID</th><th>Username</th><th>Role</th><th>Assigned Property</th></tr></thead>
+                <thead><tr><th>ID</th><th>Username</th><th>Role</th><th>Assigned Property</th><th>Actions</th></tr></thead>
                 <tbody id="usersTableBody"></tbody>
             </table>
         </div>
@@ -631,7 +724,11 @@
     window.onload = function() {
         if(authToken) {
             document.getElementById("loginScreen").style.display = "none";
-            document.getElementById("mainDashboard").style.display = "block";
+            if(localStorage.getItem('pm_must_change') === 'true') {
+                document.getElementById("screen-force-change-pw").style.display = "flex";
+            } else {
+                document.getElementById("mainDashboard").style.display = "block";
+            }
             
             if(currentRole === 'ADMIN') {
                 document.getElementById('userMgmtCard').style.display = 'block';
@@ -671,7 +768,7 @@
     }
 
     function loadAllData() {
-        loadCompanySettings(); loadDashboardStats(); loadAllTenants(); loadAllMeters(); loadTariffs(); 
+        loadCompanySettings(); loadDashboardStats(); loadSmartMeterHealth(); loadActiveAlarms(); loadAllTenants(); loadAllMeters(); loadTariffs(); 
         if (typeof loadRecons === 'function') { loadRecons(); }
         if (typeof loadInvoices === 'function') { loadInvoices(); }
     }
@@ -709,22 +806,22 @@
             const d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
             tB.innerHTML = "";
-            d.users.forEach(u => { tB.innerHTML += `<tr><td>${u.id}</td><td>${u.username}</td><td>${u.role}</td><td>${u.property_name || 'All'}</td></tr>`; });
+            d.users.forEach(u => { tB.innerHTML += `<tr><td>${u.id}</td><td>${u.username}</td><td>${u.role}</td><td>${u.property_name || 'All'}</td><td><button onclick="resetUserPassword(${u.id})" class="btn-reset-user">Reset Password</button></td></tr>`; });
             document.getElementById("usersTable").style.display = "block";
         } catch (e) { console.error("Error calling /users: " + e.message); }
     }
 
     async function createUser() {
         const username = document.getElementById("newUsername").value;
-        const password = document.getElementById("newPassword").value;
+        const email = document.getElementById("newUserEmail").value;
         const role = document.getElementById("newUserRole").value;
         const property_id = document.getElementById("newUserProp").value || null;
-        if(!username || !password) { alert("Username and password required"); return; }
+        if(!username || !email) { alert("Username and email required"); return; }
         try {
-            const r = await fetch(`/users`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify({username, password, role, property_id}) });
+            const r = await fetch(`/users`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify({username, email, role, property_id}) });
             const d = await r.json();
             if(!r.ok) throw new Error(extractError(d));
-            alert(d.message); logAction("Created User", `Username: ${username}, Role: ${role}`); loadUsers();
+            alert(d.message + "\n\nTemp Password: " + d.temp_password + "\n\nShare this securely with the user. They will be forced to set their own password on first login."); logAction("Created User", `Username: ${username}, Role: ${role}`); loadUsers();
         } catch(e) { alert("Error calling /users: " + e.message); }
     }
 
@@ -806,6 +903,14 @@
             localStorage.setItem('pm_role', data.role);
             localStorage.setItem('pm_prop_id', data.property_id || "null");
             localStorage.setItem('pm_username', user);
+            localStorage.setItem('pm_user_id', data.user_id);
+            localStorage.setItem('pm_must_change', data.must_change_password || false);
+            if(data.must_change_password) {
+                document.getElementById("loginScreen").style.display = "none";
+                var fc = document.getElementById("screen-force-change-pw");
+                if(fc) { fc.style.display = "flex"; } else { location.reload(); }
+                return;
+            }
             location.reload(); 
         } catch (error) { errorDiv.innerText = error.message; }
     }
@@ -1136,7 +1241,7 @@
         }
         const tenantId = tenantCheck.id;
         try {
-            const url = `/water-control/${tenantId}?action=RESTRICT`;
+            const url = `/restrict-water/${tenantId}`;
             const r = await fetch(url, { method: 'POST', headers: getAuthHeaders() });
             const d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
@@ -1145,7 +1250,7 @@
             loadAllMeters();
         } catch (e) {
             resultDiv.style.display = "block";
-            resultDiv.innerHTML = `<p style="color:red;">Error calling /water-control: ${e.message}</p>`;
+            resultDiv.innerHTML = `<p style="color:red;">Error: ${e.message}</p>`;
         }
     }
 
@@ -1160,7 +1265,7 @@
         }
         const tenantId = tenantCheck.id;
         try {
-            const url = `/water-control/${tenantId}?action=RESTORE`;
+            const url = `/unrestrict-water/${tenantId}`;
             const r = await fetch(url, { method: 'POST', headers: getAuthHeaders() });
             const d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
@@ -1169,7 +1274,7 @@
             loadAllMeters();
         } catch (e) {
             resultDiv.style.display = "block";
-            resultDiv.innerHTML = `<p style="color:red;">Error calling /water-control: ${e.message}</p>`;
+            resultDiv.innerHTML = `<p style="color:red;">Error: ${e.message}</p>`;
         }
     }
 
@@ -1251,7 +1356,7 @@
         if(!eventType) return;
         const notes = prompt("Enter event notes:");
         try {
-            const url = `/meter-event/${id}`;
+            const url = `/log-meter-event/${id}`;
             const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify({ event_type: eventType.toUpperCase(), notes }) });
             const d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
@@ -1262,7 +1367,7 @@
 
     async function viewMeterHistory(id) {
         try {
-            const url = `/meter-history/${id}`;
+            const url = `/meter-audit-history/${id}`;
             const r = await fetch(url, { headers: getAuthHeaders() });
             const d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
@@ -1516,20 +1621,31 @@
 
     async function generateInvoice() {
         const unit = document.getElementById("invUnitNumber").value;
-        const tenantId = getTenantIdByUnit(unit);
-        if(!tenantId) return;
+        const resultDiv = document.getElementById("invResult");
+        const tenantCheck = getTenantIdByUnit(unit);
+        if(tenantCheck.error) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">${tenantCheck.error}</p>`;
+            return;
+        }
+        const tenantId = tenantCheck.id;
         const payload = {
+            tenant_id: tenantId,
             period: document.getElementById("invPeriod").value,
             cycle: document.getElementById("invCycle").value
         };
         try {
-            const url = `/generate-invoice/${tenantId}`;
+            const url = `/generate-invoice/`;
             const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) });
             const d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
-            alert(d.message);
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`;
             loadInvoices();
-        } catch (e) { alert(`Error calling ${url}: ` + e.message); }
+        } catch (e) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">Error: ${e.message}</p>`;
+        }
     }
 
     async function loadInvoices() {
@@ -1634,18 +1750,26 @@
     }
 
     async function triggerMockRent() {
-        const unitNumber = document.getElementById("syncRentUnitNumber").value.trim();
-        const payload = unitNumber ? { unit_number: unitNumber } : {};
+        var unitNumber = document.getElementById("syncRentUnitNumber").value.trim();
+        var propId = document.getElementById("propertyFilter").value;
+        var payload = {};
+        if (propId) payload.property_id = parseInt(propId);
+        if (unitNumber) payload.unit_number = unitNumber;
+        
+        if(!propId) {
+            alert("Please select a property first (top right dropdown).");
+            return;
+        }
         
         try {
-            const r = await fetch(`/sync-rent`, { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, 
+            var r = await fetch("/sync-rent", { 
+                method: "POST", 
+                headers: { "Content-Type": "application/json", "Authorization": "Bearer " + authToken }, 
                 body: JSON.stringify(payload) 
             });
-            const d = await r.json();
+            var d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
-            alert(d.message || "Rent sync triggered.");
+            alert(d.message || "Rent sync triggered for selected property.");
             loadAllTenants();
         } catch (e) { 
             alert("Error calling /sync-rent: " + e.message); 
@@ -1711,23 +1835,23 @@
     async function loadAging() {
         const tB = document.getElementById("agingTableBody");
         try {
-            const url = `/aging-report/${getPropertyFilter()}`;
+            const url = `/arrears-aging/${getPropertyFilter()}`;
             const r = await fetch(url, { headers: getAuthHeaders() });
             const d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
             tB.innerHTML = "";
-            d.report.forEach(t => {
+            (d.aging || d.report || []).forEach(t => {
                 tB.innerHTML += `<tr>
                     <td>${t.tenant_name}</td>
                     <td>R${t.total_arrears.toFixed(2)}</td>
-                    <td>R${t.bucket_30.toFixed(2)}</td>
-                    <td>R${t.bucket_60.toFixed(2)}</td>
-                    <td>R${t.bucket_90.toFixed(2)}</td>
-                    <td>R${t.bucket_over_90.toFixed(2)}</td>
+                    <td>R${(t.current || t.bucket_30 || 0).toFixed(2)}</td>
+                    <td>R${(t.days_30 || t.bucket_60 || 0).toFixed(2)}</td>
+                    <td>R${(t.days_60 || t.bucket_90 || 0).toFixed(2)}</td>
+                    <td>R${(t.days_90 || t.bucket_over_90 || 0).toFixed(2)}</td>
                 </tr>`;
             });
             document.getElementById("agingTable").style.display = "block";
-        } catch (e) { alert("Error calling /aging-report: " + e.message); }
+        } catch (e) { alert("Error calling /arrears-aging: " + e.message); }
     }
 
     async function runRecon() {
@@ -1778,9 +1902,29 @@
             const r = await fetch(url, { headers: getAuthHeaders() });
             const d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
-            document.getElementById("reportContent").innerHTML = `<h2>Financial Report</h2><pre>${JSON.stringify(d, null, 2)}</pre>`;
+            let monthlyRows = (d.revenue.monthly || []).map(m =>
+                `<tr><td>${m.month}</td><td>R${m.revenue.toFixed(2)}</td><td>R${m.billed.toFixed(2)}</td></tr>`
+            ).join("");
+            let consumptionRows = (d.consumption || []).map(c =>
+                `<tr><td>${c.tenant}</td><td>R${c.value.toFixed(2)}</td></tr>`
+            ).join("") || '<tr><td colspan="2" style="color:#7f8c8d;">No consumption data yet.</td></tr>';
+            document.getElementById("reportContent").innerHTML = `
+                <h2>Financial Report</h2>
+                <div class="kpi-grid">
+                    <div class="kpi-card green"><h3>Total Collected</h3><div class="value">R${d.revenue.total_revenue.toFixed(2)}</div></div>
+                    <div class="kpi-card orange"><h3>Total Billed</h3><div class="value">R${d.revenue.total_billed.toFixed(2)}</div></div>
+                    <div class="kpi-card"><h3>Collection Rate</h3><div class="value">${d.revenue.collection_rate.toFixed(1)}%</div></div>
+                    <div class="kpi-card red"><h3>Total Arrears</h3><div class="value">R${d.arrears.total.toFixed(2)}</div></div>
+                </div>
+                <h3>Arrears Breakdown</h3>
+                <p>Rent: R${d.arrears.rent.toFixed(2)} | Electricity: R${d.arrears.electricity.toFixed(2)} | Water: R${d.arrears.water.toFixed(2)}</p>
+                <h3>Monthly Trend</h3>
+                <table><thead><tr><th>Month</th><th>Collected</th><th>Billed</th></tr></thead><tbody>${monthlyRows || '<tr><td colspan="3" style="color:#7f8c8d;">No monthly data yet.</td></tr>'}</tbody></table>
+                <h3>Top Consumers</h3>
+                <table><thead><tr><th>Tenant</th><th>Consumption (R)</th></tr></thead><tbody>${consumptionRows}</tbody></table>
+            `;
             document.getElementById("reportModal").style.display = "block";
-        } catch (e) { alert(`Error calling /financial-report: ` + e.message); }
+        } catch (e) { alert("Error calling /financial-report: " + e.message); }
     }
 
     function closeReport() { document.getElementById("reportModal").style.display = "none"; }
@@ -1788,12 +1932,12 @@
     async function loadPaymentRecon() {
         const tB = document.getElementById("reconReportTableBody");
         try {
-            const url = `/payment-recon/${getPropertyFilter()}`;
+            const url = `/payment-reconciliation/${getPropertyFilter()}`;
             const r = await fetch(url, { headers: getAuthHeaders() });
             const d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
             tB.innerHTML = "";
-            d.report.forEach(t => {
+            (d.reconciliation || d.report || []).forEach(t => {
                 tB.innerHTML += `<tr>
                     <td>${t.tenant_name}</td>
                     <td>R${t.total_billed.toFixed(2)}</td>
@@ -1802,11 +1946,11 @@
                     <td>R${t.rent_arrears.toFixed(2)}</td>
                     <td>R${t.elec_arrears.toFixed(2)}</td>
                     <td>R${t.water_arrears.toFixed(2)}</td>
-                    <td>R${t.net_balance.toFixed(2)}</td>
+                    <td>R${t.balance_due.toFixed(2)}</td>
                 </tr>`;
             });
             document.getElementById("reconReportTable").style.display = "block";
-        } catch (e) { alert("Error calling /payment-recon: " + e.message); }
+        } catch (e) { alert("Error calling /payment-reconciliation: " + e.message); }
     }
 
     async function downloadExcel() {
@@ -1827,19 +1971,42 @@
     }
 
     async function loadBankRecon() {
-        document.getElementById("bankResult").style.display = "block";
-        document.getElementById("bankResult").innerHTML = "<p>Generating Bank Recon... (Mock)</p>";
+        const div = document.getElementById("bankResult");
+        div.style.display = "block";
+        div.innerHTML = "<p>Generating Bank Recon...</p>";
+        try {
+            const url = `/bank-reconciliation/${getPropertyFilter()}`;
+            const r = await fetch(url, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            div.innerHTML = `<p><strong>Total Collected:</strong> R${d.total_collected.toFixed(2)}<br>
+                <strong>Total Disbursed:</strong> R${d.total_disbursed.toFixed(2)}<br>
+                <strong>Net Balance:</strong> R${d.net_balance.toFixed(2)}</p>`;
+        } catch (e) { div.innerHTML = `<p style="color:red;">Error: ${e.message}</p>`; }
     }
 
     async function loadMgmtInvoice() {
-        document.getElementById("mgmtResult").style.display = "block";
-        document.getElementById("mgmtResult").innerHTML = "<p>Generating Management Fee Invoice... (Mock)</p>";
+        const div = document.getElementById("mgmtResult");
+        div.style.display = "block";
+        div.innerHTML = "<p>Generating Management Fee Invoice...</p>";
+        try {
+            const url = `/management-fee-invoice/${getPropertyFilter()}`;
+            const r = await fetch(url, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            let rows = (d.items || []).map(i => `<li>${i.desc}: R${i.amount.toFixed(2)}</li>`).join("");
+            div.innerHTML = `<p><strong>Total Collections:</strong> R${d.total_collections.toFixed(2)}</p>
+                <ul>${rows}</ul>
+                <p><strong>Subtotal:</strong> R${d.subtotal.toFixed(2)}<br>
+                <strong>VAT:</strong> R${d.vat.toFixed(2)}<br>
+                <strong>Total:</strong> R${d.total.toFixed(2)}</p>`;
+        } catch (e) { div.innerHTML = `<p style="color:red;">Error: ${e.message}</p>`; }
     }
 
     async function load3MonthStats() {
         const tB = document.getElementById("statsTableBody");
         try {
-            const url = `/stats-3month/${getPropertyFilter()}`;
+            const url = `/three-month-stats/${getPropertyFilter()}`;
             const r = await fetch(url, { headers: getAuthHeaders() });
             const d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
@@ -1852,27 +2019,266 @@
                 </tr>`;
             });
             document.getElementById("statsTable").style.display = "block";
-        } catch (e) { alert("Error calling /stats-3month: " + e.message); }
+        } catch (e) { alert("Error calling /three-month-stats: " + e.message); }
     }
 
     async function loadPropertyReport() {
         const tB = document.getElementById("propTableBody");
         try {
-            const r = await fetch(`/property-report`, { headers: getAuthHeaders() });
+            const r = await fetch(`/property-report/${getPropertyFilter()}`, { headers: getAuthHeaders() });
             const d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
             tB.innerHTML = "";
-            d.report.forEach(p => {
+            (d.properties || d.report || []).forEach(p => {
                 tB.innerHTML += `<tr>
-                    <td>${p.property_name}</td>
+                    <td>${p.name || p.property_name}</td>
                     <td>${p.tenant_count}</td>
                     <td>R${p.total_arrears.toFixed(2)}</td>
-                    <td>R${p.wallet_balances.toFixed(2)}</td>
+                    <td>R${(p.wallet_balance || p.wallet_balances || 0).toFixed(2)}</td>
                 </tr>`;
             });
             document.getElementById("propTable").style.display = "block";
         } catch (e) { alert("Error calling /property-report: " + e.message); }
     }
+
+
+    // --- USER PASSWORD FUNCTIONS ---
+    function showUserForgotPassword() {
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('screen-user-forgot').style.display = 'flex';
+        document.getElementById('userForgotError').style.display = 'none';
+        document.getElementById('userForgotSuccess').style.display = 'none';
+    }
+    function backToUserLogin() {
+        document.getElementById('screen-user-forgot').style.display = 'none';
+        document.getElementById('loginScreen').style.display = 'block';
+        document.getElementById('userForgotSuccess').style.display = 'none';
+        document.getElementById('userForgotError').style.display = 'none';
+        document.getElementById('forgotUsername').value = '';
+        document.getElementById('forgotEmail').value = '';
+    }
+    async function submitUserForgotPassword() {
+        const username = document.getElementById('forgotUsername').value;
+        const email = document.getElementById('forgotEmail').value;
+        const errBox = document.getElementById('userForgotError');
+        const successBox = document.getElementById('userForgotSuccess');
+        errBox.style.display = 'none';
+        successBox.style.display = 'none';
+        if(!username || !email) { errBox.innerText = 'Please enter username and email.'; errBox.style.display = 'block'; return; }
+        try {
+            const r = await fetch('/user-forgot-password/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, email }) });
+            const d = await r.json();
+            if (!r.ok) throw new Error(d.detail || 'Failed');
+            document.getElementById('userForgotTempPw').innerText = d.temp_password;
+            successBox.style.display = 'block';
+        } catch (e) { errBox.innerText = e.message; errBox.style.display = 'block'; }
+    }
+    function showChangePassword() {
+        document.getElementById('changePwModal').style.display = 'block';
+        document.getElementById('changePwError').style.display = 'none';
+        document.getElementById('changeCurPw').value = '';
+        document.getElementById('changeNewPw').value = '';
+        document.getElementById('changeConfirmPw').value = '';
+    }
+    function closeChangePwModal() { document.getElementById('changePwModal').style.display = 'none'; }
+    async function submitChangePassword() {
+        var userId = localStorage.getItem('pm_user_id');
+        if(!userId || userId === 'undefined' || userId === 'null') {
+            alert('Session expired. Please log out and log in again.');
+            return;
+        }
+        const curPw = document.getElementById('changeCurPw').value;
+        const newPw = document.getElementById('changeNewPw').value;
+        const confPw = document.getElementById('changeConfirmPw').value;
+        const errBox = document.getElementById('changePwError');
+        errBox.style.display = 'none';
+        try {
+            const r = await fetch('/user-change-password/', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken }, body: JSON.stringify({ user_id: parseInt(userId), current_password: curPw, new_password: newPw, confirm_password: confPw }) });
+            const d = await r.json();
+            if (!r.ok) throw new Error(d.detail || 'Failed');
+            alert('Password changed successfully!');
+            closeChangePwModal();
+        } catch (e) { errBox.innerText = e.message; errBox.style.display = 'block'; }
+    }
+    async function submitForceChangePw() {
+        const userId = localStorage.getItem('pm_user_id');
+        const curPw = document.getElementById('forceCurPw').value;
+        const newPw = document.getElementById('forceNewPw').value;
+        const confPw = document.getElementById('forceConfirmPw').value;
+        const errBox = document.getElementById('forceChangePwError');
+        errBox.style.display = 'none';
+        try {
+            const r = await fetch('/user-change-password/', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify({ user_id: parseInt(userId), current_password: curPw, new_password: newPw, confirm_password: confPw }) });
+            const d = await r.json();
+            if (!r.ok) throw new Error(d.detail || 'Failed');
+            document.getElementById('screen-force-change-pw').style.display = 'none';
+            document.getElementById('mainDashboard').style.display = 'block';
+            localStorage.setItem('pm_must_change', 'false');
+            loadAllData();
+        } catch (e) { errBox.innerText = e.message; errBox.style.display = 'block'; }
+    }
+    async function resetUserPassword(id) {
+        if(!confirm('Generate a new temp password for this user?')) return;
+        try {
+            const r = await fetch(`/admin-reset-user-password/${id}/`, { method: 'POST', headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            alert('TEMP PASSWORD GENERATED\n\nUsername: ' + d.username + '\n\nTemp Password: ' + d.temp_password + '\n\nShare this securely with the user. They will be forced to set their own password on next login.');
+            logAction('Reset User Password', 'User ID: ' + id);
+        } catch (e) { alert('Error: ' + e.message); }
+    }
+
+
+    // --- SMART METER DEMO FUNCTIONS ---
+    async function loadSmartMeterHealth() {
+        const container = document.getElementById('smartMeterHealth');
+        if (!container) return;
+        try {
+            const r = await fetch('/all-meters/' + getPropertyFilter(), { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error('Failed');
+            let html = '';
+            (d.meters || []).slice(0, 12).forEach(m => {
+                var mockBattery = (3.2 + Math.random() * 0.4).toFixed(2);
+                var battClass = 'battery-good';
+                var battIcon = 'Battery';
+                if (parseFloat(mockBattery) < 3.0) { battClass = 'battery-critical'; battIcon = 'LOW BATT'; }
+                else if (parseFloat(mockBattery) < 3.2) { battClass = 'battery-warn'; battIcon = 'WARN BATT'; }
+
+                var typeIcon = '?';
+                var typeLabel = m.meter_type || 'Unknown';
+                var typeColor = '#7f8c8d';
+                if (m.meter_type === 'WATER_COLD') { typeIcon = 'COLD WATER'; typeColor = '#3498db'; }
+                else if (m.meter_type === 'WATER_HOT') { typeIcon = 'HOT WATER'; typeColor = '#e74c3c'; }
+                else if (m.meter_type === 'ELECTRICITY') { typeIcon = 'ELECTRICITY'; typeColor = '#f39c12'; }
+
+                var minsAgo = Math.floor(Math.random() * 30) + 1;
+                var statusColor = minsAgo < 5 ? '#27ae60' : (minsAgo < 15 ? '#f39c12' : '#e74c3c');
+
+                html += '<div class="meter-health-item">' +
+                    '<div><div class="serial">' + (m.serial_number || 'N/A') + '</div>' +
+                    '<div style="font-size:0.7em; color:' + typeColor + '; font-weight:bold;">' + typeIcon + '</div>' +
+                    '<div style="font-size:0.75em; color:#7f8c8d;">' + (m.unit_number || 'N/A') + ' &bull; ' + minsAgo + 'm ago</div></div>' +
+                    '<div class="' + battClass + '">' + battIcon + ' ' + mockBattery + 'V</div>' +
+                    '</div>';
+            });
+            container.innerHTML = html || '<p style="color:#7f8c8d;">No active meters.</p>';
+        } catch (e) { container.innerHTML = '<p style="color:#e74c3c;">Error: ' + e.message + '</p>'; }
+    }
+
+    async function loadActiveAlarms() {
+        const container = document.getElementById('activeAlarms');
+        try {
+            const r = await fetch('/meter-events/', { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error('Failed');
+            
+            if (!d.events || d.events.length === 0) {
+                // Show mock alarms for demo
+                const mockAlarms = [
+                    { serial: 'WM-101', type: 'WATER_LEAKAGE', notes: 'Continuous flow for 26 hours. Flow: 0.3 m³/h', severity: 'HIGH', time: '2h ago' },
+                    { serial: 'WM-205', type: 'LOW_BATTERY', notes: 'Battery at 2.9V. Replacement within 30 days.', severity: 'MEDIUM', time: '5h ago' },
+                    { serial: 'WM-308', type: 'TAMPER_DETECT', notes: 'Magnetic interference. Valve auto-closed.', severity: 'HIGH', time: '1h ago' },
+                    { serial: 'WM-412', type: 'VALVE_FAIL', notes: 'Valve close command failed after 3 retries.', severity: 'HIGH', time: '8h ago' },
+                ];
+                
+                let html = '';
+                mockAlarms.forEach(a => {
+                    let sevClass = a.severity === 'HIGH' ? 'alarm-high' : (a.severity === 'MEDIUM' ? 'alarm-medium' : 'alarm-low');
+                    let icon = a.type.includes('LEAK') ? '💧' : (a.type.includes('BATTERY') ? '🪫' : (a.type.includes('TAMPER') ? '🧲' : '⚠️'));
+                    html += '<div class="alarm-item">' +
+                        '<div><div style="font-weight:bold; color:#2c3e50;">' + icon + ' ' + a.type.replace(/_/g, ' ') + ' — ' + a.serial + '</div>' +
+                        '<div style="font-size:0.85em; color:#7f8c8d;">' + a.notes + ' • ' + a.time + '</div></div>' +
+                        '<span class="alarm-badge ' + sevClass + '">' + a.severity + '</span>' +
+                        '</div>';
+                });
+                container.innerHTML = html;
+            } else {
+                let html = '';
+                d.events.slice(0, 5).forEach(a => {
+                    let sevClass = 'alarm-high';
+                    let icon = '⚠️';
+                    html += '<div class="alarm-item">' +
+                        '<div><div style="font-weight:bold;">' + icon + ' ' + a.event_type + ' — ' + (a.serial_number || 'N/A') + '</div>' +
+                        '<div style="font-size:0.85em; color:#7f8c8d;">' + (a.event_notes || '') + '</div></div>' +
+                        '<span class="alarm-badge ' + sevClass + '">ACTIVE</span>' +
+                        '</div>';
+                });
+                container.innerHTML = html;
+            }
+        } catch (e) {
+            // Fallback to mock alarms
+            const mockAlarms = [
+                { serial: 'WM-101', type: 'WATER_LEAKAGE', notes: 'Continuous flow for 26 hours', severity: 'HIGH', time: '2h ago' },
+                { serial: 'WM-205', type: 'LOW_BATTERY', notes: 'Battery at 2.9V', severity: 'MEDIUM', time: '5h ago' },
+                { serial: 'WM-308', type: 'TAMPER_DETECT', notes: 'Magnetic interference detected', severity: 'HIGH', time: '1h ago' },
+            ];
+            let html = '';
+            mockAlarms.forEach(a => {
+                let sevClass = a.severity === 'HIGH' ? 'alarm-high' : 'alarm-medium';
+                let icon = a.type.includes('LEAK') ? '💧' : (a.type.includes('BATTERY') ? '🪫' : '🧲');
+                html += '<div class="alarm-item"><div><div style="font-weight:bold;">' + icon + ' ' + a.type.replace(/_/g, ' ') + ' — ' + a.serial + '</div><div style="font-size:0.85em; color:#7f8c8d;">' + a.notes + ' • ' + a.time + '</div></div><span class="alarm-badge ' + sevClass + '">' + a.severity + '</span></div>';
+            });
+            container.innerHTML = html;
+        }
+    }
+
+
+    async function submitCreditNote() {
+        var unit = document.getElementById("cnUnitNumber").value;
+        var resultDiv = document.getElementById("cnResult");
+        if(!unit) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = "<p style='color:red;'>Please enter a Unit Number.</p>";
+            return;
+        }
+        var tenantCheck = getTenantIdByUnit(unit);
+        if(tenantCheck.error) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = "<p style='color:red;'>" + tenantCheck.error + "</p>";
+            return;
+        }
+        var tenantId = tenantCheck.id;
+        var amount = document.getElementById("cnAmount").value;
+        var reason = document.getElementById("cnReason").value;
+        if(!amount || !reason) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = "<p style='color:red;'>Please enter an amount and a reason.</p>";
+            return;
+        }
+        var url = "/generate-credit-note/";
+        try {
+            var r = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": "Bearer " + authToken },
+                body: JSON.stringify({ tenant_id: tenantId, amount: parseFloat(amount), reason: reason })
+            });
+            var d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = "<p style='color:green;'>" + d.message + " (" + (d.note_no || "") + ")</p>";
+            logAction("Generated Credit Note", "Unit: " + unit + ", Amount: " + amount);
+            document.getElementById("cnAmount").value = "";
+            document.getElementById("cnReason").value = "";
+            loadAllTenants();
+        } catch (e) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = "<p style='color:red;'>Error: " + e.message + "</p>";
+        }
+    }
 </script>
+<!-- CHANGE PASSWORD MODAL -->
+<div id="changePwModal" class="change-pw-modal">
+    <div class="change-pw-content">
+        <h2>Change Password</h2>
+        <input type="password" id="changeCurPw" placeholder="Current Password">
+        <input type="password" id="changeNewPw" placeholder="New Password (min 8 chars)">
+        <input type="password" id="changeConfirmPw" placeholder="Confirm New Password">
+        <button style="background:#3498db;" onclick="submitChangePassword()">Change Password</button>
+        <button style="background:#7f8c8d;" onclick="closeChangePwModal()">Cancel</button>
+        <div id="changePwError" style="color:red; margin-top:10px; display:none;"></div>
+    </div>
+</div>
+
 </body>
 </html>

@@ -204,7 +204,12 @@ def init_db():
         cursor.execute("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS exit_reason TEXT;")
         cursor.execute("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS inspection_notes TEXT;")
         cursor.execute("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS unit_number VARCHAR(50);")
-        cursor.execute("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS cellphone VARCHAR(20);") # NEW
+        cursor.execute("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS cellphone VARCHAR(20);")
+
+        # --- NEW: TENANT PASSWORD COLUMNS (bcrypt-based tenant login) ---
+        cursor.execute("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);")
+        cursor.execute("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT TRUE;")
+        cursor.execute("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMP;")
 
         # --- NEW: MICRO-CREDIT WALLET COLUMNS ---
         cursor.execute("ALTER TABLE wallets ADD COLUMN IF NOT EXISTS credit_limit DECIMAL DEFAULT 0;")

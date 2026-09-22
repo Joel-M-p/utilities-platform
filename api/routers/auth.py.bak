@@ -1,0 +1,257 @@
+from fastapi import APIRouter, HTTPException, Depends
+from api.database import get_db_connection
+from api.security import create_token, verify_token
+from api.services.passwords import hash_password, verify_password, needs_rehash, generate_temp_password
+
+router = APIRouter()
+
+@router.post("/login/")
+def api_login(payload: dict):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        username = payload.get("username")
+        password = payload.get("password")
+        if not username or not password:
+            raise HTTPException(status_code=401, detail="Invalid username or password")
+
+        cursor.execute("SELECT id, username, password, role, property_id FROM users WHERE username = %s", (username,))
+        user = cursor.fetchone()
+
+        stored_hash = user[2] if user else None
+        if not verify_password(password, stored_hash) or not user:
+            raise HTTPException(status_code=401, detail="Invalid username or password")
+
+        if needs_rehash(stored_hash):
+            try:
+                cursor.execute("UPDATE users SET password = %s WHERE id = %s", (hash_password(password), user[0]))
+                conn.commit()
+            except Exception:
+                conn.rollback()
+            
+        token = create_token(user[0], user[3], user[4])
+        return {
+            "status": "success", 
+            "token": token, 
+            "role": user[3], 
+            "property_id": user[4],
+            "message": "Login successful!"
+        }
+    finally:
+        cursor.close()
+        conn.close()
+
+@router.post("/tenant-login/")
+def api_tenant_login(payload: dict):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        property_id = payload.get("property_id")
+        unit_number = payload.get("unit_number")
+        password = payload.get("password")
+        
+        if not property_id or not unit_number or not password:
+            raise HTTPException(status_code=400, detail="Property, Unit Number, and Password are required")
+        
+        cursor.execute("""
+            SELECT id, email, property_id, password_hash, must_change_password, 
+                   first_name, last_name
+            FROM tenants 
+            WHERE unit_number = %s AND property_id = %s AND status != 'VACATED'
+            ORDER BY id DESC
+            LIMIT 1
+        """, (unit_number, property_id))
+        tenant_data = cursor.fetchone()
+        
+        if not tenant_data:
+            raise HTTPException(status_code=404, detail="No active tenant found for this Unit Number at this Property")
+        
+        tenant_id = tenant_data[0]
+        prop_id = tenant_data[2]
+        password_hash = tenant_data[3]
+        must_change = tenant_data[4]
+        first_name = tenant_data[5] or ""
+        last_name = tenant_data[6] or ""
+        
+        if not verify_password(password, password_hash):
+            raise HTTPException(status_code=401, detail="Invalid password")
+        
+        # Transparent rehash if needed (legacy SHA-256 -> bcrypt)
+        if needs_rehash(password_hash):
+            try:
+                cursor.execute("UPDATE tenants SET password_hash = %s WHERE id = %s", (hash_password(password), tenant_id))
+                conn.commit()
+            except Exception:
+                conn.rollback()
+        
+        token = create_token(user_id=tenant_id, role="TENANT", property_id=prop_id, tenant_id=tenant_id)
+        
+        return {
+            "status": "success", 
+            "token": token, 
+            "tenant_id": tenant_id, 
+            "property_id": prop_id,
+            "must_change_password": bool(must_change),
+            "tenant_name": f"{first_name} {last_name}".strip(),
+            "message": "Tenant login successful!"
+        }
+    finally:
+        cursor.close()
+        conn.close()
+
+@router.post("/tenant-change-password/")
+def api_tenant_change_password(payload: dict):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        tenant_id = payload.get("tenant_id")
+        current_password = payload.get("current_password")
+        new_password = payload.get("new_password")
+        confirm_password = payload.get("confirm_password")
+        
+        if not all([tenant_id, current_password, new_password, confirm_password]):
+            raise HTTPException(status_code=400, detail="All fields are required")
+        
+        if new_password != confirm_password:
+            raise HTTPException(status_code=400, detail="New passwords do not match")
+        
+        if len(new_password) < 8:
+            raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+        
+        if not any(c.isalpha() for c in new_password) or not any(c.isdigit() for c in new_password):
+            raise HTTPException(status_code=400, detail="Password must contain both letters and numbers")
+        
+        if new_password == current_password:
+            raise HTTPException(status_code=400, detail="New password cannot be the same as current password")
+        
+        cursor.execute("SELECT password_hash FROM tenants WHERE id = %s", (tenant_id,))
+        result = cursor.fetchone()
+        if not result:
+            raise HTTPException(status_code=404, detail="Tenant not found")
+        
+        stored_hash = result[0]
+        if not verify_password(current_password, stored_hash):
+            raise HTTPException(status_code=401, detail="Current password is incorrect")
+        
+        new_hash = hash_password(new_password)
+        cursor.execute("""
+            UPDATE tenants 
+            SET password_hash = %s, must_change_password = FALSE, 
+                password_changed_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+        """, (new_hash, tenant_id))
+        conn.commit()
+        
+        return {"status": "success", "message": "Password changed successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
+@router.post("/admin-reset-tenant-password/{tenant_id}/")
+def api_admin_reset_tenant_password(tenant_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT id, first_name, last_name, unit_number FROM tenants WHERE id = %s", (tenant_id,))
+        tenant = cursor.fetchone()
+        if not tenant:
+            raise HTTPException(status_code=404, detail="Tenant not found")
+        
+        temp_password = generate_temp_password()
+        hashed = hash_password(temp_password)
+        
+        cursor.execute("""
+            UPDATE tenants 
+            SET password_hash = %s, must_change_password = TRUE
+            WHERE id = %s
+        """, (hashed, tenant_id))
+        conn.commit()
+        
+        return {
+            "status": "success",
+            "message": "Temporary password generated. Share it with the tenant securely.",
+            "temp_password": temp_password,
+            "must_change": True,
+            "tenant_name": f"{tenant[1] or ''} {tenant[2] or ''}".strip(),
+            "unit_number": tenant[3]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
+# --- USER MANAGEMENT ENDPOINTS ---
+
+@router.get("/users/", dependencies=[Depends(verify_token)])
+def api_get_users():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT u.id, u.username, u.role, u.property_id, p.name 
+            FROM users u 
+            LEFT JOIN properties p ON u.property_id = p.id
+            ORDER BY u.id ASC
+        """)
+        users = cursor.fetchall()
+        users_list = []
+        for u in users:
+            users_list.append({
+                "id": u[0],
+                "username": u[1],
+                "role": u[2],
+                "property_id": u[3],
+                "property_name": u[4] if u[4] else "All Properties (Admin)"
+            })
+        return {"users": users_list}
+    finally:
+        cursor.close()
+        conn.close()
+
+@router.post("/users/", dependencies=[Depends(verify_token)])
+def api_create_user(payload: dict):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        username = payload.get("username")
+        password = payload.get("password")
+        role = payload.get("role")
+        property_id = payload.get("property_id")
+        
+        if not username or not password:
+            raise HTTPException(status_code=400, detail="Username and password required")
+            
+        if not property_id:
+            property_id = None
+
+        if len(password) < 8:
+            raise HTTPException(status_code=400, detail="Password must be at least 8 characters.")
+
+        hashed_pass = hash_password(password)
+
+        cursor.execute("SELECT id FROM users WHERE username = %s", (username,))
+        if cursor.fetchone():
+            raise HTTPException(status_code=400, detail="Username already exists")
+
+        cursor.execute("""
+            INSERT INTO users (username, password, role, property_id) 
+            VALUES (%s, %s, %s, %s) RETURNING id
+        """, (username, hashed_pass, role, property_id))
+        user_id = cursor.fetchone()[0]
+        conn.commit()
+        return {"status": "success", "message": "User created successfully", "user_id": user_id}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()

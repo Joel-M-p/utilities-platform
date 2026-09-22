@@ -1,0 +1,2276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Utilities PM Dashboard</title>
+    
+<style>
+        .smart-meter-card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-left: 5px solid #3498db; }
+        .smart-meter-card h3 { color: #2c3e50; margin: 0 0 15px 0; font-size: 1.1em; }
+        .meter-health-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+        .meter-health-item { background: #f8f9fa; padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .meter-health-item .serial { font-weight: bold; color: #2c3e50; font-size: 0.9em; }
+        .meter-health-item .battery { font-size: 1.1em; font-weight: bold; }
+        .battery-good { color: #27ae60; }
+        .battery-warn { color: #f39c12; }
+        .battery-critical { color: #e74c3c; }
+        .alarm-card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-left: 5px solid #e74c3c; }
+        .alarm-item { padding: 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .alarm-item:last-child { border-bottom: none; }
+        .alarm-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.75em; font-weight: bold; color: white; }
+        .alarm-high { background: #e74c3c; }
+        .alarm-medium { background: #f39c12; }
+        .alarm-low { background: #7f8c8d; }
+        .demo-banner { background: linear-gradient(135deg, #2c3e50, #3498db); color: white; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 20px; font-size: 0.9em; }
+        .demo-banner strong { font-size: 1.1em; }
+    
+
+
+        .force-change-screen { display: none; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; background: #2c3e50; color: white; padding: 20px; box-sizing: border-box; }
+        .force-change-screen .login-card { background: white; padding: 30px; border-radius: 10px; width: 100%; max-width: 400px; box-shadow: 0px 0px 10px #ccc; }
+        .force-change-screen .login-card h1 { color: #2c3e50; }
+        .force-change-screen .login-card input { width: 100%; padding: 10px; margin-bottom: 10px; box-sizing: border-box; }
+        .force-change-screen .login-card button { width: 100%; margin: 0; }
+        .change-pw-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 300; }
+        .change-pw-content { background: white; margin: 20px; border-radius: 10px; padding: 30px; margin-top: 60px; max-width: 400px; margin-left: auto; margin-right: auto; }
+        .change-pw-content h2 { color: #2c3e50; margin-top: 0; }
+        .change-pw-content input { width: 100%; padding: 10px; margin-bottom: 10px; box-sizing: border-box; }
+        .change-pw-content button { width: 100%; margin: 0 0 10px 0; }
+        .btn-change-pw { background-color: #2980b9; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.9em; margin-right: 5px; }
+        .btn-change-pw:hover { background-color: #3498db; }
+        .btn-reset-user { background-color: #2980b9; padding: 5px 10px; font-size: 12px; }
+        .btn-reset-user:hover { background-color: #3498db; }
+    
+<style>
+        body { font-family: Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 0; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0px 0px 10px #ccc; margin-bottom: 20px; }
+        h1, h2 { color: #2c3e50; }
+        input, select { padding: 10px; width: 200px; margin-bottom: 10px; margin-right: 10px; box-sizing: border-box; }
+        button { padding: 10px 15px; background-color: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 5px; margin-bottom: 10px; }
+        button:hover { background-color: #2980b9; }
+        .result { margin-top: 20px; padding: 15px; background-color: #e8f8f5; border-left: 4px solid #1abc9c; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #2c3e50; color: white; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        tr:hover { background-color: #f1f1f1; }
+        #loginScreen { max-width: 400px; margin: 50px auto; text-align: center; padding: 30px; border-radius: 10px; box-shadow: 0px 0px 10px #ccc; background: white; }
+        #loginScreen input { width: 100%; margin-bottom: 15px; }
+        #loginScreen button { width: 100%; margin: 0; }
+        .btn-download { background-color: #27ae60; }
+        .btn-download:hover { background-color: #2ecc71; }
+        .btn-restrict { background-color: #e67e22; } 
+        .btn-restrict:hover { background-color: #d35400; }
+        .btn-danger { background-color: #c0392b; padding: 5px 10px; font-size: 12px; }
+        .btn-danger:hover { background-color: #e74c3c; }
+        .btn-edit { background-color: #f39c12; padding: 5px 10px; font-size: 12px; }
+        .btn-edit:hover { background-color: #e67e22; }
+        .btn-statement { background-color: #2c3e50; padding: 5px 10px; font-size: 12px; }
+        .btn-statement:hover { background-color: #34495e; }
+        .btn-suspend { background-color: #d35400; padding: 5px 10px; font-size: 12px; }
+        .btn-suspend:hover { background-color: #e67e22; }
+        .btn-docs { background-color: #16a085; padding: 5px 10px; font-size: 12px; }
+        .btn-docs:hover { background-color: #1abc9c; }
+        .btn-credit { background-color: #2980b9; padding: 5px 10px; font-size: 12px; }
+        .btn-credit:hover { background-color: #3498db; }
+        .btn-inspect { background-color: #8e44ad; padding: 5px 10px; font-size: 12px; }
+        .btn-inspect:hover { background-color: #9b59b6; }
+        .btn-popia { background-color: #27ae60; padding: 5px 10px; font-size: 12px; }
+        .btn-popia:hover { background-color: #2ecc71; }
+        .btn-anonymize { background-color: #7f8c8d; padding: 5px 10px; font-size: 12px; }
+        .btn-anonymize:hover { background-color: #95a5a6; }
+        .btn-invoice { background-color: #2980b9; padding: 5px 10px; font-size: 12px; }
+        .btn-invoice:hover { background-color: #3498db; }
+        .btn-event { background-color: #c0392b; padding: 5px 10px; font-size: 12px; }
+        .btn-event:hover { background-color: #e74c3c; }
+        .btn-history { background-color: #8e44ad; padding: 5px 10px; font-size: 12px; }
+        .btn-history:hover { background-color: #9b59b6; }
+        .btn-fraud { background-color: #c0392b; padding: 10px 15px; }
+        .btn-fraud:hover { background-color: #e74c3c; }
+        .status-active { color: green; font-weight: bold; }
+        .status-vacated { color: red; font-weight: bold; }
+        .status-suspended { color: #d35400; font-weight: bold; }
+        .status-pending { color: #f39c12; font-weight: bold; }
+        .recon-balanced { color: green; font-weight: bold; }
+        .recon-loss { color: red; font-weight: bold; }
+        .recon-gain { color: #e67e22; font-weight: bold; }
+        .modal { display: none; position: fixed; z-index: 1; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); }
+        .modal-content { background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 800px; border-radius: 10px; }
+        .close { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .stmt-header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #2c3e50; padding-bottom: 10px; }
+        .stmt-summary { display: flex; justify-content: space-between; margin-bottom: 20px; background: #f9f9f9; padding: 15px; border-radius: 5px; }
+        .stmt-summary div { width: 48%; }
+        .invoice-paper { background: white; padding: 40px; border: 1px solid #ddd; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .invoice-item { cursor: pointer; }
+        .invoice-item:hover { background-color: #f9f9f9; }
+        .drill-down { display: none; background-color: #ecf0f1; padding: 10px; font-size: 0.9em; color: #7f8c8d; }
+        .drill-down.visible { display: block; }
+        .btn-print { background-color: #2c3e50; color: white; padding: 10px 20px; border: none; cursor: pointer; margin-top: 20px; }
+        .invoice-branding { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #2c3e50; padding-bottom: 20px; margin-bottom: 20px; }
+        .company-info img { max-height: 80px; max-width: 200px; margin-bottom: 10px; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .kpi-card { background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 5px solid #3498db; }
+        .kpi-card h3 { margin: 0 0 5px 0; font-size: 0.9em; color: #7f8c8d; }
+        .kpi-card .value { font-size: 1.5em; font-weight: bold; color: #2c3e50; }
+        .kpi-card .sub { font-size: 0.8em; color: #7f8c8d; margin-top: 5px; }
+        .kpi-card.green { border-left-color: #27ae60; }
+        .kpi-card.red { border-left-color: #e74c3c; }
+        .kpi-card.orange { border-left-color: #e67e22; }
+        .kpi-card.purple { border-left-color: #8e44ad; }
+        .trend-bar { display: flex; align-items: center; margin-bottom: 8px; }
+        .trend-bar .month { width: 80px; font-size: 0.8em; color: #7f8c8d; }
+        .trend-bar .bar-bg { flex-grow: 1; background: #ecf0f1; border-radius: 4px; height: 20px; overflow: hidden; }
+        .trend-bar .bar-fill { height: 100%; background: #3498db; border-radius: 4px; }
+        .trend-bar .val { width: 80px; font-size: 0.8em; text-align: right; font-weight: bold; }
+        
+        /* Tab Navigation & Header Styles */
+        .tab-nav { background: #2c3e50; position: sticky; top: 0; z-index: 100; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); flex-wrap: wrap; }
+        .tab-nav-left { display: flex; flex-wrap: wrap; }
+        .tab-btn { background: none; border: none; color: #ecf0f1; padding: 15px 20px; cursor: pointer; font-size: 1em; font-weight: bold; border-bottom: 3px solid transparent; margin: 0; border-radius: 0; }
+        .tab-btn:hover { background: #34495e; color: white; }
+        .tab-btn.active { color: white; border-bottom: 3px solid #3498db; background: #34495e; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .header-controls { display: flex; align-items: center; gap: 10px; }
+        .header-controls select { padding: 8px; border-radius: 4px; border: none; font-size: 0.9em; font-weight: bold; }
+        .header-controls button { padding: 8px 15px; margin: 0; background: #e74c3c; }
+        .prop-warning { color: #e74c3c; font-size: 0.85em; display: none; margin-bottom: 5px; font-weight: bold; }
+        
+        /* Help System Styles */
+        .btn-help { background: #f1c40f; color: #2c3e50; padding: 8px 15px; margin: 0; font-weight: bold; }
+        .help-tooltip { display: none; background: #fff3cd; color: #856404; border: 1px solid #ffeeba; padding: 10px; border-radius: 5px; font-size: 0.85em; margin-bottom: 10px; max-width: 300px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .help-mode .help-tooltip { display: block; position: absolute; z-index: 10; }
+        .help-icon { color: #f1c40f; cursor: pointer; margin-left: 5px; font-size: 0.8em; display: none; }
+        .help-mode .help-icon { display: inline-block; }
+        
+        /* Event History Styles */
+        .event-category { font-size: 0.75em; padding: 2px 6px; border-radius: 3px; font-weight: bold; text-transform: uppercase; }
+        .event-category.transaction { background: #e8f4f8; color: #2980b9; }
+        .event-category.event { background: #fce4ec; color: #c0392b; }
+        
+        /* Fraud Severity Badges */
+        .sev-badge { padding: 3px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; color: white; }
+        .sev-high { background: #c0392b; }
+        .sev-medium { background: #e67e22; }
+        .sev-low { background: #7f8c8d; }
+
+        /* FIX: Property Utility Model Badges */
+        .badge { padding: 4px 8px; border-radius: 12px; font-size: 0.75em; font-weight: bold; color: white; text-transform: uppercase; }
+        .badge-smart { background: #27ae60; }
+        .badge-dumb { background: #e67e22; }
+
+        /* FIX: Hot Water Calculator Box */
+        .hw-calc-box { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 10px; border: 1px solid #e1e4e8; width: 300px; }
+        .hw-calc-box label { font-size: 0.85em; color: #7f8c8d; display: block; margin-bottom: 5px; }
+        .hw-calc-box input { width: 100%; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; }
+        .hw-calc-box input[readonly] { background-color: #e9ecef; font-weight: bold; color: #2c3e50; }
+        .hw-calc-box .final-rate { font-size: 1.2em; font-weight: bold; color: #27ae60; text-align: center; background: white; padding: 10px; border-radius: 4px; border: 1px dashed #27ae60; }
+    </style>
+</head>
+<body>
+
+<div id="loginScreen" class="container">
+    <h1>PM Login</h1>
+    <input type="text" id="loginUser" placeholder="Username (admin)">
+    <input type="password" id="loginPass" placeholder="Password (password123)">
+    <button onclick="login()">Log In</button>
+    <div id="loginError" style="color: red; margin-top: 10px;"></div>
+        <p style="text-align:center; margin-top:15px;"><a href="#" onclick="showUserForgotPassword()" style="color:#3498db; text-decoration:none; font-size:0.9em;">Forgot Password?</a></p>
+</div>
+
+<!-- USER FORGOT PASSWORD SCREEN -->
+<div id="screen-user-forgot" class="force-change-screen">
+    <div class="login-card">
+        <h1>Forgot Password</h1>
+        <p style="color:#7f8c8d; font-size:0.9em; text-align:center; margin-bottom:15px;">Enter your username and email. A temp password will be generated.</p>
+        <input type="text" id="forgotUsername" placeholder="Username">
+        <input type="email" id="forgotEmail" placeholder="Email Address">
+        <button onclick="submitUserForgotPassword()">Send Reset</button>
+        <button style="background:#7f8c8d;" onclick="backToUserLogin()">Back to Login</button>
+        <div id="userForgotError" style="color:red; margin-top:10px; display:none;"></div>
+        <div id="userForgotSuccess" style="display:none; background:#e8f8f5; padding:15px; border-radius:5px; margin-top:15px;">
+            <p style="color:#27ae60; font-weight:bold; margin:0 0 10px 0;">Temp password generated!</p>
+            <p style="margin:0 0 5px 0;">Your temporary password is:</p>
+            <p style="font-size:1.2em; font-weight:bold; text-align:center; color:#2c3e50; margin:10px 0;" id="userForgotTempPw"></p>
+            <p style="font-size:0.8em; color:#7f8c8d; margin:10px 0 0 0;">Use this to log in. You will be asked to set your own password.</p>
+            <button onclick="backToUserLogin()" style="margin-top:10px;">Go to Login</button>
+        </div>
+    </div>
+</div>
+
+<!-- FORCE CHANGE PASSWORD SCREEN -->
+<div id="screen-force-change-pw" class="force-change-screen">
+    <div class="login-card">
+        <h1>Set Your Password</h1>
+        <p style="color:#7f8c8d; font-size:0.9em; text-align:center; margin-bottom:15px;">Please set a new password to secure your account.</p>
+        <input type="password" id="forceCurPw" placeholder="Temporary Password">
+        <input type="password" id="forceNewPw" placeholder="New Password (min 8 chars)">
+        <input type="password" id="forceConfirmPw" placeholder="Confirm New Password">
+        <button onclick="submitForceChangePw()">Set Password</button>
+        <div id="forceChangePwError" style="color:red; margin-top:10px; display:none;"></div>
+    </div>
+</div>
+
+<div id="mainDashboard" style="display:none;">
+    
+    <!-- Tab Navigation & Property Selector (Active Context) -->
+    <div class="tab-nav">
+        <div class="tab-nav-left">
+            <button class="tab-btn active" onclick="switchTab(event, 'tab-overview')">Overview</button>
+            <button class="tab-btn" onclick="switchTab(event, 'tab-tenants')">Tenants</button>
+            <button class="tab-btn" onclick="switchTab(event, 'tab-ops')">Billing & Ops</button>
+            <button class="tab-btn" onclick="switchTab(event, 'tab-invoices')">Invoices</button>
+            <button class="tab-btn" onclick="switchTab(event, 'tab-reports')">Reports</button>
+        </div>
+        <div class="header-controls">
+            <select id="propertyFilter" onchange="loadAllData()" disabled>
+                <option value="">All Properties (Owner View)</option>
+            </select>
+            <button class="btn-help" onclick="toggleHelpMode()">? Help</button>
+            <button class="btn-change-pw" onclick="showChangePassword()">Change Password</button> <button onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <!-- TAB 1: OVERVIEW -->
+    <div id="tab-overview" class="tab-content active">
+        <div class="container">
+            <h1>Property Manager Dashboard <span class="help-icon" title="Welcome to the Dashboard. Use the tabs above to navigate. Select a property from the top right to filter data.">ℹ️</span></h1>
+            <h2>Executive Summary</h2>
+            <div class="kpi-grid" id="kpiGrid">
+                <div class="kpi-card green"><h3>Total Revenue (Collected)</h3><div class="value" id="kpiRevenue">R0.00</div></div>
+                <div class="kpi-card"><h3>Collection Rate</h3><div class="value" id="kpiRate">0%</div></div>
+                <div class="kpi-card red"><h3>Total Arrears</h3><div class="value" id="kpiArrears">R0.00</div></div>
+                <div class="kpi-card purple"><h3>Total Tenants</h3><div class="value" id="kpiTenants">0</div><div class="sub" id="kpiActiveTenants">0 Active</div></div>
+                <div class="kpi-card orange"><h3>Active Meters</h3><div class="value" id="kpiMeters">0</div><div class="sub" id="kpiMeterStatus">0 Open / 0 Trickle / 0 Disc</div></div>
+            </div>
+            <h3>Consumption Trends (Last 6 Months)</h3>
+            <div id="trendsContainer" style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                <p style="color:#7f8c8d; font-size:0.9em;">Loading trends...</p>
+            </div>
+        </div>
+
+        <!-- SMART METER HEALTH CARD -->
+        <div class="smart-meter-card">
+            <h3>🔋 Smart Meter Health Dashboard</h3>
+            <div class="meter-health-grid" id="smartMeterHealth">
+                <p style="color:#7f8c8d; font-size:0.9em;">Loading meter health data...</p>
+            </div>
+        </div>
+
+        <!-- ACTIVE ALARMS CARD -->
+        <div class="alarm-card">
+            <h3>🚨 Active Meter Alarms</h3>
+            <div id="activeAlarms">
+                <p style="color:#7f8c8d; font-size:0.9em;">Loading alarms...</p>
+            </div>
+        </div>
+
+        <!-- DEMO BANNER -->
+        <div class="demo-banner">
+            <strong>⚡ IoT Integration Ready</strong> — This system supports LoRaWAN smart meters with real-time data, automated valve control, and instant alarm notifications.
+        </div>
+
+        <!-- USER MANAGEMENT CARD (Admin Only) -->
+        <div class="container" id="userMgmtCard" style="display:none;">
+            <h2>User Management & Access Control <span class="help-icon" title="Create users here. Admins see everything. PM Users are locked to their assigned property.">ℹ️</span></h2>
+            <p style="color: #7f8c8d; font-size: 0.9rem;">Create users with specific roles. Property Managers are locked to their assigned property.</p>
+            
+            <h3>Add New User</h3>
+            <input type="text" id="newUsername" placeholder="Username" title="Enter a unique username for the new user.">
+            <input type="email" id="newUserEmail" placeholder="Email Address" title="Enter the user email. A temp password will be auto-generated.">
+            <select id="newUserRole" title="Select the user's role. Admins have full access. PM users are restricted.">
+                <option value="ADMIN">Admin (Head Office - All Properties)</option>
+                <option value="PM_SUPER">Super User (Property Level)</option>
+                <option value="PM_USER">Limited User (Property Level)</option>
+            </select>
+            <select id="newUserProp" title="Assign the user to a specific property. Leave blank for Admins."><option value="">Select Property...</option></select>
+            <button onclick="createUser()">Create User</button>
+            <div id="userResult" class="result" style="display:none;"></div>
+            
+            <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+            <button onclick="loadUsers()" class="btn-statement">Load Users List</button>
+            <table id="usersTable" style="display:none;">
+                <thead><tr><th>ID</th><th>Username</th><th>Role</th><th>Assigned Property</th><th>Actions</th></tr></thead>
+                <tbody id="usersTableBody"></tbody>
+            </table>
+        </div>
+
+        <!-- PROPERTY SETUP CARD -->
+        <div class="container" id="propertyMgmtCard">
+            <h2>Property Setup & Configuration <span class="help-icon" title="Define your properties here. STS Token = Dumb meters requiring codes. Wallet Consumption = Smart meters deducting from a balance.">ℹ️</span></h2>
+            <p style="color: #7f8c8d; font-size: 0.9rem;">Define your properties and their utility meter type. This determines how the Tenant App behaves for tenants on that property.</p>
+            
+            <h3>Add / Edit Property</h3>
+            <input type="hidden" id="propId">
+            <input type="text" id="propName" placeholder="Property Name (e.g., Sandton Sky)" title="The official name of the property or complex.">
+            <input type="text" id="propProvince" placeholder="Province (e.g., Gauteng)" title="The province where the property is located.">
+            <input type="text" id="propAddress" placeholder="Address" title="The physical street address of the property.">
+            <select id="propUtilityModel" title="STS Token = Dumb meters requiring 20-digit codes. Wallet Consumption = Smart meters that deduct from a live wallet balance.">
+                <option value="STS_TOKEN">STS Token (Dumb Meters)</option>
+                <option value="WALLET_CONSUMPTION">Wallet Consumption (Smart Meters)</option>
+            </select>
+            <br>
+            <button onclick="saveProperty()">Save Property</button>
+            <button onclick="clearPropertyForm()" style="background-color: #7f8c8d;">Clear Form</button>
+            
+            <table id="propertiesTable" style="display:none;">
+                <thead><tr><th>ID</th><th>Name</th><th>Province</th><th>Utility Model</th><th>Actions</th></tr></thead>
+                <tbody id="propertiesTableBody"></tbody>
+            </table>
+        </div>
+
+        <div class="container">
+            <h2>Company Settings (Invoice Branding) <span class="help-icon" title="These details appear on all generated invoices and statements. Set your VAT rate here.">ℹ️</span></h2>
+            <p style="color: #7f8c8d; font-size: 0.9rem;">These details appear dynamically on all generated invoices, statements, and tariff screens.</p>
+            <input type="text" id="compName" placeholder="Company Name">
+            <input type="text" id="compLogo" placeholder="Logo Path (e.g., /static/logo.png)">
+            <input type="text" id="compAddress" placeholder="Address">
+            <input type="text" id="compVat" placeholder="VAT Number">
+            <input type="number" id="compVatRate" placeholder="VAT Rate (%) e.g., 15" value="15">
+            <input type="email" id="compEmail" placeholder="Contact Email">
+            <input type="text" id="compPhone" placeholder="Contact Phone">
+            <button onclick="updateCompanySettings()" class="btn-download">Save Company Settings</button>
+            <div id="compResult" class="result" style="display:none;"></div>
+        </div>
+    </div>
+
+    <!-- TAB 2: TENANTS -->
+    <div id="tab-tenants" class="tab-content">
+        <div class="container">
+            <h2>Tenant Management <span class="help-icon" title="Onboard new tenants, check balances, upload FICA documents, and manage exit inspections.">ℹ️</span></h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <h3>Onboard New Tenant <span class="help-icon" title="You must select a property from the top right dropdown first. Initial debt is optional.">ℹ️</span></h3>
+                    <div id="propWarning" class="prop-warning">Please select a specific property from the top right dropdown first!</div>
+                    <input type="text" id="newUnitNumber" placeholder="Unit Number (e.g., 101)" title="The unit number the tenant lives in. They will use this to log in to the Tenant App.">
+                    <input type="text" id="newFirstName" placeholder="First Name">
+                    <input type="text" id="newLastName" placeholder="Last Name">
+                    <input type="email" id="newEmail" placeholder="Email">
+                    <input type="tel" id="newCellphone" placeholder="Cellphone (e.g., 0821234567)">
+                    <input type="number" id="newRentDebt" placeholder="Rent Debt">
+                    <input type="number" id="newElecDebt" placeholder="Elec Debt">
+                    <input type="number" id="newWaterDebt" placeholder="Water Debt">
+                    <button onclick="createTenant()">Create Tenant</button>
+                    <div id="createResult" class="result" style="display:none;"></div>
+                </div>
+                <div>
+                    <h3>Check Tenant Balance <span class="help-icon" title="Enter a Unit Number to view their current rent, utility, and wallet balances.">ℹ️</span></h3>
+                    <input type="text" id="unitNumberInput" placeholder="Enter Unit Number">
+                    <button onclick="checkBalance()">Check Balance</button>
+                    <div id="balanceResult" class="result" style="display:none;"></div>
+                </div>
+                <div>
+                    <h3>Tenant Document Upload (FICA/Lease) <span class="help-icon" title="Upload PDFs or Images of tenant documents for compliance.">ℹ️</span></h3>
+                    <input type="text" id="docUnitNumber" placeholder="Unit Number">
+                    <select id="docType"><option value="ID">ID</option><option value="FICA">FICA</option><option value="LEASE">Lease</option></select>
+                    <input type="file" id="docFile" accept=".pdf,.jpg,.png">
+                    <button onclick="uploadDoc()">Upload Document</button>
+                    <div id="docResult" class="result" style="display:none;"></div>
+                </div>
+                <div>
+                    <h3>Tenant Exit & Inspections <span class="help-icon" title="Submit notice to vacate, then record the final inspection result to close the account.">ℹ️</span></h3>
+                    <h4>Submit Notice to Vacate</h4>
+                    <input type="text" id="ntvUnitNumber" placeholder="Unit Number"><input type="date" id="ntvExitDate"><input type="text" id="ntvReason" placeholder="Reason">
+                    <button onclick="submitNTV()">Submit Notice</button>
+                    <div id="ntvResult" class="result" style="display:none;"></div>
+                    <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+                    <h4>Record Inspection Result</h4>
+                    <input type="text" id="inspUnitNumber" placeholder="Unit Number">
+                    <select id="inspStatus"><option value="PASSED">Passed</option><option value="FAILED">Failed</option><option value="PENDING_DEDUCTION">Pending</option></select>
+                    <input type="text" id="inspNotes" placeholder="Inspection Notes">
+                    <button onclick="submitInspection()" class="btn-inspect">Submit Result</button>
+                    <div id="inspResult" class="result" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <h2>All Tenants Overview <span class="help-icon" title="This table shows all tenants for the selected property. Use the action buttons to manage them.">ℹ️</span></h2>
+            <button onclick="loadAllTenants()">Refresh Tenant List</button>
+            <button onclick="downloadCSV()" class="btn-download">Download CSV</button>
+            <input type="text" id="syncRentUnitNumber" placeholder="Unit No (Leave blank for ALL)" style="width: 250px; margin-bottom: 0px;">
+            <button onclick="triggerMockRent()" class="btn-restrict">Sync Rent</button>
+            
+            <table id="tenantsTable" style="display:none;">
+                <thead>
+                    <tr>
+                        <th>Unit</th><th>Name</th><th>Email</th><th>Cellphone</th><th>Payment Status</th><th>Rent</th><th>Elec</th><th>Water</th><th>Wallet</th><th>Account Status</th><th>Credit Score</th><th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="tenantsTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- TAB 3: BILLING & OPS -->
+    <div id="tab-ops" class="tab-content">
+        <div class="container">
+            <h2>Process Payment & Credit Facility <span class="help-icon" title="Process manual payments. The waterfall automatically pays Rent first, then Elec, then Water. Set emergency fund limits here.">ℹ️</span></h2>
+            <h3>Process Payment</h3>
+            <input type="text" id="paymentUnitNumber" placeholder="Unit Number">
+            <input type="number" id="paymentAmount" placeholder="Amount">
+            <label style="font-size: 0.8em; color: #7f8c8d; display:block; margin-bottom:5px;">Allocation % (Leave blank for standard sequential):</label>
+            <input type="number" id="paymentRentPct" placeholder="Rent %">
+            <input type="number" id="paymentElecPct" placeholder="Elec %">
+            <input type="number" id="paymentWaterPct" placeholder="Water %">
+            <button onclick="processPayment()">Process Payment</button>
+            <div id="paymentResult" class="result" style="display:none;"></div>
+            <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+            <h3>Set Emergency Fund Limit (3 Taps/Month)</h3>
+            <input type="text" id="creditUnitNumber" placeholder="Unit Number"><input type="number" id="creditLimitInput" placeholder="Emergency Fund Limit (R)">
+            <button onclick="setCreditLimit()" class="btn-download">Set Emergency Fund</button>
+            <div id="creditResult" class="result" style="display:none;"></div>
+        </div>
+
+        <div class="container">
+            <h2>Assign Physical Meter & Generate Bill <span class="help-icon" title="Assign a physical meter to a tenant using a matching tariff. Generate manual bills for postpaid meters.">ℹ️</span></h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <h3>Assign Meter</h3>
+                    <input type="text" id="meterUnitNumber" placeholder="Unit Number">
+                    <input type="text" id="meterSerial" placeholder="Serial Number">
+                    <select id="meterType"><option value="ELECTRICITY">Electricity</option><option value="WATER_HOT">Hot Water</option><option value="WATER_COLD">Cold Water</option></select>
+                    <select id="billingType"><option value="PREPAID">Prepaid</option><option value="POSTPAID">Postpaid</option></select>
+                    <button onclick="assignMeter()">Assign Meter</button>
+                    <button onclick="loadAvailableMeters()" class="btn-statement" style="padding:10px 15px; font-size:12px;">View Available</button>
+                    <div id="meterResult" class="result" style="display:none;"></div>
+                    <div id="availableMetersResult" class="result" style="display:none; background: #fff3cd; border-left-color: #f1c40f;"></div>
+                </div>
+                <div>
+                    <h3>Generate Utility Bill (Manual)</h3>
+                    <input type="text" id="billUnitNumber" placeholder="Unit Number">
+                    <select id="billType"><option value="ELECTRICITY">Electricity</option><option value="WATER_HOT">Hot Water</option><option value="WATER_COLD">Cold Water</option></select>
+                    <input type="number" id="billAmount" placeholder="Total Units"><input type="number" id="billPeak" placeholder="Peak Units"><input type="number" id="billOffpeak" placeholder="Off-Peak Units">
+                    <button onclick="generateBill()">Generate Bill</button>
+                    <div id="billResult" class="result" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <h2>Water Flow Control & Adjustments <span class="help-icon" title="Restrict water flow to trickle mode for arrears, or manually adjust account balances.">ℹ️</span></h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <h3>Water Flow Control (Trickle Mode)</h3>
+                    <input type="text" id="restrictUnitNumber" placeholder="Unit Number">
+                    <button onclick="restrictWater()" class="btn-restrict">Restrict Water Flow</button>
+                    <button onclick="unrestrictWater()" class="btn-download">Restore Water Flow</button>
+                    <div id="restrictResult" class="result" style="display:none;"></div>
+                </div>
+                <div>
+                    <h3>Manual Account Adjustment</h3>
+                    <input type="text" id="adjUnitNumber" placeholder="Unit Number">
+                    <select id="adjTarget"><option value="RENT">Rent</option><option value="ELECTRICITY">Electricity</option><option value="WATER">Water</option><option value="WALLET">Wallet</option></select>
+                    <input type="number" id="adjAmount" placeholder="Amount (+/-)"><input type="text" id="adjReason" placeholder="Reason">
+                    <button onclick="adjustAccount()">Apply Adjustment</button>
+                    <div id="adjResult" class="result" style="display:none;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <h2>Installed Meters Overview <span class="help-icon" title="View all meters assigned to tenants for this property. Use 'Log Event' to record tamper or bypass incidents. Use 'History' to view the full audit trail.">ℹ️</span></h2>
+            <button onclick="loadAllMeters()">Refresh Meters List</button>
+            <table id="metersTable" style="display:none;">
+                <thead><tr><th>Meter ID</th><th>Unit</th><th>Property</th><th>Tenant</th><th>Type</th><th>Billing</th><th>Serial</th><th>Valve</th><th>Active?</th><th>Actions</th></tr></thead>
+                <tbody id="metersTableBody"></tbody>
+            </table>
+        </div>
+
+        <div class="container">
+            <h2>Tariff Management (Complex Structures) <span class="help-icon" title="Create Flat, Tiered, or Time-of-Use tariffs. Sanitation is a fixed daily charge. You must select a property first.">ℹ️</span></h2>
+            <div id="tariffWarning" class="prop-warning">Please select a specific property from the top right dropdown first!</div>
+            <input type="text" id="tariffName" placeholder="Tariff Name">
+            <select id="tariffMeterType" onchange="toggleTariffFields()">
+                <option value="ELECTRICITY">Electricity (Consumption)</option>
+                <option value="WATER_HOT">Water Hot (Consumption)</option>
+                <option value="WATER_COLD">Water Cold (Consumption)</option>
+                <option value="SANITATION">Sanitation (Fixed Daily)</option>
+            </select>
+            <select id="tariffStructure" onchange="toggleTariffFields()"><option value="FLAT">Flat Rate</option><option value="TIERED">Tiered (Block)</option><option value="TOU">Time-of-Use</option></select>
+            <br>
+            
+            <div id="flatFields">
+                <input type="number" id="rateFlat" placeholder="Flat Rate (e.g., 2.50 for Elec, 4.14 for Daily Sani)">
+                
+                <div id="hotWaterCalc" class="hw-calc-box" style="display:none;">
+                    <label>Cold Water Base Rate (Auto-fetched)</label>
+                    <input type="text" id="hwBaseRate" placeholder="N/A" readonly>
+                    <label>Surcharge (X) - Defaults to 227.26</label>
+                    <input type="number" id="hwSurcharge" value="227.26" oninput="calcHotWater()">
+                    <label>Final Hot Water Rate (R)</label>
+                    <input type="text" id="hwFinalRate" placeholder="Auto-calculated" readonly class="final-rate">
+                </div>
+            </div>
+            
+            <div id="tieredFields" style="display:none;"><input type="number" id="tier1Limit" placeholder="Limit"><input type="number" id="tier1Rate" placeholder="Rate 1"><input type="number" id="tier2Rate" placeholder="Rate 2"></div>
+            <div id="touFields" style="display:none;"><input type="number" id="touPeak" placeholder="Peak"><input type="number" id="touOffpeak" placeholder="Off-Peak"></div>
+            <button onclick="createTariff()">Create Tariff</button>
+            <div id="tariffResult" class="result" style="display:none;"></div>
+            <table id="tariffsTable" style="display:none;"><thead><tr><th>ID</th><th>Name</th><th>Type</th><th>Structure</th><th>Details</th><th>Actions</th></tr></thead><tbody id="tariffsTableBody"></tbody></table>
+        </div>
+    </div>
+
+    <!-- TAB 4: INVOICES -->
+    <div id="tab-invoices" class="tab-content">
+        <div class="container">
+            <h2>Billing & Interactive Invoices <span class="help-icon" title="Generate consolidated invoices for tenants. Sanitation charges are added automatically based on the property.">ℹ️</span></h2>
+            <input type="text" id="invUnitNumber" placeholder="Unit Number"><input type="text" id="invPeriod" placeholder="Period (e.g., 2024-05)">
+            <select id="invCycle"><option value="MONTHLY">Monthly</option><option value="BI_MONTHLY">Bi-Monthly</option><option value="QUARTERLY">Quarterly</option></select>
+            <button onclick="generateInvoice()">Generate Invoice</button>
+            <div id="invResult" class="result" style="display:none;"></div>
+            <table id="invoicesTable" style="display:none;"><thead><tr><th>ID</th><th>Tenant</th><th>Period</th><th>Total</th><th>Status</th><th>Action</th></tr></thead><tbody id="invoicesTableBody"></tbody></table>
+        </div>
+    </div>
+
+    <!-- TAB 5: REPORTS -->
+    <div id="tab-reports" class="tab-content">
+        
+        <!-- FRAUD INTELLIGENCE CARD (NEW) -->
+        <div class="container">
+            <h2>Fraud Intelligence & Anomaly Detection <span class="help-icon" title="Analyzes purchasing patterns to detect possible meter bypasses, unusual drops in usage, or arrears avoidance.">ℹ️</span></h2>
+            <button onclick="loadFraudAnalysis()" class="btn-fraud">Run Fraud Analysis</button>
+            <table id="fraudTable" style="display:none;">
+                <thead><tr><th>Unit</th><th>Tenant</th><th>Flag Type</th><th>Severity</th><th>Details</th><th>Action</th></tr></thead>
+                <tbody id="fraudTableBody"></tbody>
+            </table>
+        </div>
+
+        <!-- AUDIT TRAIL CARD -->
+        <div class="container">
+            <h2>Audit Trail <span class="help-icon" title="View the last 100 actions performed on the system by all users.">ℹ️</span></h2>
+            <button onclick="loadAuditLog()">Load Audit Log</button>
+            <table id="auditTable" style="display:none;">
+                <thead><tr><th>Timestamp</th><th>User</th><th>Action</th><th>Details</th></tr></thead>
+                <tbody id="auditTableBody"></tbody>
+            </table>
+        </div>
+
+        <!-- Merged Advanced Reports -->
+        <div class="container">
+            <h2>Advanced Reports & Utilities <span class="help-icon" title="Generate credit notes, management fee invoices, and bank reconciliation reports.">ℹ️</span></h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <h3>Generate Credit Note</h3>
+                    <input type="text" id="cnUnitNumber" placeholder="Unit Number">
+                    <input type="number" id="cnAmount" placeholder="Amount (R)">
+                    <input type="text" id="cnReason" placeholder="Reason">
+                    <button onclick="submitCreditNote()">Submit Credit Note</button>
+                    <div id="cnResult" class="result" style="display:none;"></div>
+                </div>
+                <div>
+                    <h3>Management Fee Invoice</h3>
+                    <button onclick="loadMgmtInvoice()">Generate Fee Invoice</button>
+                    <div id="mgmtResult" class="result" style="display:none;"></div>
+                </div>
+                <div>
+                    <h3>Bank Reconciliation</h3>
+                    <button onclick="loadBankRecon()">Generate Bank Recon</button>
+                    <div id="bankResult" class="result" style="display:none;"></div>
+                </div>
+                <div>
+                    <h3>3-Month Comparative Stats</h3>
+                    <button onclick="load3MonthStats()">Generate Stats</button>
+                    <table id="statsTable" style="display:none;">
+                        <thead><tr><th>Month</th><th>Electricity (R)</th><th>Water (R)</th></tr></thead>
+                        <tbody id="statsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <h2>Property-Level Report <span class="help-icon" title="View a high-level summary of tenants, arrears, and wallet balances per property.">ℹ️</span></h2>
+            <button onclick="loadPropertyReport()">Generate Property Report</button>
+            <table id="propTable" style="display:none;">
+                <thead><tr><th>Property Name</th><th>Tenants</th><th>Total Arrears</th><th>Wallet Balances</th></tr></thead>
+                <tbody id="propTableBody"></tbody>
+            </table>
+        </div>
+
+        <!-- Existing Standard Reports -->
+        <div class="container">
+            <h2>Arrears Aging Analysis (FIFO) <span class="help-icon" title="View how old tenant arrears are, categorized into 30/60/90 day buckets.">ℹ️</span></h2>
+            <button onclick="loadAging()">Generate Aging Report</button>
+            <table id="agingTable" style="display:none;"><thead><tr><th>Tenant</th><th>Total Arrears</th><th>0-30d</th><th>31-60d</th><th>61-90d</th><th>>90d</th></tr></thead><tbody id="agingTableBody"></tbody></table>
+        </div>
+
+        <div class="container">
+            <h2>Automated Reconciliation (Municipal vs Sub-meter) <span class="help-icon" title="Compare municipal meter readings against your sub-meter readings to find losses or gains.">ℹ️</span></h2>
+            <input type="text" id="reconMonth" placeholder="Month">
+            <select id="reconType"><option value="ELECTRICITY">Electricity</option><option value="WATER">Water</option></select>
+            <input type="number" id="reconMuni" placeholder="Muni Units"><input type="number" id="reconSub" placeholder="Sub-meter Units">
+            <button onclick="runRecon()">Run Reconciliation</button>
+            <div id="reconResult" class="result" style="display:none;"></div>
+            <table id="reconTable" style="display:none;"><thead><tr><th>Date</th><th>Month</th><th>Type</th><th>Muni</th><th>Sub</th><th>Var</th><th>Status</th></tr></thead><tbody id="reconTableBody"></tbody></table>
+        </div>
+
+        <div class="container">
+            <h2>Financial & Payment Reconciliation Reports <span class="help-icon" title="Generate a full financial report or view payment reconciliation per tenant.">ℹ️</span></h2>
+            <button onclick="generateFinancialReport()" class="btn-download">Generate Full Financial Report</button>
+            <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+            <h3>Payment Reconciliation Report</h3>
+            <button onclick="loadPaymentRecon()" class="btn-download">Generate Reconciliation</button>
+            <table id="reconReportTable" style="display:none;">
+                <thead>
+                    <tr>
+                        <th>Tenant</th><th>Total Billed</th><th>Total Paid</th><th>Wallet (Credit)</th><th>Rent Arrears</th><th>Elec Arrears</th><th>Water Arrears</th><th>Net Balance Due</th>
+                    </tr>
+                </thead>
+                <tbody id="reconReportTableBody"></tbody>
+            </table>
+        </div>
+
+        <div class="container">
+            <h2>Excel Export (Monthly Report) <span class="help-icon" title="Download a multi-sheet Excel report for a specific month for auditors or SARS.">ℹ️</span></h2>
+            <p style="color: #7f8c8d; font-size: 0.9rem;">Download a multi-sheet Excel report for a specific month.</p>
+            <input type="text" id="excelMonth" placeholder="Month (e.g., 2023-11)">
+            <button onclick="downloadExcel()" class="btn-download">Download Excel File</button>
+            <div id="excelResult" class="result" style="display:none;"></div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Modals -->
+<div id="statementModal" class="modal"><div class="modal-content"><span class="close" onclick="closeStatement()">&times;</span><div id="statementContent"></div></div></div>
+<div id="invoiceModal" class="modal"><div class="modal-content"><span class="close" onclick="closeInvoice()">&times;</span><div id="invoiceContent"></div></div></div>
+<div id="docsModal" class="modal"><div class="modal-content"><span class="close" onclick="closeDocs()">&times;</span><h2>Tenant Documents</h2><table id="docsTable"><thead><tr><th>Date</th><th>Type</th><th>File Name</th></tr></thead><tbody id="docsTableBody"></tbody></table></div></div>
+<div id="reportModal" class="modal"><div class="modal-content"><span class="close" onclick="closeReport()">&times;</span><div id="reportContent"></div></div></div>
+<div id="meterHistoryModal" class="modal"><div class="modal-content"><span class="close" onclick="closeMeterHistory()">&times;</span><div id="meterHistoryContent"></div></div></div>
+
+<!-- EDIT TENANT MODAL -->
+<div id="tenantEditModal" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+        <span class="close" onclick="closeTenantEdit()">&times;</span>
+        <h2>Edit Tenant Details</h2>
+        <input type="hidden" id="editTenantId">
+        <label>First Name</label><br>
+        <input type="text" id="editFirstName" style="width: 100%;"><br>
+        <label>Last Name</label><br>
+        <input type="text" id="editLastName" style="width: 100%;"><br>
+        <label>Email</label><br>
+        <input type="email" id="editEmail" style="width: 100%;"><br>
+        <label>Cellphone</label><br>
+        <input type="tel" id="editCellphone" style="width: 100%;"><br>
+        <label>Status</label><br>
+        <select id="editStatus" style="width: 100%;">
+            <option value="ACTIVE">Active</option>
+            <option value="SUSPENDED">Suspended</option>
+            <option value="VACATED">Vacated</option>
+        </select><br><br>
+        <button onclick="saveTenantEdit()" class="btn-download">Save Changes</button>
+    </div>
+</div>
+
+<!-- EDIT TARIFF MODAL -->
+<div id="tariffEditModal" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+        <span class="close" onclick="closeTariffEdit()">&times;</span>
+        <h2>Edit Tariff</h2>
+        <input type="hidden" id="editTariffId">
+        <label>Name</label><br>
+        <input type="text" id="editTariffName" style="width: 100%;"><br>
+        <label>Meter Type</label><br>
+        <select id="editTariffMeterType" style="width: 100%;">
+            <option value="ELECTRICITY">Electricity</option>
+            <option value="WATER_HOT">Water Hot</option>
+            <option value="WATER_COLD">Water Cold</option>
+            <option value="SANITATION">Sanitation</option>
+        </select><br>
+        <label>Structure</label><br>
+        <select id="editTariffStructure" style="width: 100%;" onchange="toggleEditTariffFields()">
+            <option value="FLAT">Flat Rate</option>
+            <option value="TIERED">Tiered (Block)</option>
+            <option value="TOU">Time-of-Use</option>
+        </select><br>
+        
+        <div id="editFlatFields">
+            <label>Flat Rate (R)</label><br>
+            <input type="number" id="editRateFlat" style="width: 100%;"><br>
+        </div>
+        <div id="editTieredFields" style="display:none;">
+            <label>Tier 1 Limit (kWh/kL)</label><br>
+            <input type="number" id="editTier1Limit" style="width: 100%;"><br>
+            <label>Tier 1 Rate (R)</label><br>
+            <input type="number" id="editTier1Rate" style="width: 100%;"><br>
+            <label>Tier 2 Rate (R)</label><br>
+            <input type="number" id="editTier2Rate" style="width: 100%;"><br>
+        </div>
+        <div id="editTouFields" style="display:none;">
+            <label>Peak Rate (R)</label><br>
+            <input type="number" id="editTouPeak" style="width: 100%;"><br>
+            <label>Off-Peak Rate (R)</label><br>
+            <input type="number" id="editTouOffpeak" style="width: 100%;"><br>
+        </div>
+        <br>
+        <button onclick="saveTariffEdit()" class="btn-download">Save Changes</button>
+    </div>
+</div>
+
+<script>
+    let authToken = localStorage.getItem('pm_token');
+    let currentRole = localStorage.getItem('pm_role');
+    let assignedPropId = localStorage.getItem('pm_prop_id');
+    let currentStmtTenantId = null;
+    let companyData = { name: "", logo_path: "", address: "", vat_number: "", contact_email: "", contact_phone: "" };
+    let allTariffsCache = []; 
+    let allTenantsCache = []; 
+
+    window.onload = function() {
+        if(authToken) {
+            document.getElementById("loginScreen").style.display = "none";
+            if(localStorage.getItem('pm_must_change') === 'true') {
+                document.getElementById("screen-force-change-pw").style.display = "flex";
+            } else {
+                document.getElementById("mainDashboard").style.display = "block";
+            }
+            
+            if(currentRole === 'ADMIN') {
+                document.getElementById('userMgmtCard').style.display = 'block';
+                document.getElementById('propertyMgmtCard').style.display = 'block';
+                document.getElementById('propertyFilter').disabled = false;
+            } else {
+                document.getElementById('userMgmtCard').style.display = 'none';
+                document.getElementById('propertyMgmtCard').style.display = 'none';
+                document.getElementById('propertyFilter').disabled = true;
+            }
+            
+            loadProperties(); 
+            loadAllData();
+            if(currentRole === 'ADMIN') loadUsers();
+        }
+    };
+
+    function toggleHelpMode() { document.body.classList.toggle('help-mode'); }
+
+    async function logAction(action, details) {
+        try {
+            const username = localStorage.getItem('pm_username') || 'Unknown';
+            await fetch(`/audit-log`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify({ username, action, details }) });
+        } catch(e) { console.error("Audit log failed:", e); }
+    }
+
+    async function loadAuditLog() {
+        const tB = document.getElementById("auditTableBody");
+        try {
+            const r = await fetch(`/audit-log`, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            tB.innerHTML = "";
+            d.logs.forEach(l => { tB.innerHTML += `<tr><td>${l.timestamp}</td><td>${l.username}</td><td>${l.action}</td><td>${l.details}</td></tr>`; });
+            document.getElementById("auditTable").style.display = "block";
+        } catch(e) { alert("Error loading audit log: " + e.message); }
+    }
+
+    function loadAllData() {
+        loadCompanySettings(); loadDashboardStats(); loadSmartMeterHealth(); loadActiveAlarms(); loadAllTenants(); loadAllMeters(); loadTariffs(); 
+        if (typeof loadRecons === 'function') { loadRecons(); }
+        if (typeof loadInvoices === 'function') { loadInvoices(); }
+    }
+
+    function getPropertyFilter() {
+        const val = document.getElementById("propertyFilter").value;
+        return val ? `?property_id=${val}` : "";
+    }
+
+    function getTenantIdByUnit(unitNumber) {
+        if(!unitNumber) { return { error: "Please enter a Unit Number." }; }
+        if(!allTenantsCache || allTenantsCache.length === 0) {
+            return { error: "Tenant list is still loading. Please wait a few seconds and try again." };
+        }
+
+        const matches = allTenantsCache.filter(t => String(t.unit_number) === String(unitNumber));
+        if(matches.length === 0) { return { error: `Tenant with Unit Number ${unitNumber} not found in the selected property.` }; }
+        
+        const active = matches.find(t => t.status && t.status.toUpperCase() === 'ACTIVE');
+        if(!active) {
+            return { error: `Unit ${unitNumber} has no ACTIVE tenant (only past/vacated records). Add a new tenant to this unit first.` };
+        }
+        
+        const tenantId = active.tenant_id || active.id;
+        if(!tenantId) {
+            return { error: "Error: Could not find valid Tenant ID for this unit. Check backend response." };
+        }
+        return { id: tenantId };
+    }
+
+    async function loadUsers() {
+        const tB = document.getElementById("usersTableBody");
+        try {
+            const r = await fetch(`/users`, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            tB.innerHTML = "";
+            d.users.forEach(u => { tB.innerHTML += `<tr><td>${u.id}</td><td>${u.username}</td><td>${u.role}</td><td>${u.property_name || 'All'}</td><td><button onclick="resetUserPassword(${u.id})" class="btn-reset-user">Reset Password</button></td></tr>`; });
+            document.getElementById("usersTable").style.display = "block";
+        } catch (e) { console.error("Error calling /users: " + e.message); }
+    }
+
+    async function createUser() {
+        const username = document.getElementById("newUsername").value;
+        const email = document.getElementById("newUserEmail").value;
+        const role = document.getElementById("newUserRole").value;
+        const property_id = document.getElementById("newUserProp").value || null;
+        if(!username || !email) { alert("Username and email required"); return; }
+        try {
+            const r = await fetch(`/users`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify({username, email, role, property_id}) });
+            const d = await r.json();
+            if(!r.ok) throw new Error(extractError(d));
+            alert(d.message + "\n\nTemp Password: " + d.temp_password + "\n\nShare this securely with the user. They will be forced to set their own password on first login."); logAction("Created User", `Username: ${username}, Role: ${role}`); loadUsers();
+        } catch(e) { alert("Error calling /users: " + e.message); }
+    }
+
+    async function loadProperties() {
+        try {
+            const r = await fetch(`/properties`, { headers: getAuthHeaders() });
+            if (!r.ok) throw new Error(extractError(await r.json()));
+            const d = await r.json();
+            const dd = document.getElementById("propertyFilter");
+            const tB = document.getElementById("propertiesTableBody");
+            const userPropDD = document.getElementById("newUserProp");
+            dd.innerHTML = '<option value="">All Properties (Owner View)</option>';
+            tB.innerHTML = "";
+            userPropDD.innerHTML = '<option value="">Select Property...</option>';
+            
+            d.properties.forEach(p => {
+                let modelText = p.utility_model === 'WALLET_CONSUMPTION' ? 'Smart Meters' : 'Dumb Meters';
+                dd.innerHTML += `<option value="${p.id}">${p.name} (${modelText})</option>`;
+                userPropDD.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+                
+                let modelBadge = p.utility_model === 'WALLET_CONSUMPTION' ? '<span class="badge badge-smart">Smart</span>' : '<span class="badge badge-dumb">Dumb</span>';
+                tB.innerHTML += `<tr><td>${p.id}</td><td>${p.name}</td><td>${p.province}</td><td>${modelBadge}</td><td><button onclick="editProperty(${p.id}, '${p.name}', '${p.province}', '${p.address}', '${p.utility_model}')" class="btn-edit">Edit</button></td></tr>`;
+            });
+            document.getElementById("propertiesTable").style.display = "block";
+            if(currentRole !== 'ADMIN' && assignedPropId && assignedPropId !== "null") { dd.value = assignedPropId; dd.disabled = true; }
+        } catch (e) { console.error("Error calling /properties: " + e.message); }
+    }
+
+    function editProperty(id, name, prov, addr, model) {
+        document.getElementById("propId").value = id;
+        document.getElementById("propName").value = name;
+        document.getElementById("propProvince").value = prov;
+        document.getElementById("propAddress").value = addr;
+        document.getElementById("propUtilityModel").value = model;
+        window.scrollTo(0, 0);
+    }
+
+    function clearPropertyForm() {
+        document.getElementById("propId").value = "";
+        document.getElementById("propName").value = "";
+        document.getElementById("propProvince").value = "";
+        document.getElementById("propAddress").value = "";
+        document.getElementById("propUtilityModel").value = "STS_TOKEN";
+    }
+
+    async function saveProperty() {
+        const id = document.getElementById("propId").value;
+        const name = document.getElementById("propName").value;
+        const province = document.getElementById("propProvince").value;
+        const address = document.getElementById("propAddress").value;
+        const utility_model = document.getElementById("propUtilityModel").value;
+        if (!name) { alert("Property name is required."); return; }
+        const payload = { name, province, address, utility_model };
+        const url = id ? `/properties/${id}` : `/properties`;
+        const method = id ? 'PUT' : 'POST';
+        try {
+            const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            alert(d.message); logAction("Saved Property", `Name: ${name}, Model: ${utility_model}`); clearPropertyForm(); loadProperties(); 
+        } catch (e) { alert(`Error calling ${url}: ` + e.message); }
+    }
+
+    function switchTab(evt, tabId) {
+        document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+        document.getElementById(tabId).classList.add("active");
+        evt.currentTarget.classList.add("active");
+    }
+
+    async function login() {
+        const user = document.getElementById("loginUser").value, pass = document.getElementById("loginPass").value, errorDiv = document.getElementById("loginError");
+        try {
+            const response = await fetch(`/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: user, password: pass }) });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.detail || "Login failed");
+            authToken = data.token; 
+            localStorage.setItem('pm_token', authToken);
+            localStorage.setItem('pm_role', data.role);
+            localStorage.setItem('pm_prop_id', data.property_id || "null");
+            localStorage.setItem('pm_username', user);
+            localStorage.setItem('pm_user_id', data.user_id);
+            localStorage.setItem('pm_must_change', data.must_change_password || false);
+            if(data.must_change_password) {
+                document.getElementById("loginScreen").style.display = "none";
+                var fc = document.getElementById("screen-force-change-pw");
+                if(fc) { fc.style.display = "flex"; } else { location.reload(); }
+                return;
+            }
+            location.reload(); 
+        } catch (error) { errorDiv.innerText = error.message; }
+    }
+
+    function logout() { 
+        localStorage.removeItem('pm_token'); localStorage.removeItem('pm_role'); localStorage.removeItem('pm_prop_id'); localStorage.removeItem('pm_username'); location.reload(); 
+    }
+    function getAuthHeaders() { return { 'Authorization': `Bearer ${authToken}` }; }
+    function extractError(data) { if (typeof data.detail === 'string') return data.detail; if (Array.isArray(data.detail)) return data.detail.map(err => err.msg).join(", "); return "Unknown error"; }
+
+    async function loadDashboardStats() {
+        try {
+            const url = `/dashboard-stats/${getPropertyFilter()}`;
+            const response = await fetch(url, { headers: getAuthHeaders() });
+            if (!response.ok) throw new Error(extractError(await response.json()));
+            const data = await response.json();
+            document.getElementById("kpiRevenue").innerText = `R${data.revenue.total_revenue.toFixed(2)}`;
+            document.getElementById("kpiRate").innerText = `${data.revenue.collection_rate.toFixed(1)}%`;
+            document.getElementById("kpiArrears").innerText = `R${data.arrears.total_arrears.toFixed(2)}`;
+            document.getElementById("kpiTenants").innerText = data.tenants.total;
+            document.getElementById("kpiActiveTenants").innerText = `${data.tenants.active} Active`;
+            const total_meters = data.meters.counts.ELECTRICITY + data.meters.counts.WATER_HOT + data.meters.counts.WATER_COLD;
+            document.getElementById("kpiMeters").innerText = total_meters;
+            document.getElementById("kpiMeterStatus").innerText = `${data.meters.statuses.OPEN} Open / ${data.meters.statuses.TRICKLE} Trickle / ${data.meters.statuses.DISCONNECTED} Disc`;
+            const trendsContainer = document.getElementById("trendsContainer");
+            if(data.trends.length === 0) { trendsContainer.innerHTML = "<p style='color:#7f8c8d; font-size:0.9em;'>No consumption data yet.</p>"; } 
+            else {
+                const maxVal = Math.max(...data.trends.map(t => t.value), 1);
+                let html = "";
+                data.trends.forEach(t => { const width = (t.value / maxVal) * 100; html += `<div class="trend-bar"><div class="month">${t.month}</div><div class="bar-bg"><div class="bar-fill" style="width: ${width}%;"></div></div><div class="val">R${t.value.toFixed(0)}</div></div>`; });
+                trendsContainer.innerHTML = html;
+            }
+        } catch (error) { console.error("Error calling /dashboard-stats: " + error.message); }
+    }
+
+    async function createTenant() {
+        const propId = document.getElementById("propertyFilter").value;
+        if(!propId) { alert("Please select a property first."); return; }
+        const payload = { 
+            property_id: parseInt(propId), 
+            unit_number: document.getElementById("newUnitNumber").value, 
+            first_name: document.getElementById("newFirstName").value, 
+            last_name: document.getElementById("newLastName").value, 
+            email: document.getElementById("newEmail").value,
+            cellphone: document.getElementById("newCellphone").value,
+            rent_outstanding: parseFloat(document.getElementById("newRentDebt").value || 0), 
+            electricity_outstanding: parseFloat(document.getElementById("newElecDebt").value || 0), 
+            water_outstanding: parseFloat(document.getElementById("newWaterDebt").value || 0) 
+        };
+        try { const r = await fetch(`/create-tenant`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); logAction("Created Tenant", `Unit: ${payload.unit_number}`); loadAllTenants(); } catch (e) { alert("Error calling /create-tenant: " + e.message); }
+    }
+
+    async function checkBalance() {
+        const unit = document.getElementById("unitNumberInput").value;
+        const resultDiv = document.getElementById("balanceResult");
+        const tenantCheck = getTenantIdByUnit(unit);
+        
+        if(tenantCheck.error) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">${tenantCheck.error}</p>`;
+            return;
+        }
+        const tenantId = tenantCheck.id;
+
+        try { 
+            const r = await fetch(`/tenant-balance/${tenantId}`, { headers: getAuthHeaders() }); 
+            const d = await r.json(); 
+            if (!r.ok) throw new Error(extractError(d)); 
+            resultDiv.style.display = "block"; 
+            resultDiv.innerHTML = `<p><strong>${d.tenant_name}</strong><br>Rent: R${d.rent_outstanding.toFixed(2)}<br>Elec: R${d.electricity_outstanding.toFixed(2)}<br>Water: R${d.water_outstanding.toFixed(2)}<br>Wallet: R${d.wallet_balance.toFixed(2)}</p>`; 
+        } catch (e) { 
+            resultDiv.style.display = "block"; 
+            resultDiv.innerHTML = `<p style="color:red;">Error calling /tenant-balance: ${e.message}</p>`;
+        }
+    }
+
+    async function loadAllTenants() {
+        const tB = document.getElementById("tenantsTableBody");
+        try { 
+            const url = `/all-tenants/${getPropertyFilter()}`;
+            const r = await fetch(url, { headers: getAuthHeaders() }); 
+            const d = await r.json(); 
+            if (!r.ok) throw new Error(extractError(d)); 
+            tB.innerHTML = ""; 
+            allTenantsCache = d.tenants; 
+            d.tenants.forEach(t => { 
+                const tId = t.tenant_id || t.id;
+                const upperStatus = (t.status || 'ACTIVE').toUpperCase();
+                let statusClass = upperStatus === 'ACTIVE' ? 'status-active' : (upperStatus === 'VACATED' ? 'status-vacated' : 'status-suspended'); 
+                let payStatus = (t.rent_outstanding > 0 || t.electricity_outstanding > 0 || t.water_outstanding > 0) ? '<span style="color:red;font-weight:bold;">IN ARREARS</span>' : '<span style="color:green;font-weight:bold;">CLEAR</span>'; 
+                tB.innerHTML += `<tr><td>${t.unit_number || 'N/A'}</td><td>${t.first_name || ''} ${t.last_name || ''}</td><td>${t.email || 'N/A'}</td><td>${t.cellphone || 'N/A'}</td><td>${payStatus}</td><td>R${(t.rent_outstanding || 0).toFixed(2)}</td><td>R${(t.electricity_outstanding || 0).toFixed(2)}</td><td>R${(t.water_outstanding || 0).toFixed(2)}</td><td>R${(t.wallet_balance || 0).toFixed(2)}</td><td class="${statusClass}">${upperStatus}</td><td>${t.credit_status || 'N/A'}</td><td><button onclick="editTenant(${tId})" class="btn-edit">Edit</button> <button onclick="viewStatement(${tId})" class="btn-statement">Statement</button> <button onclick="openDocs(${tId})" class="btn-docs">Docs</button> <button onclick="grantConsent(${tId})" class="btn-popia">Consent</button> <button onclick="anonymize(${tId})" class="btn-anonymize">Anonymize</button> <button onclick="runCreditCheck(${tId})" class="btn-credit">Credit</button> <button onclick="suspendTenant(${tId})" class="btn-suspend">Suspend</button> <button onclick="vacateTenant(${tId})" class="btn-danger">Vacate</button></td></tr>`; 
+            }); 
+            document.getElementById("tenantsTable").style.display = "block"; 
+        } catch (e) { console.error("Error calling /all-tenants: " + e.message); }
+    }
+
+    function editTenant(id) {
+        const t = allTenantsCache.find(t => (t.tenant_id || t.id) === id);
+        if (!t) return;
+        document.getElementById('editTenantId').value = t.tenant_id || t.id;
+        document.getElementById('editFirstName').value = t.first_name || '';
+        document.getElementById('editLastName').value = t.last_name || '';
+        document.getElementById('editEmail').value = t.email || '';
+        document.getElementById('editCellphone').value = t.cellphone || '';
+        document.getElementById('editStatus').value = t.status ? t.status.toUpperCase() : 'ACTIVE';
+        document.getElementById('tenantEditModal').style.display = 'block';
+    }
+
+    function closeTenantEdit() {
+        document.getElementById('tenantEditModal').style.display = 'none';
+    }
+
+    async function saveTenantEdit() {
+        const id = document.getElementById('editTenantId').value;
+        const payload = {
+            first_name: document.getElementById('editFirstName').value,
+            last_name: document.getElementById('editLastName').value,
+            email: document.getElementById('editEmail').value,
+            cellphone: document.getElementById('editCellphone').value,
+            status: document.getElementById('editStatus').value
+        };
+        
+        try {
+            const url = `/update-tenant/${id}`;
+            const r = await fetch(url, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+                body: JSON.stringify(payload)
+            });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            alert(d.message);
+            logAction("Updated Tenant", `ID: ${id}`);
+            closeTenantEdit();
+            loadAllTenants();
+        } catch (e) {
+            alert(`Error calling ${url}: ` + e.message);
+        }
+    }
+
+    async function viewStatement(id) { 
+        try { 
+            const url = `/tenant-statement/${id}`;
+            const r = await fetch(url, { headers: getAuthHeaders() }); 
+            const d = await r.json(); 
+            if (!r.ok) throw new Error(extractError(d)); 
+            currentStmtTenantId = id; 
+            let rows = ""; 
+            d.transactions.forEach(t => { rows += `<tr><td>${t.date}</td><td>${t.type}</td><td>R${t.amount.toFixed(2)}</td><td>${t.reference}</td></tr>`; }); 
+            document.getElementById("statementContent").innerHTML = `<div class="stmt-header"><h2>Account Statement</h2><h3>${d.tenant_name}</h3><p>${d.email}</p></div><div class="stmt-summary"><div><h3>Arrears</h3><p>Rent: R${d.rent_outstanding.toFixed(2)}</p><p>Elec: R${d.electricity_outstanding.toFixed(2)}</p><p>Water: R${d.water_outstanding.toFixed(2)}</p></div><div><h3>Wallet</h3><p>Balance: R${d.wallet_balance.toFixed(2)}</p><p>Credit Limit: R${(d.credit_limit || 0).toFixed(2)}</p></div></div><table><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Reference</th></tr></thead><tbody>${rows}</tbody></table>`; 
+            document.getElementById("statementModal").style.display = "block"; 
+        } catch (e) { alert(`Error calling /tenant-statement: ` + e.message); } 
+    }
+    function closeStatement() { document.getElementById("statementModal").style.display = "none"; }
+
+    async function openDocs(id) { try { const url = `/get-docs/${id}`; const r = await fetch(url, { headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); const tB = document.getElementById("docsTableBody"); tB.innerHTML = ""; d.documents.forEach(doc => { tB.innerHTML += `<tr><td>${doc.uploaded_at}</td><td>${doc.doc_type}</td><td>${doc.file_name}</td></tr>`; }); document.getElementById("docsModal").style.display = "block"; } catch (e) { alert("Error calling /get-docs: " + e.message); } }
+    function closeDocs() { document.getElementById("docsModal").style.display = "none"; }
+
+    async function uploadDoc() {
+        const unit = document.getElementById("docUnitNumber").value;
+        const resultDiv = document.getElementById("docResult");
+        const tenantCheck = getTenantIdByUnit(unit);
+        if(tenantCheck.error) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">${tenantCheck.error}</p>`;
+            return;
+        }
+        const tenantId = tenantCheck.id;
+        const file = document.getElementById("docFile").files[0]; 
+        if(!file) { alert("Select a file."); return; }
+        const formData = new FormData(); formData.append("doc_type", document.getElementById("docType").value); formData.append("file", file);
+        try { 
+            const url = `/upload-doc/${tenantId}`; 
+            const r = await fetch(url, { method: 'POST', headers: { 'Authorization': `Bearer ${authToken}` }, body: formData }); 
+            const d = await r.json(); 
+            if (!r.ok) throw new Error(extractError(d)); 
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`;
+            logAction("Uploaded Doc", `Unit: ${unit}`); 
+        } catch (e) { 
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">Error calling /upload-doc: ${e.message}</p>`;
+        }
+    }
+
+    async function grantConsent(id) { try { const url = `/grant-consent/${id}`; const r = await fetch(url, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllTenants(); } catch (e) { alert(`Error calling /grant-consent: ` + e.message); } }
+    async function anonymize(id) { if(!confirm("Anonymize this tenant's data?")) return; try { const url = `/anonymize-tenant/${id}`; const r = await fetch(url, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllTenants(); } catch (e) { alert(`Error calling /anonymize-tenant: ` + e.message); } }
+    async function runCreditCheck(id) { try { const url = `/credit-check/${id}`; const r = await fetch(url, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllTenants(); } catch (e) { alert(`Error calling /credit-check: ` + e.message); } }
+    async function suspendTenant(id) { if(!confirm("Suspend this tenant?")) return; try { const url = `/suspend-tenant/${id}`; const r = await fetch(url, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllTenants(); } catch (e) { alert(`Error calling /suspend-tenant: ` + e.message); } }
+    async function vacateTenant(id) { if(!confirm("Vacate this tenant?")) return; try { const url = `/vacate-tenant/${id}`; const r = await fetch(url, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); loadAllTenants(); loadAllMeters(); } catch (e) { alert(`Error calling /vacate-tenant: ` + e.message); } }
+
+    async function submitNTV() {
+        const unit = document.getElementById("ntvUnitNumber").value;
+        const resultDiv = document.getElementById("ntvResult");
+        const tenantCheck = getTenantIdByUnit(unit);
+        if(tenantCheck.error) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">${tenantCheck.error}</p>`;
+            return;
+        }
+        const tenantId = tenantCheck.id;
+        const payload = { exit_date: document.getElementById("ntvExitDate").value, exit_reason: document.getElementById("ntvReason").value };
+        try { const url = `/notice-to-vacate/${tenantId}`; const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`; } catch (e) { resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:red;">${e.message}</p>`; }
+    }
+
+    async function submitInspection() {
+        const unit = document.getElementById("inspUnitNumber").value;
+        const resultDiv = document.getElementById("inspResult");
+        const tenantCheck = getTenantIdByUnit(unit);
+        if(tenantCheck.error) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">${tenantCheck.error}</p>`;
+            return;
+        }
+        const tenantId = tenantCheck.id;
+        const payload = { status: document.getElementById("inspStatus").value, notes: document.getElementById("inspNotes").value };
+        try { const url = `/inspection-result/${tenantId}`; const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`; loadAllTenants(); loadAllMeters(); } catch (e) { resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:red;">${e.message}</p>`; }
+    }
+
+    async function downloadCSV() {
+        try { const url = `/export-csv/${getPropertyFilter()}`; const r = await fetch(url, { headers: getAuthHeaders() }); if(!r.ok) throw new Error("Failed"); const blob = await r.blob(); const url2 = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url2; a.download = 'tenants.csv'; a.click(); window.URL.revokeObjectURL(url2); } catch (e) { alert("Error calling /export-csv: " + e.message); }
+    }
+
+    async function setCreditLimit() {
+        const unit = document.getElementById("creditUnitNumber").value, limit = document.getElementById("creditLimitInput").value, resultDiv = document.getElementById("creditResult");
+        const tenantCheck = getTenantIdByUnit(unit);
+        if(tenantCheck.error) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">${tenantCheck.error}</p>`;
+            return;
+        }
+        const tenantId = tenantCheck.id;
+        try { const url = `/set-credit-limit/${tenantId}?limit=${limit}`; const r = await fetch(url, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`; logAction("Set Emergency Fund", `Unit: ${unit}, Limit: ${limit}`); loadAllTenants(); } catch (e) { resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:red;">Error calling /set-credit-limit: ${e.message}</p>`; }
+    }
+
+    async function loadAvailableMeters() {
+        const resultDiv = document.getElementById("availableMetersResult");
+        try {
+            const r = await fetch(`/available-meters`, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            if (d.meters.length === 0) {
+                resultDiv.innerHTML = `<p style="color:green; margin:0;">No vacant meters available. You can deploy a new one.</p>`;
+            } else {
+                let html = "<p style='color:green; margin:0 0 5px 0;'>Vacant meters available to reuse (do not create new ones):</p><ul style='margin:0; padding-left:20px;'>";
+                d.meters.forEach(m => {
+                    html += `<li><strong>${m.meter_type}</strong> - Serial: ${m.serial_number} (${m.billing_type})</li>`;
+                });
+                html += "</ul>";
+                resultDiv.innerHTML = html;
+            }
+            resultDiv.style.display = "block";
+        } catch (e) {
+            resultDiv.innerHTML = `<p style="color:red; margin:0;">Error: ${e.message}</p>`;
+            resultDiv.style.display = "block";
+        }
+    }
+
+    async function assignMeter() {
+        const unit = document.getElementById("meterUnitNumber").value; 
+        const resultDiv = document.getElementById("meterResult");
+        
+        const tenantCheck = getTenantIdByUnit(unit);
+        if(tenantCheck.error) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">${tenantCheck.error}</p>`;
+            return;
+        }
+        const tenantId = tenantCheck.id;
+        
+        const serial = document.getElementById("meterSerial").value;
+        if(!serial) { 
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">Error: Please enter a Meter Serial Number.</p>`;
+            return; 
+        }
+
+        const payload = { 
+            tenant_id: tenantId, 
+            serial_number: serial, 
+            meter_type: document.getElementById("meterType").value, 
+            billing_type: document.getElementById("billingType").value 
+        };
+        try { 
+            const url = `/assign-meter`;
+            const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); 
+            const d = await r.json(); 
+            if (!r.ok) throw new Error(extractError(d)); 
+            
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`;
+            logAction("Assigned Meter", `Unit: ${unit}`); 
+            
+            document.getElementById('meterUnitNumber').value = '';
+            document.getElementById('meterSerial').value = '';
+            document.getElementById('meterType').value = 'ELECTRICITY';
+            document.getElementById('billingType').value = 'PREPAID';
+            
+            loadAllMeters(); 
+        } catch (e) { 
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">Error calling /assign-meter: ${e.message}</p>`;
+        }
+    }
+
+    async function generateBill() {
+        const unit = document.getElementById("billUnitNumber").value;
+        const resultDiv = document.getElementById("billResult");
+        const tenantCheck = getTenantIdByUnit(unit);
+        if(tenantCheck.error) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">${tenantCheck.error}</p>`;
+            return;
+        }
+        const tenantId = tenantCheck.id;
+        const payload = { tenant_id: tenantId, utility_type: document.getElementById("billType").value, amount: parseFloat(document.getElementById("billAmount").value || 0), peak_units: parseFloat(document.getElementById("billPeak").value || 0), offpeak_units: parseFloat(document.getElementById("billOffpeak").value || 0), manual_entry: true };
+        try { const url = `/generate-bill`; const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`; loadAllTenants(); } catch (e) { resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:red;">Error calling /generate-bill: ${e.message}</p>`; }
+    }
+
+    async function restrictWater() {
+        const unit = document.getElementById("restrictUnitNumber").value;
+        const resultDiv = document.getElementById("restrictResult");
+        const tenantCheck = getTenantIdByUnit(unit);
+        if(tenantCheck.error) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">${tenantCheck.error}</p>`;
+            return;
+        }
+        const tenantId = tenantCheck.id;
+        try {
+            const url = `/restrict-water/${tenantId}`;
+            const r = await fetch(url, { method: 'POST', headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`;
+            loadAllMeters();
+        } catch (e) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">Error: ${e.message}</p>`;
+        }
+    }
+
+    async function unrestrictWater() {
+        const unit = document.getElementById("restrictUnitNumber").value;
+        const resultDiv = document.getElementById("restrictResult");
+        const tenantCheck = getTenantIdByUnit(unit);
+        if(tenantCheck.error) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">${tenantCheck.error}</p>`;
+            return;
+        }
+        const tenantId = tenantCheck.id;
+        try {
+            const url = `/unrestrict-water/${tenantId}`;
+            const r = await fetch(url, { method: 'POST', headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`;
+            loadAllMeters();
+        } catch (e) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">Error: ${e.message}</p>`;
+        }
+    }
+
+    async function adjustAccount() {
+        const unit = document.getElementById("adjUnitNumber").value;
+        const resultDiv = document.getElementById("adjResult");
+        const tenantCheck = getTenantIdByUnit(unit);
+        if(tenantCheck.error) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">${tenantCheck.error}</p>`;
+            return;
+        }
+        const tenantId = tenantCheck.id;
+        const payload = {
+            target: document.getElementById("adjTarget").value,
+            amount: parseFloat(document.getElementById("adjAmount").value || 0),
+            reason: document.getElementById("adjReason").value
+        };
+        try {
+            const url = `/adjust-account/${tenantId}`;
+            const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`;
+            logAction("Adjusted Account", `Unit: ${unit}, Target: ${payload.target}`);
+            loadAllTenants();
+        } catch (e) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">Error calling /adjust-account: ${e.message}</p>`;
+        }
+    }
+
+    async function loadAllMeters() {
+        const tB = document.getElementById("metersTableBody");
+        try {
+            const url = `/all-meters/${getPropertyFilter()}`;
+            const r = await fetch(url, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            tB.innerHTML = "";
+            d.meters.forEach(m => {
+                const mId = m.meter_id || m.id;
+                tB.innerHTML += `<tr>
+                    <td>${mId}</td>
+                    <td>${m.unit_number || 'N/A'}</td>
+                    <td>${m.property_name || 'N/A'}</td>
+                    <td>${m.tenant_name || 'Vacant'}</td>
+                    <td>${m.meter_type}</td>
+                    <td>${m.billing_type}</td>
+                    <td>${m.serial_number}</td>
+                    <td>${m.valve_status || 'N/A'}</td>
+                    <td>${m.is_active ? 'Yes' : 'No'}</td>
+                    <td>
+                        <button onclick="logMeterEvent(${mId})" class="btn-event">Log Event</button>
+                        <button onclick="viewMeterHistory(${mId})" class="btn-history">History</button>
+                        ${m.is_active ? `<button onclick="deactivateMeter(${mId})" class="btn-danger">Deactivate</button>` : ''}
+                    </td>
+                </tr>`;
+            });
+            document.getElementById("metersTable").style.display = "block";
+        } catch (e) { console.error("Error calling /all-meters: " + e.message); }
+    }
+
+    async function deactivateMeter(id) {
+        if(!confirm("Deactivate this meter? The tenant will be free to receive a new meter.")) return;
+        try {
+            const url = `/deactivate-meter/${id}`;
+            const r = await fetch(url, { method: 'POST', headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            alert(d.message);
+            loadAllMeters();
+        } catch (e) { alert(`Error calling ${url}: ` + e.message); }
+    }
+
+    async function logMeterEvent(id) {
+        const eventType = prompt("Enter event type (e.g., TAMPER, BYPASS, FAULT):");
+        if(!eventType) return;
+        const notes = prompt("Enter event notes:");
+        try {
+            const url = `/log-meter-event/${id}`;
+            const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify({ event_type: eventType.toUpperCase(), notes }) });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            alert(d.message);
+            logAction("Logged Meter Event", `Meter ID: ${id}, Type: ${eventType}`);
+        } catch (e) { alert(`Error calling ${url}: ` + e.message); }
+    }
+
+    async function viewMeterHistory(id) {
+        try {
+            const url = `/meter-audit-history/${id}`;
+            const r = await fetch(url, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            let rows = "";
+            d.history.forEach(h => { rows += `<tr><td>${h.timestamp}</td><td>${h.event_type}</td><td>${h.notes || ''}</td></tr>`; });
+            document.getElementById("meterHistoryContent").innerHTML = `<h2>Meter History</h2><table><thead><tr><th>Timestamp</th><th>Type</th><th>Notes</th></tr></thead><tbody>${rows}</tbody></table>`;
+            document.getElementById("meterHistoryModal").style.display = "block";
+        } catch (e) { alert(`Error calling /meter-history: ` + e.message); }
+    }
+
+    function closeMeterHistory() { document.getElementById("meterHistoryModal").style.display = "none"; }
+
+    function toggleTariffFields() {
+        const val = document.getElementById("tariffStructure").value;
+        const mType = document.getElementById("tariffMeterType").value;
+        
+        document.getElementById("flatFields").style.display = val === 'FLAT' ? 'block' : 'none';
+        document.getElementById("tieredFields").style.display = val === 'TIERED' ? 'block' : 'none';
+        document.getElementById("touFields").style.display = val === 'TOU' ? 'block' : 'none';
+        
+        if(val === 'FLAT' && mType === 'WATER_HOT') {
+            document.getElementById("rateFlat").style.display = 'none';
+            document.getElementById("hotWaterCalc").style.display = 'block';
+            
+            let coldWaterTariff = allTariffsCache.find(t => (t.meter_type === 'WATER_COLD') && ((t.structure || t.structure_type) === 'FLAT'));
+            if(coldWaterTariff) {
+                let cwRate = coldWaterTariff.rate_flat || coldWaterTariff.flat_rate || 0;
+                document.getElementById("hwBaseRate").value = parseFloat(cwRate).toFixed(2);
+            } else {
+                document.getElementById("hwBaseRate").value = "0.00";
+                alert("Warning: No Flat Rate 'Water Cold' tariff found for this property. Please create one first. Defaulting base to 0.00.");
+            }
+            calcHotWater();
+        } else {
+            document.getElementById("rateFlat").style.display = 'block';
+            document.getElementById("hotWaterCalc").style.display = 'none';
+        }
+    }
+
+    function calcHotWater() {
+        let base = parseFloat(document.getElementById("hwBaseRate").value || 0);
+        if (isNaN(base)) base = 0;
+        let surcharge = parseFloat(document.getElementById("hwSurcharge").value || 227.26);
+        if (isNaN(surcharge)) surcharge = 227.26;
+        document.getElementById("hwFinalRate").value = (base + surcharge).toFixed(2);
+    }
+
+    async function createTariff() {
+        const propId = document.getElementById("propertyFilter").value;
+        if(!propId) { alert("Please select a property first."); return; }
+        const structure = document.getElementById("tariffStructure").value;
+        const mType = document.getElementById("tariffMeterType").value;
+        
+        let flat_rate_val = 0;
+        let tier_1_limit_val = 0;
+        let tier_1_rate_val = 0;
+        let tier_2_rate_val = 0;
+        let tou_peak_rate_val = 0;
+        let tou_offpeak_rate_val = 0;
+
+        if (structure === 'FLAT') {
+            if (mType === 'WATER_HOT') {
+                let base = parseFloat(document.getElementById("hwBaseRate").value || 0);
+                if (isNaN(base)) base = 0;
+                let surcharge = parseFloat(document.getElementById("hwSurcharge").value || 227.26);
+                if (isNaN(surcharge)) surcharge = 227.26;
+                flat_rate_val = base + surcharge;
+            } else {
+                flat_rate_val = parseFloat(document.getElementById("rateFlat").value || 0);
+                if (isNaN(flat_rate_val)) flat_rate_val = 0;
+            }
+        } else if (structure === 'TIERED') {
+            tier_1_limit_val = parseFloat(document.getElementById("tier1Limit").value || 0);
+            if (isNaN(tier_1_limit_val)) tier_1_limit_val = 0;
+            tier_1_rate_val = parseFloat(document.getElementById("tier1Rate").value || 0);
+            if (isNaN(tier_1_rate_val)) tier_1_rate_val = 0;
+            tier_2_rate_val = parseFloat(document.getElementById("tier2Rate").value || 0);
+            if (isNaN(tier_2_rate_val)) tier_2_rate_val = 0;
+        } else if (structure === 'TOU') {
+            tou_peak_rate_val = parseFloat(document.getElementById("touPeak").value || 0);
+            if (isNaN(tou_peak_rate_val)) tou_peak_rate_val = 0;
+            tou_offpeak_rate_val = parseFloat(document.getElementById("touOffpeak").value || 0);
+            if (isNaN(tou_offpeak_rate_val)) tou_offpeak_rate_val = 0;
+        }
+
+        const payload = {
+            property_id: parseInt(propId),
+            name: document.getElementById("tariffName").value,
+            meter_type: mType,
+            structure_type: structure,
+            rate_flat: flat_rate_val,
+            tier_1_limit: tier_1_limit_val,
+            tier_1_rate: tier_1_rate_val,
+            tier_2_rate: tier_2_rate_val,
+            tou_peak_rate: tou_peak_rate_val,
+            tou_offpeak_rate: tou_offpeak_rate_val
+        };
+        try {
+            const url = `/tariffs`;
+            const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            alert(d.message);
+            loadTariffs();
+        } catch (e) { alert(`Error calling ${url}: ` + e.message); }
+    }
+
+    async function loadTariffs() {
+        const tB = document.getElementById("tariffsTableBody");
+        try {
+            const url = `/tariffs/${getPropertyFilter()}`;
+            const r = await fetch(url, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            allTariffsCache = d.tariffs;
+            tB.innerHTML = "";
+            d.tariffs.forEach(t => {
+                const tId = t.tariff_id || t.id;
+                const structure = t.structure || t.structure_type || t.tariff_structure || 'FLAT';
+                const flat_rate = t.flat_rate || t.rate_flat;
+                const tier_1_limit = t.tier_1_limit || t.tier1_limit;
+                const tier_1_rate = t.tier_1_rate || t.tier1_rate;
+                const tier_2_rate = t.tier_2_rate || t.tier2_rate;
+                const tou_peak_rate = t.tou_peak_rate || t.peak_rate;
+                const tou_offpeak_rate = t.tou_offpeak_rate || t.offpeak_rate;
+                
+                let details = "";
+                if(structure === 'FLAT') details = `Rate: R${flat_rate || 0}`;
+                else if(structure === 'TIERED') details = `T1: ${tier_1_limit || 0}@R${tier_1_rate || 0}, T2: R${tier_2_rate || 0}`;
+                else if(structure === 'TOU') details = `Peak: R${tou_peak_rate || 0}, Off: R${tou_offpeak_rate || 0}`;
+                
+                tB.innerHTML += `<tr>
+                    <td>${tId}</td>
+                    <td>${t.name}</td>
+                    <td>${t.meter_type}</td>
+                    <td>${structure}</td>
+                    <td>${details}</td>
+                    <td>
+                        <button onclick="editTariff(${tId})" class="btn-edit">Edit</button>
+                        <button onclick="deleteTariff(${tId})" class="btn-danger">Delete</button>
+                    </td>
+                </tr>`;
+            });
+            document.getElementById("tariffsTable").style.display = "block";
+        } catch (e) { console.error("Error calling /tariffs: " + e.message); }
+    }
+
+    function editTariff(id) {
+        const t = allTariffsCache.find(x => (x.tariff_id || x.id) === id);
+        if(!t) return;
+        const structure = t.structure || t.structure_type || t.tariff_structure || 'FLAT';
+        const flat_rate = t.flat_rate || t.rate_flat;
+        const tier_1_limit = t.tier_1_limit || t.tier1_limit;
+        const tier_1_rate = t.tier_1_rate || t.tier1_rate;
+        const tier_2_rate = t.tier_2_rate || t.tier2_rate;
+        const tou_peak_rate = t.tou_peak_rate || t.peak_rate;
+        const tou_offpeak_rate = t.tou_offpeak_rate || t.offpeak_rate;
+
+        document.getElementById('editTariffId').value = t.tariff_id || t.id;
+        document.getElementById('editTariffName').value = t.name;
+        document.getElementById('editTariffMeterType').value = t.meter_type;
+        document.getElementById('editTariffStructure').value = structure;
+        
+        if(structure === 'FLAT') document.getElementById('editRateFlat').value = flat_rate || '';
+        if(structure === 'TIERED') {
+            document.getElementById('editTier1Limit').value = tier_1_limit || '';
+            document.getElementById('editTier1Rate').value = tier_1_rate || '';
+            document.getElementById('editTier2Rate').value = tier_2_rate || '';
+        }
+        if(structure === 'TOU') {
+            document.getElementById('editTouPeak').value = tou_peak_rate || '';
+            document.getElementById('editTouOffpeak').value = tou_offpeak_rate || '';
+        }
+        
+        toggleEditTariffFields();
+        document.getElementById('tariffEditModal').style.display = 'block';
+    }
+
+    function toggleEditTariffFields() {
+        const val = document.getElementById("editTariffStructure").value;
+        document.getElementById("editFlatFields").style.display = val === 'FLAT' ? 'block' : 'none';
+        document.getElementById("editTieredFields").style.display = val === 'TIERED' ? 'block' : 'none';
+        document.getElementById("editTouFields").style.display = val === 'TOU' ? 'block' : 'none';
+    }
+
+    function closeTariffEdit() {
+        document.getElementById('tariffEditModal').style.display = 'none';
+    }
+
+    async function saveTariffEdit() {
+        const id = document.getElementById('editTariffId').value;
+        const structure = document.getElementById('editTariffStructure').value;
+        
+        let flat_rate_val = 0;
+        let tier_1_limit_val = 0;
+        let tier_1_rate_val = 0;
+        let tier_2_rate_val = 0;
+        let tou_peak_rate_val = 0;
+        let tou_offpeak_rate_val = 0;
+
+        if (structure === 'FLAT') {
+            flat_rate_val = parseFloat(document.getElementById('editRateFlat').value || 0);
+            if (isNaN(flat_rate_val)) flat_rate_val = 0;
+        } else if (structure === 'TIERED') {
+            tier_1_limit_val = parseFloat(document.getElementById('editTier1Limit').value || 0);
+            if (isNaN(tier_1_limit_val)) tier_1_limit_val = 0;
+            tier_1_rate_val = parseFloat(document.getElementById('editTier1Rate').value || 0);
+            if (isNaN(tier_1_rate_val)) tier_1_rate_val = 0;
+            tier_2_rate_val = parseFloat(document.getElementById('editTier2Rate').value || 0);
+            if (isNaN(tier_2_rate_val)) tier_2_rate_val = 0;
+        } else if (structure === 'TOU') {
+            tou_peak_rate_val = parseFloat(document.getElementById('editTouPeak').value || 0);
+            if (isNaN(tou_peak_rate_val)) tou_peak_rate_val = 0;
+            tou_offpeak_rate_val = parseFloat(document.getElementById('editTouOffpeak').value || 0);
+            if (isNaN(tou_offpeak_rate_val)) tou_offpeak_rate_val = 0;
+        }
+
+        const payload = {
+            name: document.getElementById('editTariffName').value,
+            meter_type: document.getElementById('editTariffMeterType').value,
+            structure_type: structure,
+            rate_flat: flat_rate_val,
+            tier_1_limit: tier_1_limit_val,
+            tier_1_rate: tier_1_rate_val,
+            tier_2_rate: tier_2_rate_val,
+            tou_peak_rate: tou_peak_rate_val,
+            tou_offpeak_rate: tou_offpeak_rate_val
+        };
+        try {
+            const url = `/tariffs/${id}`;
+            const r = await fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            alert(d.message);
+            closeTariffEdit();
+            loadTariffs();
+        } catch (e) { alert(`Error calling ${url}: ` + e.message); }
+    }
+
+    async function deleteTariff(id) {
+        if(!confirm("Delete this tariff?")) return;
+        try {
+            const url = `/tariffs/${id}`;
+            const r = await fetch(url, { method: 'DELETE', headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            alert(d.message);
+            loadTariffs();
+        } catch (e) { alert(`Error calling ${url}: ` + e.message); }
+    }
+
+    async function generateInvoice() {
+        const unit = document.getElementById("invUnitNumber").value;
+        const resultDiv = document.getElementById("invResult");
+        const tenantCheck = getTenantIdByUnit(unit);
+        if(tenantCheck.error) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">${tenantCheck.error}</p>`;
+            return;
+        }
+        const tenantId = tenantCheck.id;
+        const payload = {
+            tenant_id: tenantId,
+            period: document.getElementById("invPeriod").value,
+            cycle: document.getElementById("invCycle").value
+        };
+        try {
+            const url = `/generate-invoice/`;
+            const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`;
+            loadInvoices();
+        } catch (e) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">Error: ${e.message}</p>`;
+        }
+    }
+
+    async function loadInvoices() {
+        const tB = document.getElementById("invoicesTableBody");
+        try {
+            const url = `/invoices/${getPropertyFilter()}`;
+            const r = await fetch(url, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            tB.innerHTML = "";
+            d.invoices.forEach(inv => {
+                tB.innerHTML += `<tr>
+                    <td>${inv.id}</td>
+                    <td>${inv.tenant_name}</td>
+                    <td>${inv.period}</td>
+                    <td>R${inv.total_amount.toFixed(2)}</td>
+                    <td>${inv.status}</td>
+                    <td><button onclick="viewInvoice(${inv.id})" class="btn-invoice">View</button></td>
+                </tr>`;
+            });
+            document.getElementById("invoicesTable").style.display = "block";
+        } catch (e) { console.error("Error calling /invoices: " + e.message); }
+    }
+
+    async function viewInvoice(id) {
+        try {
+            const url = `/invoice/${id}`;
+            const r = await fetch(url, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            let itemsRows = "";
+            d.line_items.forEach(item => {
+                itemsRows += `<tr><td>${item.description}</td><td>${item.qty}</td><td>R${item.rate.toFixed(2)}</td><td>R${item.amount.toFixed(2)}</td></tr>`;
+            });
+            document.getElementById("invoiceContent").innerHTML = `
+                <div class="invoice-paper">
+                    <div class="invoice-branding">
+                        <div class="company-info">
+                            <h2>${companyData.name || 'Company Name'}</h2>
+                            <p>${companyData.address || ''}</p>
+                            <p>VAT: ${companyData.vat_number || ''}</p>
+                        </div>
+                        <div>
+                            <h3>INVOICE</h3>
+                            <p>#${d.id}</p>
+                            <p>Date: ${d.date_generated}</p>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <h3>Bill To:</h3>
+                        <p>${d.tenant_name}</p>
+                        <p>${d.unit_number}</p>
+                    </div>
+                    <table style="width:100%; border-collapse: collapse;">
+                        <thead><tr><th style="text-align:left; border-bottom: 1px solid #ddd;">Desc</th><th style="text-align:left; border-bottom: 1px solid #ddd;">Qty</th><th style="text-align:left; border-bottom: 1px solid #ddd;">Rate</th><th style="text-align:left; border-bottom: 1px solid #ddd;">Amount</th></tr></thead>
+                        <tbody>${itemsRows}</tbody>
+                    </table>
+                    <div style="text-align: right; margin-top: 20px;">
+                        <h3>Total: R${d.total_amount.toFixed(2)}</h3>
+                    </div>
+                </div>
+            `;
+            document.getElementById("invoiceModal").style.display = "block";
+        } catch (e) { alert(`Error calling /invoice: ` + e.message); }
+    }
+
+    function closeInvoice() { document.getElementById("invoiceModal").style.display = "none"; }
+
+    async function loadCompanySettings() {
+        try {
+            const r = await fetch(`/company-settings`, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            companyData = d;
+            document.getElementById("compName").value = d.name || "";
+            document.getElementById("compLogo").value = d.logo_path || "";
+            document.getElementById("compAddress").value = d.address || "";
+            document.getElementById("compVat").value = d.vat_number || "";
+            document.getElementById("compVatRate").value = d.vat_rate || 15;
+            document.getElementById("compEmail").value = d.contact_email || "";
+            document.getElementById("compPhone").value = d.contact_phone || "";
+        } catch (e) { console.error("Error calling /company-settings: " + e.message); }
+    }
+
+    async function updateCompanySettings() {
+        const payload = {
+            name: document.getElementById("compName").value,
+            logo_path: document.getElementById("compLogo").value,
+            address: document.getElementById("compAddress").value,
+            vat_number: document.getElementById("compVat").value,
+            vat_rate: parseFloat(document.getElementById("compVatRate").value || 15),
+            contact_email: document.getElementById("compEmail").value,
+            contact_phone: document.getElementById("compPhone").value
+        };
+        try {
+            const r = await fetch(`/company-settings`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            alert(d.message);
+            loadCompanySettings();
+        } catch (e) { alert("Error calling /company-settings: " + e.message); }
+    }
+
+    async function triggerMockRent() {
+        const unitNumber = document.getElementById("syncRentUnitNumber").value.trim();
+        const payload = unitNumber ? { unit_number: unitNumber } : {};
+        
+        try {
+            const r = await fetch(`/sync-rent`, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, 
+                body: JSON.stringify(payload) 
+            });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            alert(d.message || "Rent sync triggered.");
+            loadAllTenants();
+        } catch (e) { 
+            alert("Error calling /sync-rent: " + e.message); 
+        }
+    }
+
+    async function processPayment() {
+        const unit = document.getElementById("paymentUnitNumber").value;
+        const resultDiv = document.getElementById("paymentResult");
+        const tenantCheck = getTenantIdByUnit(unit);
+        if(tenantCheck.error) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">${tenantCheck.error}</p>`;
+            return;
+        }
+        const tenantId = tenantCheck.id;
+        const payload = {
+            amount: parseFloat(document.getElementById("paymentAmount").value || 0),
+            rent_pct: document.getElementById("paymentRentPct").value ? parseFloat(document.getElementById("paymentRentPct").value) : null,
+            elec_pct: document.getElementById("paymentElecPct").value ? parseFloat(document.getElementById("paymentElecPct").value) : null,
+            water_pct: document.getElementById("paymentWaterPct").value ? parseFloat(document.getElementById("paymentWaterPct").value) : null
+        };
+        try {
+            const url = `/process-payment/${tenantId}`;
+            const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`;
+            logAction("Processed Payment", `Unit: ${unit}, Amount: ${payload.amount}`);
+            loadAllTenants();
+        } catch (e) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">Error calling /process-payment: ${e.message}</p>`;
+        }
+    }
+
+    // --- REPORTS FUNCTIONS ---
+    async function loadFraudAnalysis() {
+        const tB = document.getElementById("fraudTableBody");
+        try {
+            const url = `/fraud-analysis/${getPropertyFilter()}`;
+            const r = await fetch(url, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            tB.innerHTML = "";
+            d.flags.forEach(f => {
+                let sevClass = f.severity === 'HIGH' ? 'sev-high' : (f.severity === 'MEDIUM' ? 'sev-medium' : 'sev-low');
+                const fTid = f.tenant_id || f.id;
+                tB.innerHTML += `<tr>
+                    <td>${f.unit_number}</td>
+                    <td>${f.tenant_name}</td>
+                    <td>${f.flag_type}</td>
+                    <td><span class="sev-badge ${sevClass}">${f.severity}</span></td>
+                    <td>${f.details}</td>
+                    <td><button onclick="suspendTenant(${fTid})" class="btn-suspend">Suspend</button></td>
+                </tr>`;
+            });
+            document.getElementById("fraudTable").style.display = "block";
+        } catch (e) { alert("Error calling /fraud-analysis: " + e.message); }
+    }
+
+    async function loadAging() {
+        const tB = document.getElementById("agingTableBody");
+        try {
+            const url = `/arrears-aging/${getPropertyFilter()}`;
+            const r = await fetch(url, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            tB.innerHTML = "";
+            (d.aging || d.report || []).forEach(t => {
+                tB.innerHTML += `<tr>
+                    <td>${t.tenant_name}</td>
+                    <td>R${t.total_arrears.toFixed(2)}</td>
+                    <td>R${(t.current || t.bucket_30 || 0).toFixed(2)}</td>
+                    <td>R${(t.days_30 || t.bucket_60 || 0).toFixed(2)}</td>
+                    <td>R${(t.days_60 || t.bucket_90 || 0).toFixed(2)}</td>
+                    <td>R${(t.days_90 || t.bucket_over_90 || 0).toFixed(2)}</td>
+                </tr>`;
+            });
+            document.getElementById("agingTable").style.display = "block";
+        } catch (e) { alert("Error calling /arrears-aging: " + e.message); }
+    }
+
+    async function runRecon() {
+        const tB = document.getElementById("reconTableBody");
+        const payload = {
+            month: document.getElementById("reconMonth").value,
+            utility_type: document.getElementById("reconType").value,
+            muni_units: parseFloat(document.getElementById("reconMuni").value || 0),
+            sub_units: parseFloat(document.getElementById("reconSub").value || 0)
+        };
+        try {
+            const url = `/run-recon`;
+            const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            document.getElementById("reconResult").style.display = "block";
+            document.getElementById("reconResult").innerHTML = `<p style="color:green;">${d.message}</p>`;
+            loadRecons();
+        } catch (e) { alert(`Error calling ${url}: ` + e.message); }
+    }
+
+    async function loadRecons() {
+        const tB = document.getElementById("reconTableBody");
+        try {
+            const r = await fetch(`/recons`, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            tB.innerHTML = "";
+            d.recons.forEach(r => {
+                let statusClass = r.status === 'BALANCED' ? 'recon-balanced' : (r.status === 'LOSS' ? 'recon-loss' : 'recon-gain');
+                tB.innerHTML += `<tr>
+                    <td>${r.date}</td>
+                    <td>${r.month}</td>
+                    <td>${r.utility_type}</td>
+                    <td>${r.muni_units}</td>
+                    <td>${r.sub_units}</td>
+                    <td>${r.variance}</td>
+                    <td class="${statusClass}">${r.status}</td>
+                </tr>`;
+            });
+            document.getElementById("reconTable").style.display = "block";
+        } catch (e) { console.error("Error calling /recons: " + e.message); }
+    }
+
+    async function generateFinancialReport() {
+        try {
+            const url = `/financial-report/${getPropertyFilter()}`;
+            const r = await fetch(url, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            let monthlyRows = (d.revenue.monthly || []).map(m =>
+                `<tr><td>${m.month}</td><td>R${m.revenue.toFixed(2)}</td><td>R${m.billed.toFixed(2)}</td></tr>`
+            ).join("");
+            let consumptionRows = (d.consumption || []).map(c =>
+                `<tr><td>${c.tenant}</td><td>R${c.value.toFixed(2)}</td></tr>`
+            ).join("") || '<tr><td colspan="2" style="color:#7f8c8d;">No consumption data yet.</td></tr>';
+            document.getElementById("reportContent").innerHTML = `
+                <h2>Financial Report</h2>
+                <div class="kpi-grid">
+                    <div class="kpi-card green"><h3>Total Collected</h3><div class="value">R${d.revenue.total_revenue.toFixed(2)}</div></div>
+                    <div class="kpi-card orange"><h3>Total Billed</h3><div class="value">R${d.revenue.total_billed.toFixed(2)}</div></div>
+                    <div class="kpi-card"><h3>Collection Rate</h3><div class="value">${d.revenue.collection_rate.toFixed(1)}%</div></div>
+                    <div class="kpi-card red"><h3>Total Arrears</h3><div class="value">R${d.arrears.total.toFixed(2)}</div></div>
+                </div>
+                <h3>Arrears Breakdown</h3>
+                <p>Rent: R${d.arrears.rent.toFixed(2)} | Electricity: R${d.arrears.electricity.toFixed(2)} | Water: R${d.arrears.water.toFixed(2)}</p>
+                <h3>Monthly Trend</h3>
+                <table><thead><tr><th>Month</th><th>Collected</th><th>Billed</th></tr></thead><tbody>${monthlyRows || '<tr><td colspan="3" style="color:#7f8c8d;">No monthly data yet.</td></tr>'}</tbody></table>
+                <h3>Top Consumers</h3>
+                <table><thead><tr><th>Tenant</th><th>Consumption (R)</th></tr></thead><tbody>${consumptionRows}</tbody></table>
+            `;
+            document.getElementById("reportModal").style.display = "block";
+        } catch (e) { alert("Error calling /financial-report: " + e.message); }
+    }
+
+    function closeReport() { document.getElementById("reportModal").style.display = "none"; }
+
+    async function loadPaymentRecon() {
+        const tB = document.getElementById("reconReportTableBody");
+        try {
+            const url = `/payment-reconciliation/${getPropertyFilter()}`;
+            const r = await fetch(url, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            tB.innerHTML = "";
+            (d.reconciliation || d.report || []).forEach(t => {
+                tB.innerHTML += `<tr>
+                    <td>${t.tenant_name}</td>
+                    <td>R${t.total_billed.toFixed(2)}</td>
+                    <td>R${t.total_paid.toFixed(2)}</td>
+                    <td>R${t.wallet_balance.toFixed(2)}</td>
+                    <td>R${t.rent_arrears.toFixed(2)}</td>
+                    <td>R${t.elec_arrears.toFixed(2)}</td>
+                    <td>R${t.water_arrears.toFixed(2)}</td>
+                    <td>R${t.balance_due.toFixed(2)}</td>
+                </tr>`;
+            });
+            document.getElementById("reconReportTable").style.display = "block";
+        } catch (e) { alert("Error calling /payment-reconciliation: " + e.message); }
+    }
+
+    async function downloadExcel() {
+        const month = document.getElementById("excelMonth").value;
+        if(!month) { alert("Please enter a month (e.g., 2024-05)"); return; }
+        try {
+            const url = `/export-excel/${month}`;
+            const r = await fetch(url, { headers: getAuthHeaders() });
+            if(!r.ok) throw new Error("Failed");
+            const blob = await r.blob();
+            const url2 = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url2;
+            a.download = `report_${month}.xlsx`;
+            a.click();
+            window.URL.revokeObjectURL(url2);
+        } catch (e) { alert("Error calling /export-excel: " + e.message); }
+    }
+
+    async function loadBankRecon() {
+        const div = document.getElementById("bankResult");
+        div.style.display = "block";
+        div.innerHTML = "<p>Generating Bank Recon...</p>";
+        try {
+            const url = `/bank-reconciliation/${getPropertyFilter()}`;
+            const r = await fetch(url, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            div.innerHTML = `<p><strong>Total Collected:</strong> R${d.total_collected.toFixed(2)}<br>
+                <strong>Total Disbursed:</strong> R${d.total_disbursed.toFixed(2)}<br>
+                <strong>Net Balance:</strong> R${d.net_balance.toFixed(2)}</p>`;
+        } catch (e) { div.innerHTML = `<p style="color:red;">Error: ${e.message}</p>`; }
+    }
+
+    async function loadMgmtInvoice() {
+        const div = document.getElementById("mgmtResult");
+        div.style.display = "block";
+        div.innerHTML = "<p>Generating Management Fee Invoice...</p>";
+        try {
+            const url = `/management-fee-invoice/${getPropertyFilter()}`;
+            const r = await fetch(url, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            let rows = (d.items || []).map(i => `<li>${i.desc}: R${i.amount.toFixed(2)}</li>`).join("");
+            div.innerHTML = `<p><strong>Total Collections:</strong> R${d.total_collections.toFixed(2)}</p>
+                <ul>${rows}</ul>
+                <p><strong>Subtotal:</strong> R${d.subtotal.toFixed(2)}<br>
+                <strong>VAT:</strong> R${d.vat.toFixed(2)}<br>
+                <strong>Total:</strong> R${d.total.toFixed(2)}</p>`;
+        } catch (e) { div.innerHTML = `<p style="color:red;">Error: ${e.message}</p>`; }
+    }
+
+    async function load3MonthStats() {
+        const tB = document.getElementById("statsTableBody");
+        try {
+            const url = `/three-month-stats/${getPropertyFilter()}`;
+            const r = await fetch(url, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            tB.innerHTML = "";
+            d.stats.forEach(s => {
+                tB.innerHTML += `<tr>
+                    <td>${s.month}</td>
+                    <td>R${s.elec.toFixed(2)}</td>
+                    <td>R${s.water.toFixed(2)}</td>
+                </tr>`;
+            });
+            document.getElementById("statsTable").style.display = "block";
+        } catch (e) { alert("Error calling /three-month-stats: " + e.message); }
+    }
+
+    async function loadPropertyReport() {
+        const tB = document.getElementById("propTableBody");
+        try {
+            const r = await fetch(`/property-report/${getPropertyFilter()}`, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            tB.innerHTML = "";
+            (d.properties || d.report || []).forEach(p => {
+                tB.innerHTML += `<tr>
+                    <td>${p.name || p.property_name}</td>
+                    <td>${p.tenant_count}</td>
+                    <td>R${p.total_arrears.toFixed(2)}</td>
+                    <td>R${(p.wallet_balance || p.wallet_balances || 0).toFixed(2)}</td>
+                </tr>`;
+            });
+            document.getElementById("propTable").style.display = "block";
+        } catch (e) { alert("Error calling /property-report: " + e.message); }
+    }
+
+
+    // --- USER PASSWORD FUNCTIONS ---
+    function showUserForgotPassword() {
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('screen-user-forgot').style.display = 'flex';
+        document.getElementById('userForgotError').style.display = 'none';
+        document.getElementById('userForgotSuccess').style.display = 'none';
+    }
+    function backToUserLogin() {
+        document.getElementById('screen-user-forgot').style.display = 'none';
+        document.getElementById('loginScreen').style.display = 'block';
+        document.getElementById('userForgotSuccess').style.display = 'none';
+        document.getElementById('userForgotError').style.display = 'none';
+        document.getElementById('forgotUsername').value = '';
+        document.getElementById('forgotEmail').value = '';
+    }
+    async function submitUserForgotPassword() {
+        const username = document.getElementById('forgotUsername').value;
+        const email = document.getElementById('forgotEmail').value;
+        const errBox = document.getElementById('userForgotError');
+        const successBox = document.getElementById('userForgotSuccess');
+        errBox.style.display = 'none';
+        successBox.style.display = 'none';
+        if(!username || !email) { errBox.innerText = 'Please enter username and email.'; errBox.style.display = 'block'; return; }
+        try {
+            const r = await fetch('/user-forgot-password/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, email }) });
+            const d = await r.json();
+            if (!r.ok) throw new Error(d.detail || 'Failed');
+            document.getElementById('userForgotTempPw').innerText = d.temp_password;
+            successBox.style.display = 'block';
+        } catch (e) { errBox.innerText = e.message; errBox.style.display = 'block'; }
+    }
+    function showChangePassword() {
+        document.getElementById('changePwModal').style.display = 'block';
+        document.getElementById('changePwError').style.display = 'none';
+        document.getElementById('changeCurPw').value = '';
+        document.getElementById('changeNewPw').value = '';
+        document.getElementById('changeConfirmPw').value = '';
+    }
+    function closeChangePwModal() { document.getElementById('changePwModal').style.display = 'none'; }
+    async function submitChangePassword() {
+        var userId = localStorage.getItem('pm_user_id');
+        if(!userId || userId === 'undefined' || userId === 'null') {
+            alert('Session expired. Please log out and log in again.');
+            return;
+        }
+        const curPw = document.getElementById('changeCurPw').value;
+        const newPw = document.getElementById('changeNewPw').value;
+        const confPw = document.getElementById('changeConfirmPw').value;
+        const errBox = document.getElementById('changePwError');
+        errBox.style.display = 'none';
+        try {
+            const r = await fetch('/user-change-password/', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken }, body: JSON.stringify({ user_id: parseInt(userId), current_password: curPw, new_password: newPw, confirm_password: confPw }) });
+            const d = await r.json();
+            if (!r.ok) throw new Error(d.detail || 'Failed');
+            alert('Password changed successfully!');
+            closeChangePwModal();
+        } catch (e) { errBox.innerText = e.message; errBox.style.display = 'block'; }
+    }
+    async function submitForceChangePw() {
+        const userId = localStorage.getItem('pm_user_id');
+        const curPw = document.getElementById('forceCurPw').value;
+        const newPw = document.getElementById('forceNewPw').value;
+        const confPw = document.getElementById('forceConfirmPw').value;
+        const errBox = document.getElementById('forceChangePwError');
+        errBox.style.display = 'none';
+        try {
+            const r = await fetch('/user-change-password/', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify({ user_id: parseInt(userId), current_password: curPw, new_password: newPw, confirm_password: confPw }) });
+            const d = await r.json();
+            if (!r.ok) throw new Error(d.detail || 'Failed');
+            document.getElementById('screen-force-change-pw').style.display = 'none';
+            document.getElementById('mainDashboard').style.display = 'block';
+            localStorage.setItem('pm_must_change', 'false');
+            loadAllData();
+        } catch (e) { errBox.innerText = e.message; errBox.style.display = 'block'; }
+    }
+    async function resetUserPassword(id) {
+        if(!confirm('Generate a new temp password for this user?')) return;
+        try {
+            const r = await fetch(`/admin-reset-user-password/${id}/`, { method: 'POST', headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            alert('TEMP PASSWORD GENERATED\n\nUsername: ' + d.username + '\n\nTemp Password: ' + d.temp_password + '\n\nShare this securely with the user. They will be forced to set their own password on next login.');
+            logAction('Reset User Password', 'User ID: ' + id);
+        } catch (e) { alert('Error: ' + e.message); }
+    }
+
+
+    // --- SMART METER DEMO FUNCTIONS ---
+    async function loadSmartMeterHealth() {
+        const container = document.getElementById('smartMeterHealth');
+        if (!container) return;
+        try {
+            const r = await fetch('/all-meters/' + getPropertyFilter(), { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error('Failed');
+            let html = '';
+            (d.meters || []).slice(0, 12).forEach(m => {
+                var mockBattery = (3.2 + Math.random() * 0.4).toFixed(2);
+                var battClass = 'battery-good';
+                var battIcon = 'Battery';
+                if (parseFloat(mockBattery) < 3.0) { battClass = 'battery-critical'; battIcon = 'LOW BATT'; }
+                else if (parseFloat(mockBattery) < 3.2) { battClass = 'battery-warn'; battIcon = 'WARN BATT'; }
+
+                var typeIcon = '?';
+                var typeLabel = m.meter_type || 'Unknown';
+                var typeColor = '#7f8c8d';
+                if (m.meter_type === 'WATER_COLD') { typeIcon = 'COLD WATER'; typeColor = '#3498db'; }
+                else if (m.meter_type === 'WATER_HOT') { typeIcon = 'HOT WATER'; typeColor = '#e74c3c'; }
+                else if (m.meter_type === 'ELECTRICITY') { typeIcon = 'ELECTRICITY'; typeColor = '#f39c12'; }
+
+                var minsAgo = Math.floor(Math.random() * 30) + 1;
+                var statusColor = minsAgo < 5 ? '#27ae60' : (minsAgo < 15 ? '#f39c12' : '#e74c3c');
+
+                html += '<div class="meter-health-item">' +
+                    '<div><div class="serial">' + (m.serial_number || 'N/A') + '</div>' +
+                    '<div style="font-size:0.7em; color:' + typeColor + '; font-weight:bold;">' + typeIcon + '</div>' +
+                    '<div style="font-size:0.75em; color:#7f8c8d;">' + (m.unit_number || 'N/A') + ' &bull; ' + minsAgo + 'm ago</div></div>' +
+                    '<div class="' + battClass + '">' + battIcon + ' ' + mockBattery + 'V</div>' +
+                    '</div>';
+            });
+            container.innerHTML = html || '<p style="color:#7f8c8d;">No active meters.</p>';
+        } catch (e) { container.innerHTML = '<p style="color:#e74c3c;">Error: ' + e.message + '</p>'; }
+    }
+
+    async function loadActiveAlarms() {
+        const container = document.getElementById('activeAlarms');
+        try {
+            const r = await fetch('/meter-events/', { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error('Failed');
+            
+            if (!d.events || d.events.length === 0) {
+                // Show mock alarms for demo
+                const mockAlarms = [
+                    { serial: 'WM-101', type: 'WATER_LEAKAGE', notes: 'Continuous flow for 26 hours. Flow: 0.3 m³/h', severity: 'HIGH', time: '2h ago' },
+                    { serial: 'WM-205', type: 'LOW_BATTERY', notes: 'Battery at 2.9V. Replacement within 30 days.', severity: 'MEDIUM', time: '5h ago' },
+                    { serial: 'WM-308', type: 'TAMPER_DETECT', notes: 'Magnetic interference. Valve auto-closed.', severity: 'HIGH', time: '1h ago' },
+                    { serial: 'WM-412', type: 'VALVE_FAIL', notes: 'Valve close command failed after 3 retries.', severity: 'HIGH', time: '8h ago' },
+                ];
+                
+                let html = '';
+                mockAlarms.forEach(a => {
+                    let sevClass = a.severity === 'HIGH' ? 'alarm-high' : (a.severity === 'MEDIUM' ? 'alarm-medium' : 'alarm-low');
+                    let icon = a.type.includes('LEAK') ? '💧' : (a.type.includes('BATTERY') ? '🪫' : (a.type.includes('TAMPER') ? '🧲' : '⚠️'));
+                    html += '<div class="alarm-item">' +
+                        '<div><div style="font-weight:bold; color:#2c3e50;">' + icon + ' ' + a.type.replace(/_/g, ' ') + ' — ' + a.serial + '</div>' +
+                        '<div style="font-size:0.85em; color:#7f8c8d;">' + a.notes + ' • ' + a.time + '</div></div>' +
+                        '<span class="alarm-badge ' + sevClass + '">' + a.severity + '</span>' +
+                        '</div>';
+                });
+                container.innerHTML = html;
+            } else {
+                let html = '';
+                d.events.slice(0, 5).forEach(a => {
+                    let sevClass = 'alarm-high';
+                    let icon = '⚠️';
+                    html += '<div class="alarm-item">' +
+                        '<div><div style="font-weight:bold;">' + icon + ' ' + a.event_type + ' — ' + (a.serial_number || 'N/A') + '</div>' +
+                        '<div style="font-size:0.85em; color:#7f8c8d;">' + (a.event_notes || '') + '</div></div>' +
+                        '<span class="alarm-badge ' + sevClass + '">ACTIVE</span>' +
+                        '</div>';
+                });
+                container.innerHTML = html;
+            }
+        } catch (e) {
+            // Fallback to mock alarms
+            const mockAlarms = [
+                { serial: 'WM-101', type: 'WATER_LEAKAGE', notes: 'Continuous flow for 26 hours', severity: 'HIGH', time: '2h ago' },
+                { serial: 'WM-205', type: 'LOW_BATTERY', notes: 'Battery at 2.9V', severity: 'MEDIUM', time: '5h ago' },
+                { serial: 'WM-308', type: 'TAMPER_DETECT', notes: 'Magnetic interference detected', severity: 'HIGH', time: '1h ago' },
+            ];
+            let html = '';
+            mockAlarms.forEach(a => {
+                let sevClass = a.severity === 'HIGH' ? 'alarm-high' : 'alarm-medium';
+                let icon = a.type.includes('LEAK') ? '💧' : (a.type.includes('BATTERY') ? '🪫' : '🧲');
+                html += '<div class="alarm-item"><div><div style="font-weight:bold;">' + icon + ' ' + a.type.replace(/_/g, ' ') + ' — ' + a.serial + '</div><div style="font-size:0.85em; color:#7f8c8d;">' + a.notes + ' • ' + a.time + '</div></div><span class="alarm-badge ' + sevClass + '">' + a.severity + '</span></div>';
+            });
+            container.innerHTML = html;
+        }
+    }
+
+
+    async function submitCreditNote() {
+        var unit = document.getElementById("cnUnitNumber").value;
+        var resultDiv = document.getElementById("cnResult");
+        if(!unit) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = "<p style='color:red;'>Please enter a Unit Number.</p>";
+            return;
+        }
+        var tenantCheck = getTenantIdByUnit(unit);
+        if(tenantCheck.error) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = "<p style='color:red;'>" + tenantCheck.error + "</p>";
+            return;
+        }
+        var tenantId = tenantCheck.id;
+        var amount = document.getElementById("cnAmount").value;
+        var reason = document.getElementById("cnReason").value;
+        if(!amount || !reason) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = "<p style='color:red;'>Please enter an amount and a reason.</p>";
+            return;
+        }
+        var url = "/generate-credit-note/";
+        try {
+            var r = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": "Bearer " + authToken },
+                body: JSON.stringify({ tenant_id: tenantId, amount: parseFloat(amount), reason: reason })
+            });
+            var d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = "<p style='color:green;'>" + d.message + " (" + (d.note_no || "") + ")</p>";
+            logAction("Generated Credit Note", "Unit: " + unit + ", Amount: " + amount);
+            document.getElementById("cnAmount").value = "";
+            document.getElementById("cnReason").value = "";
+            loadAllTenants();
+        } catch (e) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = "<p style='color:red;'>Error: " + e.message + "</p>";
+        }
+    }
+</script>
+<!-- CHANGE PASSWORD MODAL -->
+<div id="changePwModal" class="change-pw-modal">
+    <div class="change-pw-content">
+        <h2>Change Password</h2>
+        <input type="password" id="changeCurPw" placeholder="Current Password">
+        <input type="password" id="changeNewPw" placeholder="New Password (min 8 chars)">
+        <input type="password" id="changeConfirmPw" placeholder="Confirm New Password">
+        <button style="background:#3498db;" onclick="submitChangePassword()">Change Password</button>
+        <button style="background:#7f8c8d;" onclick="closeChangePwModal()">Cancel</button>
+        <div id="changePwError" style="color:red; margin-top:10px; display:none;"></div>
+    </div>
+</div>
+
+</body>
+</html>

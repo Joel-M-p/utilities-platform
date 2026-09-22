@@ -23,9 +23,9 @@ def api_generate_bill(bill: BillRequest, current_user: dict = Depends(require_st
         if cursor.fetchone():
             return {"status": "success", "message": "Bill already processed."}
 
-        cursor.execute("SELECT first_name, last_name, email FROM tenants WHERE id = %s FOR UPDATE", (bill.tenant_id,))
+        cursor.execute("SELECT first_name, last_name, email, cellphone FROM tenants WHERE id = %s FOR UPDATE", (bill.tenant_id,))
         tenant_data = cursor.fetchone()
-        first_name, last_name, email = tenant_data
+        first_name, last_name, email, cellphone = tenant_data
         
         utility_type = bill.utility_type.upper()
         
@@ -121,7 +121,7 @@ def api_generate_bill(bill: BillRequest, current_user: dict = Depends(require_st
             """, (wallet_id, bill_amount, f"{utility_type}_BILL", prop_id, current_balance, current_balance, idempotency_key))
             
             msg = f"Your {utility_type} bill of R{bill_amount:.2f} has been generated. You now have arrears. Please pay to avoid restrictions."
-            send_notification(f"{first_name} {last_name}", email, msg, subject="Bill Generated & Arrears Detected")
+            send_notification(f"{first_name} {last_name}", email, cellphone, msg, subject="Bill Generated & Arrears Detected")
             new_balance_for_txn = current_balance
             
         elif billing_type == 'PREPAID':
@@ -142,7 +142,7 @@ def api_generate_bill(bill: BillRequest, current_user: dict = Depends(require_st
                 
                 action_word = 'restricted to trickle' if utility_type.startswith('WATER') else 'DISCONNECTED'
                 msg = f"Your {utility_type} has been {action_word}! Shortfall of R{shortfall:.2f} added to arrears."
-                send_notification(f"{first_name} {last_name}", email, msg, subject="Utility Disconnected/Restricted")
+                send_notification(f"{first_name} {last_name}", email, cellphone, msg, subject="Utility Disconnected/Restricted")
                 new_balance_for_txn = Decimal('0.00')
             else:
                 needs_credit = False
@@ -159,7 +159,7 @@ def api_generate_bill(bill: BillRequest, current_user: dict = Depends(require_st
                         new_balance_for_txn = Decimal('0.00')
                         
                         msg = f"Your {utility_type} was disconnected! You have used your 3 monthly emergency fund taps and ran out of main funds."
-                        send_notification(f"{first_name} {last_name}", email, msg, subject="Utility Disconnected")
+                        send_notification(f"{first_name} {last_name}", email, cellphone, msg, subject="Utility Disconnected")
                     else:
                         new_credit_balance = (credit_balance or Decimal('0')) - credit_to_use
                         new_credit_debt = (credit_debt or Decimal('0')) + credit_to_use
@@ -168,7 +168,7 @@ def api_generate_bill(bill: BillRequest, current_user: dict = Depends(require_st
                         
                         if new_credit_balance < 50:
                             msg = f"Low Wallet Balance Alert: Your emergency fund balance is R{new_credit_balance:.2f}. Please top up to avoid disconnection."
-                            send_notification(f"{first_name} {last_name}", email, msg, subject="Low Wallet Balance Alert")
+                            send_notification(f"{first_name} {last_name}", email, cellphone, msg, subject="Low Wallet Balance Alert")
                 else:
                     new_balance_for_txn = current_balance - bill_amount
                     cursor.execute("UPDATE wallets SET balance = %s WHERE id = %s", (new_balance_for_txn, wallet_id))

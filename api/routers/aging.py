@@ -1,23 +1,30 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from api.database import get_db_connection
-from api.security import verify_token
+from api.security import verify_token, resolve_property_scope
 from datetime import datetime
 from fastapi.responses import JSONResponse
 
 router = APIRouter()
 
-@router.get("/arrears-aging/", dependencies=[Depends(verify_token)])
-def api_get_arrears_aging():
+@router.get("/arrears-aging/")
+def api_get_arrears_aging(property_id: int = None, current_user: dict = Depends(verify_token)):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        # 1. Fetch all tenants with outstanding arrears
-        cursor.execute("""
+        # Scoped: arrears are sensitive financial data. A Manager must only see the
+        # tenants at the property they are assigned to.
+        scope_id = resolve_property_scope(current_user, property_id)
+
+        # 1. Fetch tenants with outstanding arrears (within scope)
+        base_query = """
             SELECT t.id, t.first_name, t.last_name, t.rent_outstanding, t.electricity_outstanding, t.water_outstanding, w.id
             FROM tenants t JOIN wallets w ON t.id = w.tenant_id 
             WHERE (t.rent_outstanding + t.electricity_outstanding + t.water_outstanding) > 0
-            ORDER BY t.id ASC
-        """)
+        """
+        if scope_id:
+            cursor.execute(base_query + " AND t.property_id = %s ORDER BY t.id ASC", (scope_id,))
+        else:
+            cursor.execute(base_query + " ORDER BY t.id ASC")
         tenants = cursor.fetchall()
         
         aging_report = []
@@ -80,6 +87,8 @@ def api_get_arrears_aging():
             })
             
         return {"status": "success", "aging": aging_report}
+    except HTTPException:
+        raise
     except Exception as e:
         return JSONResponse(status_code=400, content={"detail": str(e)})
     finally:

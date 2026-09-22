@@ -1,13 +1,58 @@
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 from api.database import get_db_connection
-from api.security import verify_token
-from io import BytesIO
+from api.security import verify_token, resolve_property_scope
+from io import BytesIO, StringIO
+import csv
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment
 from decimal import Decimal
 
 router = APIRouter()
+
+@router.get("/export-csv/")
+def export_tenants_csv(property_id: int = None, current_user: dict = Depends(verify_token)):
+    """Tenant list as CSV. The dashboard's "Download CSV" button called this route, but no
+    such endpoint existed, so the button silently failed. Property-scoped like every other
+    tenant-data endpoint."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        scope_id = resolve_property_scope(current_user, property_id)
+        query = """
+            SELECT t.unit_number, t.first_name, t.last_name, t.email, t.cellphone,
+                   t.rent_outstanding, t.electricity_outstanding, t.water_outstanding,
+                   w.balance, t.status, p.name
+            FROM tenants t
+            JOIN wallets w ON t.id = w.tenant_id
+            LEFT JOIN properties p ON t.property_id = p.id
+        """
+        if scope_id:
+            cursor.execute(query + " WHERE t.property_id = %s ORDER BY t.unit_number ASC", (scope_id,))
+        else:
+            cursor.execute(query + " ORDER BY t.unit_number ASC")
+
+        buf = StringIO()
+        writer = csv.writer(buf)
+        writer.writerow(["Unit", "First Name", "Last Name", "Email", "Cellphone",
+                         "Rent Outstanding", "Electricity Outstanding", "Water Outstanding",
+                         "Wallet Balance", "Status", "Property"])
+        for r in cursor.fetchall():
+            writer.writerow([
+                r[0] or "", r[1] or "", r[2] or "", r[3] or "", r[4] or "",
+                float(r[5] or 0), float(r[6] or 0), float(r[7] or 0), float(r[8] or 0),
+                r[9] or "", r[10] or "Unassigned"
+            ])
+        buf.seek(0)
+        return StreamingResponse(
+            iter([buf.getvalue()]),
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=tenants.csv"}
+        )
+    finally:
+        cursor.close()
+        conn.close()
+
 
 @router.get("/export-excel/", dependencies=[Depends(verify_token)])
 def export_monthly_report(month: str = Query(..., description="Format: YYYY-MM")):
