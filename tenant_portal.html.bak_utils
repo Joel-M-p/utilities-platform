@@ -19,170 +19,136 @@
     <title>Tenant Portal</title>
     
 <style>
-
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #0d1117; }
-        ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #00d4ff; }
-    
-
-        .consumption-bar { display: flex; align-items: flex-end; height: 100px; gap: 3px; margin-top: 10px; }
-        .consumption-bar-item { flex: 1; background: linear-gradient(180deg, #e74c3c, #c0392b); border-radius: 3px 3px 0 0; min-height: 3px; }
-        .consumption-labels { display: flex; gap: 3px; margin-top: 5px; }
-        .consumption-label-item { flex: 1; text-align: center; font-size: 0.65em; color: #7f8c8d; }
-    
         .consumption-chart-container { margin-top: 15px; }
         .chart-bar { display: flex; align-items: flex-end; height: 120px; gap: 4px; margin-top: 10px; }
         .chart-bar-item { flex: 1; background: linear-gradient(180deg, #3498db, #2980b9); border-radius: 4px 4px 0 0; min-height: 5px; position: relative; transition: height 0.3s; }
         .chart-bar-item:hover { background: linear-gradient(180deg, #e74c3c, #c0392b); }
         .chart-labels { display: flex; gap: 4px; margin-top: 5px; }
         .chart-label-item { flex: 1; text-align: center; font-size: 0.7em; color: var(--gray); }
-        .insight-card { background: rgba(0, 212, 255, 0.05); padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 4px solid #00d4ff; }
-        .insight-card h4 { margin: 0 0 5px 0; color: #00d4ff; font-size: 0.95em; }
-        .insight-card p { margin: 0; font-size: 0.85em; color: #8b949e; }
+        .insight-card { background: #e8f4f8; padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 4px solid var(--secondary); }
+        .insight-card h4 { margin: 0 0 5px 0; color: var(--dark); font-size: 0.95em; }
+        .insight-card p { margin: 0; font-size: 0.85em; color: var(--gray); }
     
 
 
         :root {
-            --bg: #0d1117;
-            --card-bg: #161b22;
-            --card-border: #30363d;
-            --text: #e6edf3;
-            --text-dim: #8b949e;
-            --accent: #00d4ff;
-            --accent-glow: rgba(0, 212, 255, 0.3);
-            --success: #00ff88;
-            --danger: #ff4757;
-            --warning: #ffa502;
-            --primary: #0d1117;
-            --secondary: #00d4ff;
-            --gray: #8b949e;
-            --light: #161b22;
-            --dark: #0d1117;
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --success: #27ae60;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --gray: #7f8c8d;
+            --bg: #f4f7f6;
         }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #0d1117; margin: 0; padding: 0; color: #e6edf3; -webkit-font-smoothing: antialiased; padding-bottom: 70px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg); margin: 0; padding: 0; color: #1c1c1e; -webkit-font-smoothing: antialiased; padding-bottom: 70px; }
         
-        .login-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; background: radial-gradient(circle at 50% 30%, #161b22 0%, #0d1117 100%); color: white; padding: 20px; box-sizing: border-box; }
-        .login-logo { font-size: 3em; font-weight: 900; margin-bottom: 5px; letter-spacing: 6px; text-align: center; color: #00d4ff; text-shadow: 0 0 20px rgba(0, 212, 255, 0.5), 0 0 40px rgba(0, 212, 255, 0.3); }
-        .login-card { background: rgba(22, 27, 34, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); padding: 30px; border-radius: 16px; width: 100%; max-width: 350px; border: 1px solid #30363d; box-shadow: 0 0 60px rgba(0, 212, 255, 0.1), 0 20px 40px rgba(0,0,0,0.5); }
-        .login-card h2 { text-align: center; color: #e6edf3; margin-top: 0; margin-bottom: 20px; font-weight: 600; }
-        .login-card input, .login-card select { width: 100%; padding: 15px; margin-bottom: 15px; border: 1px solid #30363d; border-radius: 8px; font-size: 16px; box-sizing: border-box; background: #0d1117; color: #e6edf3; transition: border-color 0.3s, box-shadow 0.3s; }
-        .login-card input:focus, .login-card select:focus { outline: none; border-color: #00d4ff; box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.15); }
-        .login-card input::placeholder { color: #6e7681; }
-        .login-card select option { background: #161b22; color: #e6edf3; }
-        .login-card button { width: 100%; padding: 15px; background: linear-gradient(135deg, #00d4ff, #0099cc); color: #0d1117; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 20px rgba(0, 212, 255, 0.3); transition: all 0.3s; }
-        .login-card button:hover { box-shadow: 0 6px 30px rgba(0, 212, 255, 0.5); transform: translateY(-2px); }
-        .login-card button:active { transform: translateY(0); }
-        .login-error { color: #ff4757; text-align: center; margin-top: 15px; font-size: 0.9em; display: none; }
-        .force-change-screen { display: none; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; background: radial-gradient(circle at 50% 30%, #161b22 0%, #0d1117 100%); color: white; padding: 20px; box-sizing: border-box; }
-        .change-pw-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index: 300; }
-        .change-pw-content { background: #161b22; margin: 20px; border-radius: 16px; padding: 30px; margin-top: 60px; max-width: 400px; margin-left: auto; margin-right: auto; border: 1px solid #30363d; box-shadow: 0 0 60px rgba(0, 212, 255, 0.1), 0 20px 40px rgba(0,0,0,0.5); }
-        .change-pw-content h2 { text-align: center; color: #e6edf3; margin-top: 0; margin-bottom: 20px; }
-        .change-pw-content input { width: 100%; padding: 15px; margin-bottom: 15px; border: 1px solid #30363d; border-radius: 8px; font-size: 16px; box-sizing: border-box; background: #0d1117; color: #e6edf3; }
-        .change-pw-content input:focus { outline: none; border-color: #00d4ff; box-shadow: 0 0 0 3px rgba(0,212,255,0.15); }
-        .change-pw-content button { width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 10px; transition: all 0.3s; }
-        .change-pw-content .btn-submit { background: linear-gradient(135deg, #00d4ff, #0099cc); color: #0d1117; box-shadow: 0 4px 15px rgba(0,212,255,0.25); }
-        .change-pw-content .btn-cancel { background: rgba(139, 148, 158, 0.15); color: #8b949e; border: 1px solid #30363d; }
+        .login-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; background: var(--primary); color: white; padding: 20px; box-sizing: border-box; }
+        .login-logo { font-size: 2.2em; font-weight: 800; margin-bottom: 30px; letter-spacing: 1px; text-align: center; }
+        .login-card { background: white; padding: 30px; border-radius: 16px; width: 100%; max-width: 350px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .login-card h2 { text-align: center; color: var(--dark); margin-top: 0; margin-bottom: 20px; }
+        .login-card input, .login-card select { width: 100%; padding: 15px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
+        .login-card button { width: 100%; padding: 15px; background: var(--secondary); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .login-error { color: var(--danger); text-align: center; margin-top: 15px; font-size: 0.9em; display: none; }
+        .force-change-screen { display: none; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; background: var(--primary); color: white; padding: 20px; box-sizing: border-box; }
+        .change-pw-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 300; }
+        .change-pw-content { background: white; margin: 20px; border-radius: 16px; padding: 30px; margin-top: 60px; max-width: 400px; margin-left: auto; margin-right: auto; }
+        .change-pw-content h2 { text-align: center; color: var(--dark); margin-top: 0; margin-bottom: 20px; }
+        .change-pw-content input { width: 100%; padding: 15px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
+        .change-pw-content button { width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
+        .change-pw-content .btn-submit { background: var(--secondary); color: white; }
+        .change-pw-content .btn-cancel { background: var(--gray); color: white; }
         .btn-change-pw { background: var(--secondary); color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9em; margin-right: 5px; }
 
-        .app-header { background: rgba(13, 17, 23, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid #30363d; color: white; padding: 15px; text-align: center; font-size: 1.1em; font-weight: bold; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; }
+        .app-header { background: var(--primary); color: white; padding: 15px; text-align: center; font-size: 1.1em; font-weight: bold; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; }
         
         .screen { display: none; padding: 15px; max-width: 500px; margin: 0 auto; }
         .screen.active { display: block; animation: fadeIn 0.3s ease; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        .card { background: #161b22; border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #30363d; box-shadow: 0 4px 20px rgba(0,0,0,0.3); transition: border-color 0.3s, box-shadow 0.3s; }
-        .card:hover { border-color: rgba(0, 212, 255, 0.3); box-shadow: 0 8px 30px rgba(0, 212, 255, 0.08); }
-        .card h3 { margin: 0 0 15px 0; color: #e6edf3; font-size: 1.1em; border-bottom: 1px solid #30363d; padding-bottom: 10px; font-weight: 600; }
+        .card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .card h3 { margin: 0 0 15px 0; color: var(--dark); font-size: 1.1em; border-bottom: 1px solid #eee; padding-bottom: 10px; }
         
-        .alert-banner { padding: 20px; border-radius: 12px; margin-bottom: 20px; border-left: 5px solid; text-align: center; background: #161b22; border: 1px solid #30363d; }
+        .alert-banner { padding: 20px; border-radius: 12px; margin-bottom: 20px; border-left: 5px solid; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .alert-banner h3 { margin: 0 0 10px 0; border: none; padding: 0; font-size: 1.2em; }
         .alert-banner p { margin: 0 0 15px 0; font-size: 0.95em; }
         .alert-banner button { width: 100%; padding: 12px; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
-        .alert-danger { background-color: rgba(255, 71, 87, 0.08); color: #ff4757; border-left-color: #ff4757; border: 1px solid rgba(255, 71, 87, 0.2); }
-        .alert-danger h3 { color: #ff4757; }
-        .alert-danger button { background: rgba(255, 71, 87, 0.2); border: 1px solid rgba(255, 71, 87, 0.4); color: #ff4757; }
-        .alert-warning { background-color: rgba(255, 165, 2, 0.08); color: #ffa502; border-left-color: #ffa502; border: 1px solid rgba(255, 165, 2, 0.2); }
-        .alert-warning h3 { color: #ffa502; }
-        .alert-warning button { background: rgba(255, 165, 2, 0.2); border: 1px solid rgba(255, 165, 2, 0.4); color: #ffa502; }
+        .alert-danger { background-color: #ffebee; color: #c0392b; border-left-color: #c0392b; }
+        .alert-danger h3 { color: #c0392b; }
+        .alert-danger button { background: #c0392b; }
+        .alert-warning { background-color: #fff3cd; color: #856404; border-left-color: #f39c12; }
+        .alert-warning h3 { color: #856404; }
+        .alert-warning button { background: #f39c12; }
 
         .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
-        .kpi-card { background: #161b22; border-radius: 12px; padding: 15px; border: 1px solid #30363d; text-align: center; }
-        .kpi-card h4 { margin: 0 0 5px 0; color: #8b949e; font-size: 0.8em; text-transform: uppercase; }
-        .kpi-card .val { font-size: 1.4em; font-weight: bold; color: #e6edf3; }
-        .kpi-card.success .val { color: #00ff88; }
-        .kpi-card.danger .val { color: #ff4757; }
-        .kpi-card.warning .val { color: #ffa502; }
-        .kpi-card.secondary .val { color: #00d4ff; }
+        .kpi-card { background: white; border-radius: 12px; padding: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); text-align: center; }
+        .kpi-card h4 { margin: 0 0 5px 0; color: var(--gray); font-size: 0.8em; text-transform: uppercase; }
+        .kpi-card .val { font-size: 1.4em; font-weight: bold; color: var(--dark); }
+        .kpi-card.success .val { color: var(--success); }
+        .kpi-card.danger .val { color: var(--danger); }
+        .kpi-card.warning .val { color: var(--warning); }
+        .kpi-card.secondary .val { color: var(--secondary); }
 
-        .wallet-card { background: linear-gradient(135deg, #0d1117, #161b22); border: 1px solid rgba(0, 212, 255, 0.2); color: #e6edf3; padding: 30px 20px; border-radius: 16px; text-align: center; margin-bottom: 20px; box-shadow: 0 0 40px rgba(0, 212, 255, 0.08), 0 10px 30px rgba(0,0,0,0.4); }
-        .wallet-card h2 { margin: 0 0 10px 0; font-size: 1.2em; font-weight: 400; color: #8b949e; }
-        .wallet-balance { font-size: 3em; font-weight: 800; margin-bottom: 5px; color: #00d4ff; text-shadow: 0 0 30px rgba(0, 212, 255, 0.3); }
-        .wallet-sub { font-size: 0.9em; opacity: 0.6; margin-bottom: 25px; color: #8b949e; }
-        .btn-fund { background: linear-gradient(135deg, #00d4ff, #0099cc); color: #0d1117; border: none; padding: 15px; width: 100%; border-radius: 8px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 20px rgba(0, 212, 255, 0.25); transition: all 0.3s; }
-        .btn-fund:hover { box-shadow: 0 6px 30px rgba(0, 212, 255, 0.4); transform: translateY(-2px); }
+        .wallet-card { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; padding: 30px 20px; border-radius: 16px; text-align: center; margin-bottom: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.15); }
+        .wallet-card h2 { margin: 0 0 10px 0; font-size: 1.2em; font-weight: 400; }
+        .wallet-balance { font-size: 3em; font-weight: 800; margin-bottom: 5px; }
+        .wallet-sub { font-size: 0.9em; opacity: 0.8; margin-bottom: 25px; }
+        .btn-fund { background: white; color: var(--primary); border: none; padding: 15px; width: 100%; border-radius: 8px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         
-        .credit-card { background: #161b22; border: 2px dashed rgba(255, 165, 2, 0.4); padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 20px; }
-        .credit-card h3 { color: #ffa502; border: none; margin-bottom: 5px; }
-        .credit-card .val { font-size: 1.8em; font-weight: bold; color: #ffa502; margin-bottom: 5px; }
-        .credit-card .taps-badge { background: rgba(255, 165, 2, 0.2); color: #ffa502; border: 1px solid rgba(255, 165, 2, 0.3); padding: 3px 10px; border-radius: 20px; font-size: 0.8em; font-weight: bold; }
+        .credit-card { background: white; border: 2px dashed var(--warning); padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 20px; }
+        .credit-card h3 { color: var(--warning); border: none; margin-bottom: 5px; }
+        .credit-card .val { font-size: 1.8em; font-weight: bold; color: var(--warning); margin-bottom: 5px; }
+        .credit-card .taps-badge { background: var(--warning); color: white; padding: 3px 10px; border-radius: 20px; font-size: 0.8em; font-weight: bold; }
 
         .tariff-item { margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
         .tariff-item:last-child { border-bottom: none; margin-bottom: 0; }
-        .tariff-name { font-weight: bold; color: #e6edf3; font-size: 1em; margin-bottom: 5px; }
+        .tariff-name { font-weight: bold; color: var(--dark); font-size: 1em; margin-bottom: 5px; }
         .tariff-row { display: flex; justify-content: space-between; font-size: 0.9em; color: var(--gray); margin-bottom: 2px; }
-        .tariff-total { font-weight: bold; color: #e6edf3; }
+        .tariff-total { font-weight: bold; color: var(--dark); }
         .vat-badge { background: #e8f8f5; color: #1abc9c; padding: 5px 10px; border-radius: 4px; font-size: 0.8em; font-weight: bold; display: inline-block; margin-bottom: 10px; }
 
-        .utility-card { display: flex; flex-direction: column; align-items: center; margin-bottom: 15px; padding: 15px; border-radius: 10px; background: #0d1117; border: 1px solid #30363d; }
-        .utility-card h4 { margin: 0 0 10px 0; color: #e6edf3; font-size: 1.2em; display: flex; align-items: center; gap: 8px; }
-        .utility-card input { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #30363d; border-radius: 8px; font-size: 16px; box-sizing: border-box; text-align: center; font-weight: bold; background: #161b22; color: #e6edf3; }
-        .utility-card input:focus { outline: none; border-color: #00d4ff; }
-        .btn-buy { width: 100%; padding: 12px; color: #0d1117; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s; }
-        .btn-buy:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.3); }
-        .btn-elec { background: linear-gradient(135deg, #ffa502, #ff6b00); color: #0d1117; }
-        .btn-water-cold { background: linear-gradient(135deg, #00d4ff, #0099cc); color: #0d1117; }
-        .btn-water-hot { background: linear-gradient(135deg, #ff4757, #c62828); color: white; }
+        .utility-card { display: flex; flex-direction: column; align-items: center; margin-bottom: 15px; padding: 15px; border-radius: 10px; background: #f8f9fa; }
+        .utility-card h4 { margin: 0 0 10px 0; color: var(--dark); font-size: 1.2em; display: flex; align-items: center; gap: 8px; }
+        .utility-card input { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; box-sizing: border-box; text-align: center; font-weight: bold; }
+        .btn-buy { width: 100%; padding: 12px; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .btn-elec { background: var(--warning); }
+        .btn-water-cold { background: var(--secondary); }
+        .btn-water-hot { background: #e74c3c; }
 
-        .txn-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #30363d; font-size: 0.95em; }
+        .txn-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f1f1; font-size: 0.95em; }
         .txn-item:last-child { border-bottom: none; }
-        .txn-date { color: #8b949e; font-size: 0.85em; }
+        .txn-date { color: var(--gray); font-size: 0.85em; }
         .txn-amount { font-weight: bold; }
-        .text-success { color: #00ff88; }
-        .text-danger { color: #ff4757; }
+        .text-success { color: var(--success); }
+        .text-danger { color: var(--danger); }
         
-        .btn-logout { background: rgba(255, 71, 87, 0.15); color: #ff4757; border: 1px solid rgba(255, 71, 87, 0.3); padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9em; transition: all 0.3s; }
-        .btn-logout:hover { background: rgba(255, 71, 87, 0.25); }
-        .helper-text { font-size: 0.85em; color: #6e7681; margin-bottom: 8px; text-align: center; }
+        .btn-logout { background: var(--danger); color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9em; }
+        .helper-text { font-size: 0.85em; color: var(--gray); margin-bottom: 8px; text-align: center; }
         
-        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(13, 17, 23, 0.95); backdrop-filter: blur(10px); border-top: 1px solid #30363d; box-shadow: 0 -4px 30px rgba(0,0,0,0.3); display: flex; justify-content: space-around; padding: 8px 0; z-index: 100; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: white; border-top: 1px solid #ddd; display: flex; justify-content: space-around; padding: 8px 0; z-index: 100; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
         .nav-btn { background: none; border: none; color: var(--gray); font-size: 0.65em; display: flex; flex-direction: column; align-items: center; cursor: pointer; padding: 5px; width: 100%; }
-        .nav-btn.active { color: #00d4ff; font-weight: bold; text-shadow: 0 0 10px rgba(0, 212, 255, 0.3); }
+        .nav-btn.active { color: var(--secondary); }
         .nav-icon { font-size: 1.5em; margin-bottom: 3px; }
 
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 200; }
         .modal-content { background: white; margin: 20px; border-radius: 12px; padding: 20px; margin-top: 50px; text-align: center; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
-        .modal-title { font-size: 1.2em; font-weight: bold; color: #e6edf3; }
+        .modal-title { font-size: 1.2em; font-weight: bold; color: var(--dark); }
         .modal-close { background: none; border: none; font-size: 1.5em; color: var(--gray); cursor: pointer; }
-        .paygate-logo { font-weight: 800; color: #00d4ff; font-size: 1.5em; margin: 10px 0; }
+        .paygate-logo { font-weight: 800; color: #003366; font-size: 1.5em; margin: 10px 0; }
         .payment-options { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
-        .payment-logo { background: #0d1117; padding: 5px 10px; border-radius: 4px; font-size: 0.8em; font-weight: bold; color: #8b949e; border: 1px solid #30363d; }
-        input, select { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #30363d; border-radius: 8px; font-size: 16px; box-sizing: border-box; background: #0d1117; color: #e6edf3; }
-        input:focus, select:focus { outline: none; border-color: #00d4ff; }
-        input::placeholder { color: #6e7681; }
-        select option { background: #161b22; color: #e6edf3; }
-        button { width: 100%; padding: 12px; background: linear-gradient(135deg, #00d4ff, #0099cc); color: #0d1117; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s; }
-        button:hover { box-shadow: 0 4px 20px rgba(0,212,255,0.3); transform: translateY(-1px); }
-        .btn-paygate { background: linear-gradient(135deg, #0d1117, #161b22); color: #00d4ff; border: 1px solid rgba(0,212,255,0.3); }
+        .payment-logo { background: #f8f9fa; padding: 5px 10px; border-radius: 4px; font-size: 0.8em; font-weight: bold; color: var(--gray); border: 1px solid #ddd; }
+        input, select { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: var(--secondary); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .btn-paygate { background: #003366; }
         
-        .btn-token { background: rgba(0, 212, 255, 0.15); color: #00d4ff; border: 1px solid rgba(0, 212, 255, 0.3); padding: 5px 10px; font-size: 0.75em; width: auto; border-radius: 4px; cursor: pointer; }
-        .btn-token:hover { background: rgba(0, 212, 255, 0.25); }
+        .btn-token { background: var(--secondary); padding: 5px 10px; font-size: 0.75em; width: auto; }
 
         /* NEW STYLES FOR UPGRADES */
         .home-header { text-align: center; margin-bottom: 20px; }
-        .home-header h1 { margin: 0; font-size: 1.8em; color: #e6edf3; font-weight: 700; }
-        .home-header p { margin: 5px 0 0 0; color: #6e7681; font-size: 0.9em; }
+        .home-header h1 { margin: 0; font-size: 1.8em; color: var(--dark); }
+        .home-header p { margin: 5px 0 0 0; color: var(--gray); font-size: 0.9em; }
         
         .whatsapp-float { position: fixed; bottom: 80px; right: 20px; background: #25D366; color: white; width: 55px; height: 55px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 101; text-decoration: none; }
         
@@ -190,30 +156,27 @@
         .pie-chart { width: 80px; height: 80px; border-radius: 50%; background: #eee; flex-shrink: 0; }
         .summary-legend { flex-grow: 1; }
         .legend-item { display: flex; align-items: center; margin-bottom: 8px; font-size: 0.9em; }
-        .legend-dot { width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; box-shadow: 0 0 8px currentColor; }
+        .legend-dot { width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; }
     </style>
 </head>
 <body>
 <!-- LOGIN SCREEN -->
 <div id="screen-login" class="login-screen">
-    <div class="login-logo">ELUP</div>
-        <div style="color: #8b949e; font-size: 0.8em; letter-spacing: 3px; margin-bottom: 20px; opacity: 0.8;">SERVICES &bull; Utilities Management</div>
+    <div class="login-logo">Tenant Portal</div>
     <div class="login-card">
         <h2>Sign In</h2>
-        <select id="login_property" autocomplete="off"><option value="">Select Property...</option></select>
-        <input type="text" id="login_unit_number" autocomplete="off" autocorrect="off" autocapitalize="off" placeholder="Unit Number (e.g., 101)">
-        <input type="password" id="login_password" autocomplete="new-password" placeholder="Password">
+        <select id="login_property"><option value="">Select Property...</option></select>
+        <input type="text" id="login_unit_number" placeholder="Unit Number (e.g., 101)">
+        <input type="password" id="login_password" placeholder="Password">
         <button onclick="tLogin()">Login</button>
-        <p style="text-align:center; margin-top:15px;"><a href="#" onclick="tShowForgotPassword()" style="color:#00d4ff; text-decoration:none; font-size:0.9em;">Forgot Password?</a></p>
-        <div style="text-align:center; margin-top:15px;"><span style="background:rgba(0,212,255,0.1); color:#00d4ff; border:1px solid rgba(0,212,255,0.2); padding:4px 12px; border-radius:12px; font-size:0.7em;">Level 1 B-BBEE</span></div>
+        <p style="text-align:center; margin-top:15px;"><a href="#" onclick="tShowForgotPassword()" style="color:var(--secondary); text-decoration:none; font-size:0.9em;">Forgot Password?</a></p>
         <div id="loginError" class="login-error">Invalid credentials. Please try again.</div>
     </div>
 </div>
 
 <!-- FORCE CHANGE PASSWORD SCREEN -->
 <div id="screen-force-change" class="force-change-screen">
-    <div class="login-logo" style="font-size: 1.8em; color: #00d4ff; text-shadow: 0 0 20px rgba(0,212,255,0.4);">ELUP</div>
-        <div style="color: white; font-size: 0.8em; letter-spacing: 2px; margin-bottom: 20px; opacity: 0.8;">Set Your Password</div>
+    <div class="login-logo">Set Your Password</div>
     <div class="login-card">
         <h2>Set Your Password</h2>
         <p style="text-align:center; color:var(--gray); font-size:0.9em; margin-bottom:15px;">Please set a new password to secure your account.</p>
@@ -227,14 +190,13 @@
 
 <!-- FORGOT PASSWORD SCREEN -->
 <div id="screen-forgot-password" class="force-change-screen">
-    <div class="login-logo" style="font-size: 1.8em; color: #00d4ff; text-shadow: 0 0 20px rgba(0,212,255,0.4);">ELUP</div>
-        <div style="color: white; font-size: 0.8em; letter-spacing: 2px; margin-bottom: 20px; opacity: 0.8;">Reset Password</div>
+    <div class="login-logo">Reset Password</div>
     <div class="login-card">
         <h2>Forgot Password</h2>
         <p style="text-align:center; color:var(--gray); font-size:0.9em; margin-bottom:15px;">Enter your details below. A temporary password will be generated for you.</p>
         <select id="forgot_property"><option value="">Select Property...</option></select>
-        <input type="text" id="forgot_unit_number" autocomplete="off" placeholder="Unit Number">
-        <input type="email" id="forgot_email" autocomplete="off" placeholder="Email Address">
+        <input type="text" id="forgot_unit_number" placeholder="Unit Number">
+        <input type="email" id="forgot_email" placeholder="Email Address">
         <button onclick="tSubmitForgotPassword()">Send Reset</button>
         <button style="background: var(--gray);" onclick="tBackToLogin()">Back to Login</button>
         <div id="forgotError" class="login-error"></div>
@@ -252,7 +214,7 @@
 <div id="main-app" style="display:none;">
 
     <div class="app-header">
-        <span id="appHeaderText" style="font-weight: 700; letter-spacing: 1px;">ELUP</span>
+        <span id="appHeaderText">My Utilities</span>
         <div>
             <button class="btn-change-pw" onclick="tShowChangePassword()">Change Password</button>
             <button class="btn-logout" onclick="tLogout()">Logout</button>
@@ -329,15 +291,15 @@
             <h3>My Installed Meters</h3>
             <div class="txn-item">
                 <span>Electricity Meter No.</span>
-                <span class="txn-amount" id="meterElec" style="color: #e6edf3;">N/A</span>
+                <span class="txn-amount" id="meterElec" style="color: var(--dark);">N/A</span>
             </div>
             <div class="txn-item">
                 <span>Cold Water Meter No.</span>
-                <span class="txn-amount" id="meterWaterCold" style="color: #e6edf3;">N/A</span>
+                <span class="txn-amount" id="meterWaterCold" style="color: var(--dark);">N/A</span>
             </div>
             <div class="txn-item">
                 <span>Hot Water Meter No.</span>
-                <span class="txn-amount" id="meterWaterHot" style="color: #e6edf3;">N/A</span>
+                <span class="txn-amount" id="meterWaterHot" style="color: var(--dark);">N/A</span>
             </div>
         </div>
 
@@ -396,8 +358,8 @@
     <div id="screen-topup" class="screen">
         
         <!-- Smart Meter Info Banner (Only shown for WALLET_CONSUMPTION) -->
-        <div id="smartMeterInfo" class="card" style="display:none; text-align:center; background: rgba(0, 212, 255, 0.05); border-left: 4px solid #00d4ff;">
-            <p style="margin:0; color: #e6edf3; font-size: 0.9em;">
+        <div id="smartMeterInfo" class="card" style="display:none; text-align:center; background: #e8f4f8; border-left: 4px solid var(--secondary);">
+            <p style="margin:0; color: var(--dark); font-size: 0.9em;">
                 <strong>Smart Meter Property:</strong> Your electricity and water (including hot water, if applicable) are deducted automatically from your wallet balance. No manual tokens required!
             </p>
         </div>
@@ -453,37 +415,28 @@
 
     <!-- SCREEN 4: HISTORY -->
     <div id="screen-history" class="screen">
-
+        
         <div class="card">
-            <h3>Monthly Spending Summary</h3>
+            <h3>Current Month Summary</h3>
             <div id="summaryChartContainer" class="summary-chart-container">
                 <div class="pie-chart" id="monthPieChart"></div>
                 <div class="summary-legend" id="monthLegend">
-                    <p style="color:#7f8c8d; margin:0; font-size:0.9em; text-align:center;">No spending data for this month yet.</p>
+                    <p style="color:var(--gray); margin:0; font-size:0.9em; text-align:center;">No spending data for this month yet.</p>
                 </div>
             </div>
         </div>
 
         <div class="card">
-            <h3>Daily Consumption (Usage)</h3>
-            <div id="consumptionBarChart">
-                <p style="text-align:center; color:#7f8c8d; font-size:0.9em;">Loading consumption data...</p>
-            </div>
-        </div>
-
-        <div class="card">
-            <h3>Purchases & Top-ups</h3>
-            <p style="font-size:0.8em; color:#7f8c8d; margin:0 0 10px 0;">Wallet top-ups and utility token purchases</p>
+            <h3>Income & Top-ups</h3>
             <div id="incomeTxnList">
-                <p style="text-align:center; color:#7f8c8d;">Loading transactions...</p>
+                <p style="text-align:center; color:var(--gray);">Loading transactions...</p>
             </div>
         </div>
 
         <div class="card">
-            <h3>Consumption & Bills</h3>
-            <p style="font-size:0.8em; color:#7f8c8d; margin:0 0 10px 0;">Actual usage deductions, bills, and rent charges</p>
+            <h3>Expenses & Deductions</h3>
             <div id="expenseTxnList">
-                <p style="text-align:center; color:#7f8c8d;">Loading transactions...</p>
+                <p style="text-align:center; color:var(--gray);">Loading transactions...</p>
             </div>
         </div>
     </div>
@@ -491,21 +444,15 @@
     <!-- SCREEN 5: UTILITIES -->
     <div id="screen-utilities" class="screen">
         <div class="card">
-            <h3>Electricity History & Tokens</h3>
+            <h3>⚡ Electricity History & Tokens</h3>
             <div id="elecUtilList">
                 <p style="text-align:center; color:var(--gray);">Loading electricity history...</p>
             </div>
         </div>
         <div class="card">
-            <h3>Cold Water History & Tokens</h3>
-            <div id="coldWaterUtilList">
-                <p style="text-align:center; color:var(--gray);">Loading cold water history...</p>
-            </div>
-        </div>
-        <div class="card">
-            <h3>Hot Water History & Tokens</h3>
-            <div id="hotWaterUtilList">
-                <p style="text-align:center; color:var(--gray);">Loading hot water history...</p>
+            <h3>💧 Water / Municipal History</h3>
+            <div id="waterUtilList">
+                <p style="text-align:center; color:var(--gray);">Loading water history...</p>
             </div>
         </div>
     </div>
@@ -550,11 +497,7 @@
         d.properties.forEach(p => {
             dd.innerHTML += `<option value="${p.id}">${p.name}</option>`;
         });
-        dd.value = '';
     }).catch(e => console.error("Failed to load properties for login"));
-
-    var lu = document.getElementById('login_unit_number'); if(lu) lu.value = '';
-    var lp = document.getElementById('login_password'); if(lp) lp.value = '';
 
     if(tenantToken && currentTenantId) {
         document.getElementById('screen-login').style.display = 'none';
@@ -1054,7 +997,7 @@
     }
 
     function tShowToken(token, units) {
-        alert(`UTILITY TOKEN\nUnits: ${units}\nToken: ${token}\n\nPlease enter this 20-digit token into your meter.`);
+        alert(`ELECTRICITY TOKEN\nUnits: ${units}\nToken: ${token}\n\nPlease enter this 20-digit token into your meter.`);
     }
 
     async function tProcessPayGate() {
@@ -1380,209 +1323,6 @@
             container.innerHTML = '<div style="display:flex; justify-content:space-between; margin-bottom:10px;"><span style="font-size:0.9em; color:var(--gray);">Last 7 Days</span><span style="font-weight:bold; color:var(--dark);">R' + total.toFixed(2) + ' total</span></div>' + barsHtml + labelsHtml;
             insightBox.style.display = 'block';
             insightText.innerText = 'Your usage peaks on Friday evenings. Consider shifting some activities to off-peak hours to save.';
-        }
-    }
-
-
-    // OVERRIDDEN: Handles electricity + cold water + hot water separately, with tokens for all
-    async function tLoadUtilityHistory() {
-        var elecList = document.getElementById("elecUtilList");
-        var coldList = document.getElementById("coldWaterUtilList");
-        var hotList = document.getElementById("hotWaterUtilList");
-        if(!elecList) return;
-        try {
-            var r = await fetch("/tenant-utility-history/" + currentTenantId, { headers: getAuthHeaders() });
-            if (!r.ok) throw new Error("Failed");
-            var d = await r.json();
-
-            function getToken(t) {
-                if(t.token) return t.token;
-                if(t.reference) {
-                    var m = t.reference.match(/token[:\s]*(\d{15,25})/i);
-                    if(m) return m[1];
-                    m = t.reference.match(/(\d{20})/);
-                    if(m) return m[1];
-                }
-                return "";
-            }
-
-            function makeBtn(t) {
-                var tk = getToken(t);
-                if(!tk) return "";
-                return '<span class="token-link" data-token="' + tk + '" data-units="' + (t.units || "") + '" style="color:#00d4ff;cursor:pointer;text-decoration:underline;font-size:0.75em;margin-left:5px;">View Token</span>';
-            }
-
-            function makeItem(t, label) {
-                return '<div class="txn-item"><div><div style="font-weight:600;">' + (t.units || label) + '</div><div class="txn-date">' + t.date + ' ' + makeBtn(t) + '</div></div><div class="txn-amount text-danger">- R ' + Math.abs(t.amount).toFixed(2) + '</div></div>';
-            }
-
-            // Electricity
-            if(!d.electricity || d.electricity.length === 0) {
-                elecList.innerHTML = '<p style="text-align:center; color:#7f8c8d;">No electricity purchases yet.</p>';
-            } else {
-                var html = "";
-                d.electricity.forEach(function(t) { html += makeItem(t, "Electricity Purchase"); });
-                elecList.innerHTML = html;
-            }
-
-            // Split water into cold and hot
-            var allWater = d.water || [];
-            var coldArr = [];
-            var hotArr = [];
-            allWater.forEach(function(t) {
-                var type = (t.type || "").toUpperCase();
-                var ref = (t.reference || t.units || "").toUpperCase();
-                if(type.indexOf("HOT") >= 0 || ref.indexOf("HOT") >= 0) {
-                    hotArr.push(t);
-                } else {
-                    coldArr.push(t);
-                }
-            });
-
-            // Cold Water
-            if(coldArr.length === 0) {
-                if(coldList) coldList.innerHTML = '<p style="text-align:center; color:#7f8c8d;">No cold water purchases yet.</p>';
-            } else {
-                var cHtml = "";
-                coldArr.forEach(function(t) { cHtml += makeItem(t, "Cold Water Purchase"); });
-                if(coldList) coldList.innerHTML = cHtml;
-            }
-
-            // Hot Water
-            if(hotArr.length === 0) {
-                if(hotList) hotList.innerHTML = '<p style="text-align:center; color:#7f8c8d;">No hot water purchases yet.</p>';
-            } else {
-                var hHtml = "";
-                hotArr.forEach(function(t) { hHtml += makeItem(t, "Hot Water Purchase"); });
-                if(hotList) hotList.innerHTML = hHtml;
-            }
-
-            // Attach click handlers for token links
-            var links = document.querySelectorAll(".token-link");
-            for(var i = 0; i < links.length; i++) {
-                links[i].onclick = function() {
-                    tShowToken(this.getAttribute("data-token"), this.getAttribute("data-units"));
-                };
-            }
-        } catch(e) {
-            if(elecList) elecList.innerHTML = '<p style="text-align:center; color:#e74c3c;">Error: ' + e.message + '</p>';
-            if(coldList) coldList.innerHTML = "";
-            if(hotList) hotList.innerHTML = "";
-        }
-    }
-
-    // OVERRIDDEN: Works for electricity AND water tokens
-    function tShowToken(token, units) {
-        alert("UTILITY TOKEN\n\nUnits: " + (units || "N/A") + "\nToken: " + token + "\n\nPlease enter this token into your meter.");
-    }
-
-
-    // OVERRIDDEN: Separates Purchases from Consumption + adds daily chart
-    async function tLoadTransactions() {
-        var incomeList = document.getElementById('incomeTxnList');
-        var expenseList = document.getElementById('expenseTxnList');
-        var pieChart = document.getElementById('monthPieChart');
-        var legendDiv = document.getElementById('monthLegend');
-        var consumptionChart = document.getElementById('consumptionBarChart');
-
-        try {
-            var r = await fetch('/transactions/' + currentTenantId, { headers: getAuthHeaders() });
-            if (!r.ok) throw new Error("Failed");
-            var d = await r.json();
-
-            if (!d.transactions || d.transactions.length === 0) {
-                incomeList.innerHTML = '<p style="text-align:center; color:#7f8c8d;">No transactions yet.</p>';
-                expenseList.innerHTML = '';
-                pieChart.style.background = '#eee';
-                legendDiv.innerHTML = '<p style="color:#7f8c8d; margin:0; font-size:0.9em; text-align:center;">No data yet.</p>';
-                if(consumptionChart) consumptionChart.innerHTML = '<p style="color:#7f8c8d; text-align:center; font-size:0.9em;">No consumption data yet.</p>';
-                return;
-            }
-
-            var now = new Date();
-            var monthElec = 0, monthWater = 0, monthRent = 0, totalSpend = 0;
-            var dailyUsage = {};
-            var purchasesHtml = '';
-            var consumptionHtml = '';
-
-            d.transactions.slice(0, 50).forEach(function(t) {
-                var typeUpper = (t.type || '').toUpperCase();
-                var isTopup = typeUpper.indexOf('TOPUP') >= 0 || typeUpper.indexOf('PAYMENT') >= 0;
-                var isPurchase = typeUpper.indexOf('PURCHASE') >= 0;
-                var isUsage = typeUpper.indexOf('USAGE') >= 0 || typeUpper.indexOf('BILL') >= 0;
-                var isRent = typeUpper.indexOf('RENT') >= 0;
-                var isExpense = isPurchase || isUsage || isRent;
-
-                var sign = isExpense ? '- R ' : '+ R ';
-                var colorClass = isExpense ? 'text-danger' : 'text-success';
-                var typeText = (t.type || '').replace(/_/g, ' ');
-
-                var txDate = new Date(t.date);
-                var inThisMonth = (txDate.getMonth() === now.getMonth() && txDate.getFullYear() === now.getFullYear());
-
-                if (inThisMonth && isExpense) {
-                    totalSpend += Math.abs(t.amount);
-                    if (typeUpper.indexOf('ELEC') >= 0) monthElec += Math.abs(t.amount);
-                    else if (typeUpper.indexOf('WATER') >= 0) monthWater += Math.abs(t.amount);
-                    else if (isRent) monthRent += Math.abs(t.amount);
-
-                    if (isUsage) {
-                        var dayKey = String(txDate.getDate());
-                        if (!dailyUsage[dayKey]) dailyUsage[dayKey] = 0;
-                        dailyUsage[dayKey] += Math.abs(t.amount);
-                    }
-                }
-
-                var itemHtml = '<div class="txn-item"><div><div style="font-weight:600;">' + typeText + '</div><div class="txn-date">' + t.date + '</div></div><div class="txn-amount ' + colorClass + '">' + sign + Math.abs(t.amount).toFixed(2) + '</div></div>';
-
-                if (isTopup || isPurchase) {
-                    purchasesHtml += itemHtml;
-                }
-                if (isUsage || isRent) {
-                    consumptionHtml += itemHtml;
-                }
-            });
-
-            incomeList.innerHTML = purchasesHtml || '<p style="text-align:center; color:#7f8c8d;">No purchases or top-ups yet.</p>';
-            expenseList.innerHTML = consumptionHtml || '<p style="text-align:center; color:#7f8c8d;">No consumption or bills yet.</p>';
-
-            // Pie chart (spending by category)
-            if (totalSpend > 0) {
-                var elecPct = (monthElec / totalSpend) * 100;
-                var waterPct = (monthWater / totalSpend) * 100;
-                pieChart.style.background = 'conic-gradient(#f39c12 0% ' + elecPct + '%, #3498db ' + elecPct + '% ' + (elecPct + waterPct) + '%, #2c3e50 ' + (elecPct + waterPct) + '% 100%)';
-                legendDiv.innerHTML = '<div class="legend-item"><div class="legend-dot" style="background:#f39c12;"></div>Electricity: R ' + monthElec.toFixed(2) + '</div><div class="legend-item"><div class="legend-dot" style="background:#3498db;"></div>Water: R ' + monthWater.toFixed(2) + '</div><div class="legend-item"><div class="legend-dot" style="background:#2c3e50;"></div>Rent: R ' + monthRent.toFixed(2) + '</div><div class="legend-item" style="font-weight:bold; margin-top:5px; border-top:1px solid #eee; padding-top:5px;"><div class="legend-dot" style="background:transparent;"></div>Total: R ' + totalSpend.toFixed(2) + '</div>';
-            } else {
-                pieChart.style.background = '#eee';
-                legendDiv.innerHTML = '<p style="color:#7f8c8d; margin:0; font-size:0.9em; text-align:center;">No spending this month.</p>';
-            }
-
-            // Daily consumption bar chart
-            if (consumptionChart) {
-                var days = Object.keys(dailyUsage).sort(function(a, b) { return parseInt(a) - parseInt(b); });
-                if (days.length > 0) {
-                    var maxVal = 0;
-                    days.forEach(function(d) { if(dailyUsage[d] > maxVal) maxVal = dailyUsage[d]; });
-                    var chartHtml = '<div class="consumption-bar">';
-                    days.forEach(function(day) {
-                        var h = maxVal > 0 ? (dailyUsage[day] / maxVal) * 100 : 0;
-                        chartHtml += '<div class="consumption-bar-item" style="height:' + h + '%;" title="Day ' + day + ': R' + dailyUsage[day].toFixed(2) + '"></div>';
-                    });
-                    chartHtml += '</div><div class="consumption-labels">';
-                    days.forEach(function(day) {
-                        chartHtml += '<div class="consumption-label-item">' + day + '</div>';
-                    });
-                    chartHtml += '</div>';
-                    var totalUsage = 0;
-                    days.forEach(function(d) { totalUsage += dailyUsage[d]; });
-                    consumptionChart.innerHTML = '<div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span style="font-size:0.85em; color:#7f8c8d;">Usage this month</span><span style="font-weight:bold; color:#e74c3c;">R ' + totalUsage.toFixed(2) + '</span></div>' + chartHtml;
-                } else {
-                    consumptionChart.innerHTML = '<p style="color:#7f8c8d; text-align:center; font-size:0.9em;">No consumption recorded this month.</p>';
-                }
-            }
-        } catch (e) {
-            incomeList.innerHTML = '<p style="text-align:center; color:#e74c3c;">Error loading transactions.</p>';
-            expenseList.innerHTML = '';
         }
     }
 

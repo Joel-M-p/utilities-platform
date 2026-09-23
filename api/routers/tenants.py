@@ -38,7 +38,6 @@ def api_create_tenant(payload: dict, current_user: dict = Depends(verify_token))
     cursor = conn.cursor()
     try:
         # --- AUTOMATIC SCHEMA FIX ---
-        cursor.execute("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS cellphone VARCHAR(20);")
         conn.commit()
 
         property_id = payload.get("property_id")
@@ -105,7 +104,6 @@ def api_anonymize_tenant(tenant_id: int, current_user: dict = Depends(verify_tok
     cursor = conn.cursor()
     try:
         # --- AUTOMATIC SCHEMA FIX ---
-        cursor.execute("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS cellphone VARCHAR(20);")
         conn.commit()
 
         check_tenant_access(cursor, tenant_id, current_user)
@@ -230,7 +228,6 @@ def api_inspection_result(tenant_id: int, req: InspectionResultRequest, current_
         if req.status.upper() == "PASSED":
             cursor.execute("UPDATE tenants SET status = 'VACATED', vacated_at = CURRENT_TIMESTAMP WHERE id = %s", (tenant_id,))
             # --- AUTOMATIC SCHEMA FIX ---
-            cursor.execute("ALTER TABLE meters ALTER COLUMN tenant_id DROP NOT NULL;")
             # --- AUTOMATIC METER FREEING ---
             cursor.execute("UPDATE meters SET is_active = FALSE, tenant_id = NULL WHERE tenant_id = %s", (tenant_id,))
             send_notification(f"{first_name} {last_name}", email, None, "Inspection passed. Account officially closed. Goodbye!")
@@ -250,7 +247,6 @@ def api_update_tenant(tenant_id: int, tenant: TenantUpdateRequest, current_user:
     cursor = conn.cursor()
     try:
         # --- AUTOMATIC SCHEMA FIX ---
-        cursor.execute("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS cellphone VARCHAR(20);")
         conn.commit()
 
         prop_id = check_tenant_access(cursor, tenant_id, current_user)
@@ -299,7 +295,6 @@ def api_update_tenant(tenant_id: int, tenant: TenantUpdateRequest, current_user:
             elif new_status == 'VACATED':
                 cursor.execute("UPDATE tenants SET status = 'VACATED', vacated_at = CURRENT_TIMESTAMP, suspended_at = NULL WHERE id = %s", (tenant_id,))
                 # --- AUTOMATIC SCHEMA FIX ---
-                cursor.execute("ALTER TABLE meters ALTER COLUMN tenant_id DROP NOT NULL;")
                 # --- AUTOMATIC METER FREEING ---
                 cursor.execute("UPDATE meters SET is_active = FALSE, tenant_id = NULL WHERE tenant_id = %s", (tenant_id,))
             elif new_status == 'ACTIVE':
@@ -341,7 +336,6 @@ def api_vacate_tenant(tenant_id: int, current_user: dict = Depends(verify_token)
         check_tenant_access(cursor, tenant_id, current_user)
         cursor.execute("UPDATE tenants SET status = 'VACATED', vacated_at = CURRENT_TIMESTAMP, suspended_at = NULL WHERE id = %s", (tenant_id,))
         # --- AUTOMATIC SCHEMA FIX ---
-        cursor.execute("ALTER TABLE meters ALTER COLUMN tenant_id DROP NOT NULL;")
         # --- AUTOMATIC METER FREEING (PRODUCTION SAFE) ---
         cursor.execute("UPDATE meters SET is_active = FALSE, tenant_id = NULL WHERE tenant_id = %s", (tenant_id,))
         conn.commit()
@@ -361,12 +355,6 @@ def api_get_tenant_balance(tenant_id: int, current_user: dict = Depends(verify_t
         check_tenant_access(cursor, tenant_id, current_user)
         
         # --- AUTOMATIC SCHEMA FIX ---
-        cursor.execute("ALTER TABLE wallets ADD COLUMN IF NOT EXISTS credit_limit DECIMAL DEFAULT 0;")
-        cursor.execute("ALTER TABLE wallets ADD COLUMN IF NOT EXISTS credit_balance DECIMAL DEFAULT 0;")
-        cursor.execute("ALTER TABLE wallets ADD COLUMN IF NOT EXISTS credit_debt DECIMAL DEFAULT 0;")
-        cursor.execute("ALTER TABLE wallets ADD COLUMN IF NOT EXISTS credit_taps_used INT DEFAULT 0;")
-        cursor.execute("ALTER TABLE wallets ADD COLUMN IF NOT EXISTS credit_reset_month VARCHAR(7);")
-        cursor.execute("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS cellphone VARCHAR(20);")
         conn.commit()
 
         cursor.execute("""
@@ -501,7 +489,6 @@ def api_get_all_tenants(property_id: int = None, current_user: dict = Depends(ve
     cursor = conn.cursor()
     try:
         # --- AUTOMATIC SCHEMA FIX ---
-        cursor.execute("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS cellphone VARCHAR(20);")
         conn.commit()
 
         user_role = current_user.get("role")

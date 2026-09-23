@@ -16,9 +16,6 @@ def api_get_dashboard_stats(property_id: int = None, current_user: dict = Depend
         property_id = resolve_property_scope(current_user, property_id)
         # --- AUTOMATIC SCHEMA FIX ---
         # Ensure required columns exist to prevent crashes on older databases
-        cursor.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS property_id INTEGER;")
-        cursor.execute("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS property_id INTEGER;")
-        cursor.execute("ALTER TABLE meters ADD COLUMN IF NOT EXISTS property_id INTEGER;")
         conn.commit()
 
         # 1. Revenue & Billed

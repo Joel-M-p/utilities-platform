@@ -9,6 +9,12 @@
     <title>Utilities PM Dashboard</title>
     
 <style>
+
+        .page-btn { background: #3498db; color: white; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; margin: 0 2px; }
+        .page-btn:hover { background: #2980b9; }
+        .page-btn:disabled { background: #bdc3c7; cursor: not-allowed; }
+        .pagination-bar { margin-top: 10px; display: flex; justify-content: space-between; align-items: center; }
+    
         .smart-meter-card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-left: 5px solid #3498db; }
         .smart-meter-card h3 { color: #2c3e50; margin: 0 0 15px 0; font-size: 1.1em; }
         .meter-health-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
@@ -330,7 +336,7 @@
             <input type="text" id="compLogo" placeholder="Logo Path (e.g., /static/logo.png)">
             <input type="text" id="compAddress" placeholder="Address">
             <input type="text" id="compVat" placeholder="VAT Number">
-            <input type="number" id="compVatRate" placeholder="VAT Rate (%) e.g., 15" value="15">
+            <input type="number" id="compVatRate" placeholder="VAT Rate (%) e.g., 15" >
             <input type="email" id="compEmail" placeholder="Contact Email">
             <input type="text" id="compPhone" placeholder="Contact Phone">
             <button onclick="updateCompanySettings()" class="btn-download">Save Company Settings</button>
@@ -475,6 +481,14 @@
         <div class="container">
             <h2>Installed Meters Overview <span class="help-icon" title="View all meters assigned to tenants for this property. Use 'Log Event' to record tamper or bypass incidents. Use 'History' to view the full audit trail.">ℹ️</span></h2>
             <button onclick="loadAllMeters()">Refresh Meters List</button>
+            <input type="text" id="meterSearchInput" placeholder="Search serial, unit, or tenant..." style="width: 250px; margin-bottom: 0;" oninput="filterMeters()">
+            <select id="meterTypeFilter" style="width: 150px; margin-bottom: 0;" onchange="filterMeters()">
+                <option value="">All Types</option>
+                <option value="ELECTRICITY">Electricity</option>
+                <option value="WATER_COLD">Cold Water</option>
+                <option value="WATER_HOT">Hot Water</option>
+            </select>
+            <span id="meterPageInfo" style="font-size: 0.85em; color: #7f8c8d; margin-left: 10px;"></span>
             <table id="metersTable" style="display:none;">
                 <thead><tr><th>Meter ID</th><th>Unit</th><th>Property</th><th>Tenant</th><th>Type</th><th>Billing</th><th>Serial</th><th>Valve</th><th>Active?</th><th>Actions</th></tr></thead>
                 <tbody id="metersTableBody"></tbody>
@@ -501,7 +515,7 @@
                     <label>Cold Water Base Rate (Auto-fetched)</label>
                     <input type="text" id="hwBaseRate" placeholder="N/A" readonly>
                     <label>Surcharge (X) - Defaults to 227.26</label>
-                    <input type="number" id="hwSurcharge" value="227.26" oninput="calcHotWater()">
+                    <input type="number" id="hwSurcharge"  oninput="calcHotWater()">
                     <label>Final Hot Water Rate (R)</label>
                     <input type="text" id="hwFinalRate" placeholder="Auto-calculated" readonly class="final-rate">
                 </div>
@@ -544,6 +558,8 @@
         <div class="container">
             <h2>Audit Trail <span class="help-icon" title="View the last 100 actions performed on the system by all users.">ℹ️</span></h2>
             <button onclick="loadAuditLog()">Load Audit Log</button>
+            <input type="text" id="auditSearchInput" placeholder="Search user, action, or details..." style="width: 300px; margin-bottom: 0;" oninput="filterAudit()">
+            <span id="auditPageInfo" style="font-size: 0.85em; color: #7f8c8d; margin-left: 10px;"></span>
             <table id="auditTable" style="display:none;">
                 <thead><tr><th>Timestamp</th><th>User</th><th>Action</th><th>Details</th></tr></thead>
                 <tbody id="auditTableBody"></tbody>
@@ -1886,8 +1902,8 @@
                     <td>${r.date}</td>
                     <td>${r.month}</td>
                     <td>${r.utility_type}</td>
-                    <td>${r.muni_units}</td>
-                    <td>${r.sub_units}</td>
+                    <td>${r.municipal_units}</td>
+                    <td>${r.submeter_units}</td>
                     <td>${r.variance}</td>
                     <td class="${statusClass}">${r.status}</td>
                 </tr>`;
@@ -2266,6 +2282,140 @@
             resultDiv.innerHTML = "<p style='color:red;'>Error: " + e.message + "</p>";
         }
     }
+
+    // OVERRIDDEN: Meters with search, filter, and pagination
+    var allMetersCache = [];
+    var metersPage = 1;
+    var metersPerPage = 25;
+
+    async function loadAllMeters() {
+        var tB = document.getElementById("metersTableBody");
+        var url = '/all-meters/' + getPropertyFilter();
+        try {
+            var r = await fetch(url, { headers: getAuthHeaders() });
+            var d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            allMetersCache = d.meters || [];
+            metersPage = 1;
+            filterMeters();
+        } catch (e) { console.error("Error: " + e.message); }
+    }
+
+    function filterMeters() {
+        var tB = document.getElementById("metersTableBody");
+        var search = (document.getElementById('meterSearchInput') || {}).value || '';
+        var typeFilter = (document.getElementById('meterTypeFilter') || {}).value || '';
+        var searchLower = search.toLowerCase();
+
+        var filtered = allMetersCache.filter(function(m) {
+            var matchSearch = !searchLower ||
+                (m.serial_number || '').toLowerCase().indexOf(searchLower) >= 0 ||
+                (m.unit_number || '').toLowerCase().indexOf(searchLower) >= 0 ||
+                (m.tenant_name || '').toLowerCase().indexOf(searchLower) >= 0;
+            var matchType = !typeFilter || m.meter_type === typeFilter;
+            return matchSearch && matchType;
+        });
+
+        var totalPages = Math.ceil(filtered.length / metersPerPage);
+        if (metersPage > totalPages) metersPage = 1;
+        if (metersPage < 1) metersPage = totalPages;
+
+        var start = (metersPage - 1) * metersPerPage;
+        var end = start + metersPerPage;
+        var pageItems = filtered.slice(start, end);
+
+        tB.innerHTML = "";
+        pageItems.forEach(function(m) {
+            var mId = m.meter_id || m.id;
+            tB.innerHTML += '<tr><td>' + mId + '</td><td>' + (m.unit_number || 'N/A') + '</td><td>' + (m.property_name || 'N/A') + '</td><td>' + (m.tenant_name || 'Vacant') + '</td><td>' + m.meter_type + '</td><td>' + m.billing_type + '</td><td>' + m.serial_number + '</td><td>' + (m.valve_status || 'N/A') + '</td><td>' + (m.is_active ? 'Yes' : 'No') + '</td><td><button onclick="logMeterEvent(' + mId + ')" class="btn-event">Log Event</button> <button onclick="viewMeterHistory(' + mId + ')" class="btn-history">History</button>' + (m.is_active ? ' <button onclick="deactivateMeter(' + mId + ')" class="btn-danger">Deactivate</button>' : '') + '</td></tr>';
+        });
+
+        document.getElementById("metersTable").style.display = "block";
+
+        var info = document.getElementById("meterPageInfo");
+        if (info) {
+            info.innerHTML = 'Showing ' + (start + 1) + '-' + Math.min(end, filtered.length) + ' of ' + filtered.length + ' meters';
+        }
+
+        var pagBar = document.getElementById("meterPaginationBar");
+        if (!pagBar) {
+            pagBar = document.createElement('div');
+            pagBar.id = "meterPaginationBar";
+            pagBar.className = "pagination-bar";
+            document.getElementById("metersTable").parentNode.insertBefore(pagBar, document.getElementById("metersTable").nextSibling);
+        }
+        pagBar.innerHTML = '<div><button class="page-btn" onclick="changeMeterPage(-1)" ' + (metersPage <= 1 ? 'disabled' : '') + '>Previous</button> <span style="font-size:0.85em;">Page ' + metersPage + ' of ' + (totalPages || 1) + '</span> <button class="page-btn" onclick="changeMeterPage(1)" ' + (metersPage >= totalPages ? 'disabled' : '') + '>Next</button></div><div style="font-size:0.8em; color:#7f8c8d;">25 per page</div>';
+    }
+
+    function changeMeterPage(dir) {
+        metersPage += dir;
+        filterMeters();
+    }
+
+    // OVERRIDDEN: Audit with search and pagination
+    var allAuditCache = [];
+    var auditPage = 1;
+    var auditPerPage = 50;
+
+    async function loadAuditLog() {
+        var tB = document.getElementById("auditTableBody");
+        try {
+            var r = await fetch('/audit-log/', { headers: getAuthHeaders() });
+            var d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            allAuditCache = d.logs || [];
+            auditPage = 1;
+            filterAudit();
+        } catch(e) { console.error("Error: " + e.message); }
+    }
+
+    function filterAudit() {
+        var tB = document.getElementById("auditTableBody");
+        var search = (document.getElementById('auditSearchInput') || {}).value || '';
+        var searchLower = search.toLowerCase();
+
+        var filtered = allAuditCache.filter(function(l) {
+            if (!searchLower) return true;
+            return (l.username || '').toLowerCase().indexOf(searchLower) >= 0 ||
+                   (l.action || '').toLowerCase().indexOf(searchLower) >= 0 ||
+                   (l.details || '').toLowerCase().indexOf(searchLower) >= 0;
+        });
+
+        var totalPages = Math.ceil(filtered.length / auditPerPage);
+        if (auditPage > totalPages) auditPage = 1;
+        if (auditPage < 1) auditPage = totalPages;
+
+        var start = (auditPage - 1) * auditPerPage;
+        var end = start + auditPerPage;
+        var pageItems = filtered.slice(start, end);
+
+        tB.innerHTML = "";
+        pageItems.forEach(function(l) {
+            tB.innerHTML += '<tr><td>' + l.timestamp + '</td><td>' + l.username + '</td><td>' + l.action + '</td><td>' + l.details + '</td></tr>';
+        });
+
+        document.getElementById("auditTable").style.display = "block";
+
+        var info = document.getElementById("auditPageInfo");
+        if (info) {
+            info.innerHTML = 'Showing ' + (start + 1) + '-' + Math.min(end, filtered.length) + ' of ' + filtered.length;
+        }
+
+        var pagBar = document.getElementById("auditPaginationBar");
+        if (!pagBar) {
+            pagBar = document.createElement('div');
+            pagBar.id = "auditPaginationBar";
+            pagBar.className = "pagination-bar";
+            document.getElementById("auditTable").parentNode.insertBefore(pagBar, document.getElementById("auditTable").nextSibling);
+        }
+        pagBar.innerHTML = '<div><button class="page-btn" onclick="changeAuditPage(-1)" ' + (auditPage <= 1 ? 'disabled' : '') + '>Previous</button> <span style="font-size:0.85em;">Page ' + auditPage + ' of ' + (totalPages || 1) + '</span> <button class="page-btn" onclick="changeAuditPage(1)" ' + (auditPage >= totalPages ? 'disabled' : '') + '>Next</button></div><div style="font-size:0.8em; color:#7f8c8d;">50 per page</div>';
+    }
+
+    function changeAuditPage(dir) {
+        auditPage += dir;
+        filterAudit();
+    }
+
 </script>
 <!-- CHANGE PASSWORD MODAL -->
 <div id="changePwModal" class="change-pw-modal">

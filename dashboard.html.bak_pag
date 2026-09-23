@@ -330,7 +330,7 @@
             <input type="text" id="compLogo" placeholder="Logo Path (e.g., /static/logo.png)">
             <input type="text" id="compAddress" placeholder="Address">
             <input type="text" id="compVat" placeholder="VAT Number">
-            <input type="number" id="compVatRate" placeholder="VAT Rate (%) e.g., 15" value="15">
+            <input type="number" id="compVatRate" placeholder="VAT Rate (%) e.g., 15" >
             <input type="email" id="compEmail" placeholder="Contact Email">
             <input type="text" id="compPhone" placeholder="Contact Phone">
             <button onclick="updateCompanySettings()" class="btn-download">Save Company Settings</button>
@@ -501,7 +501,7 @@
                     <label>Cold Water Base Rate (Auto-fetched)</label>
                     <input type="text" id="hwBaseRate" placeholder="N/A" readonly>
                     <label>Surcharge (X) - Defaults to 227.26</label>
-                    <input type="number" id="hwSurcharge" value="227.26" oninput="calcHotWater()">
+                    <input type="number" id="hwSurcharge"  oninput="calcHotWater()">
                     <label>Final Hot Water Rate (R)</label>
                     <input type="text" id="hwFinalRate" placeholder="Auto-calculated" readonly class="final-rate">
                 </div>
@@ -1886,8 +1886,8 @@
                     <td>${r.date}</td>
                     <td>${r.month}</td>
                     <td>${r.utility_type}</td>
-                    <td>${r.muni_units}</td>
-                    <td>${r.sub_units}</td>
+                    <td>${r.municipal_units}</td>
+                    <td>${r.submeter_units}</td>
                     <td>${r.variance}</td>
                     <td class="${statusClass}">${r.status}</td>
                 </tr>`;

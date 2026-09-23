@@ -13,11 +13,6 @@ def api_generate_invoice(req: InvoiceGenerateRequest):
     cursor = conn.cursor()
     try:
         # --- AUTOMATIC SCHEMA FIX FOR INVOICES ---
-        cursor.execute("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS billing_period VARCHAR(20);")
-        cursor.execute("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS cycle_type VARCHAR(20);")
-        cursor.execute("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS total DECIMAL DEFAULT 0;")
-        cursor.execute("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'UNPAID';")
-        cursor.execute("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS date DATE;")
         
         # Ensure invoice_items table exists
         cursor.execute("""
@@ -86,8 +81,6 @@ def api_get_invoices():
     cursor = conn.cursor()
     try:
         # --- AUTOMATIC SCHEMA FIX ---
-        cursor.execute("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS total DECIMAL DEFAULT 0;")
-        cursor.execute("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS date DATE;")
         conn.commit()
 
         cursor.execute("""

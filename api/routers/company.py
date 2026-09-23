@@ -11,7 +11,6 @@ def get_company_settings():
     cursor = conn.cursor()
     try:
         # Ensure column exists
-        cursor.execute("ALTER TABLE company ADD COLUMN IF NOT EXISTS vat_percent DECIMAL DEFAULT 15;")
         conn.commit()
 
         cursor.execute("SELECT name, logo_path, address, vat_number, contact_email, contact_phone, vat_percent FROM company WHERE id = 1")
@@ -41,7 +40,6 @@ def update_company_settings(payload: dict):
     cursor = conn.cursor()
     try:
         # Ensure column exists
-        cursor.execute("ALTER TABLE company ADD COLUMN IF NOT EXISTS vat_percent DECIMAL DEFAULT 15;")
         conn.commit()
 
         name = payload.get("name")

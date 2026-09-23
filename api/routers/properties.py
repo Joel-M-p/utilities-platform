@@ -21,8 +21,6 @@ def get_public_properties():
                 utility_model VARCHAR(20) DEFAULT 'STS_TOKEN'
             );
         """)
-        cursor.execute("ALTER TABLE properties ADD COLUMN IF NOT EXISTS utility_model VARCHAR(20) DEFAULT 'STS_TOKEN';")
-        cursor.execute("ALTER TABLE properties ADD COLUMN IF NOT EXISTS address TEXT;")
         conn.commit()
 
         cursor.execute("SELECT id, name FROM properties ORDER BY name ASC")
@@ -40,8 +38,6 @@ def get_properties():
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute("ALTER TABLE properties ADD COLUMN IF NOT EXISTS utility_model VARCHAR(20) DEFAULT 'STS_TOKEN';")
-        cursor.execute("ALTER TABLE properties ADD COLUMN IF NOT EXISTS address TEXT;")
         conn.commit()
 
         cursor.execute("SELECT id, name, province, address, utility_model FROM properties ORDER BY id ASC")
@@ -66,8 +62,6 @@ def create_property(payload: dict):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute("ALTER TABLE properties ADD COLUMN IF NOT EXISTS utility_model VARCHAR(20) DEFAULT 'STS_TOKEN';")
-        cursor.execute("ALTER TABLE properties ADD COLUMN IF NOT EXISTS address TEXT;")
         conn.commit()
 
         name = payload.get("name")
@@ -97,8 +91,6 @@ def update_property(property_id: int, payload: dict):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute("ALTER TABLE properties ADD COLUMN IF NOT EXISTS utility_model VARCHAR(20) DEFAULT 'STS_TOKEN';")
-        cursor.execute("ALTER TABLE properties ADD COLUMN IF NOT EXISTS address TEXT;")
         conn.commit()
 
         name = payload.get("name")

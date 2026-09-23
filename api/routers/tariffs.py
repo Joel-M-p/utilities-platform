@@ -11,14 +11,6 @@ def api_get_tariffs(property_id: int = None, current_user: dict = Depends(verify
     cursor = conn.cursor()
     try:
         # --- AUTOMATIC SCHEMA FIX ---
-        cursor.execute("ALTER TABLE tariffs ADD COLUMN IF NOT EXISTS structure_type VARCHAR(50) DEFAULT 'FLAT';")
-        cursor.execute("ALTER TABLE tariffs ADD COLUMN IF NOT EXISTS rate_flat DECIMAL DEFAULT 0;")
-        cursor.execute("ALTER TABLE tariffs ADD COLUMN IF NOT EXISTS tier_1_limit DECIMAL DEFAULT 0;")
-        cursor.execute("ALTER TABLE tariffs ADD COLUMN IF NOT EXISTS tier_1_rate DECIMAL DEFAULT 0;")
-        cursor.execute("ALTER TABLE tariffs ADD COLUMN IF NOT EXISTS tier_2_rate DECIMAL DEFAULT 0;")
-        cursor.execute("ALTER TABLE tariffs ADD COLUMN IF NOT EXISTS tou_peak_rate DECIMAL DEFAULT 0;")
-        cursor.execute("ALTER TABLE tariffs ADD COLUMN IF NOT EXISTS tou_offpeak_rate DECIMAL DEFAULT 0;")
-        cursor.execute("ALTER TABLE tariffs ADD COLUMN IF NOT EXISTS property_id INTEGER;")
         conn.commit()
 
         user_role = current_user.get("role")
@@ -68,7 +60,6 @@ def api_create_tariff(payload: dict, current_user: dict = Depends(verify_token))
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute("ALTER TABLE tariffs ADD COLUMN IF NOT EXISTS property_id INTEGER;")
         conn.commit()
 
         name = payload.get("name")

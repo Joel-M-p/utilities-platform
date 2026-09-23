@@ -43,7 +43,6 @@ def api_get_meter_history(meter_id: int, current_user: dict = Depends(verify_tok
     cursor = conn.cursor()
     try:
         # --- AUTOMATIC SCHEMA FIX ---
-        cursor.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS meter_id INTEGER;")
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS meter_events (
                 id SERIAL PRIMARY KEY,
