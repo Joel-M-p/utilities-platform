@@ -167,3 +167,62 @@ def api_get_dashboard_stats(property_id: int = None, current_user: dict = Depend
     finally:
         cursor.close()
         conn.close()
+
+@router.get("/consumption-comparison/{tenant_id}", dependencies=[Depends(verify_token)])
+def get_consumption_comparison(tenant_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT property_id FROM tenants WHERE id = %s", (tenant_id,))
+        result = cursor.fetchone()
+        if not result:
+            raise HTTPException(status_code=404, detail="Tenant not found")
+        property_id = result[0]
+        
+        # Unit average (last 30 days)
+        cursor.execute("""
+            SELECT DATE(t.created_at) as day, SUM(ABS(t.amount)) as daily_total
+            FROM transactions t
+            JOIN wallets w ON t.wallet_id = w.id
+            WHERE w.tenant_id = %s AND t.transaction_type LIKE 'USAGE%%'
+            AND t.created_at >= CURRENT_DATE - INTERVAL '30 days'
+            GROUP BY day
+        """, (tenant_id,))
+        unit_daily = [float(r[1]) for r in cursor.fetchall()]
+        unit_avg = sum(unit_daily) / len(unit_daily) if unit_daily else 0
+        
+        # Complex average (all active tenants in property, last 30 days)
+        cursor.execute("""
+            SELECT DATE(t.created_at) as day, tn.id, SUM(ABS(t.amount)) as daily_total
+            FROM transactions t
+            JOIN wallets w ON t.wallet_id = w.id
+            JOIN tenants tn ON w.tenant_id = tn.id
+            WHERE tn.property_id = %s AND tn.status = 'ACTIVE'
+            AND t.transaction_type LIKE 'USAGE%%'
+            AND t.created_at >= CURRENT_DATE - INTERVAL '30 days'
+            GROUP BY day, tn.id
+        """, (property_id,))
+        all_daily = [float(r[2]) for r in cursor.fetchall()]
+        complex_avg = sum(all_daily) / len(all_daily) if all_daily else 0
+        
+        if complex_avg > 0:
+            pct_diff = ((unit_avg - complex_avg) / complex_avg) * 100
+        else:
+            pct_diff = 0
+        
+        direction = "above" if pct_diff > 0 else ("below" if pct_diff < 0 else "at")
+        
+        return {
+            "unit_average": round(unit_avg, 2),
+            "complex_average": round(complex_avg, 2),
+            "percentage_difference": round(abs(pct_diff), 1),
+            "direction": direction,
+            "days_with_data": len(unit_daily)
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()

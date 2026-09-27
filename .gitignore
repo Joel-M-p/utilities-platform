@@ -1,0 +1,10 @@
+*.bak
+*.bak_*
+backup_*/
+__pycache__/
+*.pyc
+utilities_platform.db
+*.zip
+*.tmp
+Thumbs.db
+.DS_Store
