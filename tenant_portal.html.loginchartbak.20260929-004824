@@ -578,11 +578,9 @@
     if(tenantToken && currentTenantId) {
         document.getElementById('screen-login').style.display = 'none';
         document.getElementById('main-app').style.display = 'block';
-        (async function() {
-            await tLoadDashboard();
-            tLoadTransactions();
-            loadConsumptionChart();
-        })();
+        tLoadDashboard();
+        tLoadTransactions();
+        loadConsumptionChart();
     }
 
     async function tLogAction(action, details) {
@@ -628,11 +626,8 @@
             document.getElementById('screen-login').style.display = 'none';
             document.getElementById('main-app').style.display = 'block';
             tLogAction("Tenant Login", `Prop ID: ${property_id}, Unit: ${unitNumber} logged in.`);
-            // [loginchart] post-login chart load
-            await tLoadDashboard();
+            tLoadDashboard();
             tLoadTransactions();
-            loadConsumptionChart();
-            loadConsumptionComparison();
         } catch (e) {
             errBox.innerText = e.message;
             errBox.style.display = 'block';
