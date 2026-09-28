@@ -7,7 +7,7 @@ print()
 print("  A = Dark Premium (charcoal + neon cyan)")
 print("  B = Emerald Gold (dark green + gold)")
 print("  C = Electric Ocean (dark blue + turquoise)")
-print("  S = Sunset (orange → purple gradient)")
+print("  S = Sunset (orange -> purple gradient)")
 print()
 choice = input("  Enter A, B, C, or S: ").strip().upper()
 
@@ -19,25 +19,27 @@ themes = {
         'success': '#00ff88', 'danger': '#ff4757', 'warning': '#ffa502',
         'text_dim': '#8b949e', 'nav_inactive': '#6e7681', 'nav_active': '#00d4ff',
         'login_bg': 'radial-gradient(circle at 50% 30%, #161b22 0%, #0d1117 100%)',
-        'login_card_bg': 'rgba(22, 27, 34, 0.85)',
+        'login_card_bg': 'rgba(22, 27, 34, 0.95)',
         'login_card_border': '1px solid #30363d',
         'login_card_shadow': '0 0 60px rgba(0, 212, 255, 0.1), 0 20px 40px rgba(0,0,0,0.5)',
         'login_logo_color': '#00d4ff',
         'login_logo_shadow': '0 0 20px rgba(0, 212, 255, 0.5), 0 0 40px rgba(0, 212, 255, 0.3)',
         'login_btn_bg': 'linear-gradient(135deg, #00d4ff, #0099cc)',
         'login_btn_color': '#0d1117',
-        'header_bg': 'rgba(13, 17, 23, 0.95)', 'header_border': '1px solid #30363d',
+        'header_bg': 'rgba(13, 17, 23, 0.98)', 'header_border': '1px solid #30363d',
         'wallet_bg': 'linear-gradient(135deg, #0d1117, #161b22)',
         'wallet_border': '1px solid rgba(0, 212, 255, 0.2)',
         'wallet_balance_color': '#00d4ff',
         'wallet_balance_shadow': '0 0 30px rgba(0, 212, 255, 0.3)',
+        'wallet_sub_color': '#8b949e',
         'fund_btn_bg': 'linear-gradient(135deg, #00d4ff, #0099cc)', 'fund_btn_color': '#0d1117',
-        'nav_bg': 'rgba(13, 17, 23, 0.95)',
+        'nav_bg': 'rgba(13, 17, 23, 0.98)',
         'btn_bg': 'linear-gradient(135deg, #00d4ff, #0099cc)', 'btn_color': '#0d1117',
         'rgba_accent': 'rgba(0, 212, 255,', 'rgba_success': 'rgba(0, 255, 136,',
         'rgba_danger': 'rgba(255, 71, 87,', 'badge_bg': 'rgba(0,212,255,0.1)',
         'badge_color': '#00d4ff', 'badge_border': '1px solid rgba(0,212,255,0.3)',
-        'subtitle_color': 'rgba(230, 237, 243, 0.8)',
+        'subtitle_color': 'rgba(230, 237, 243, 0.9)',
+        'helper_color': '#8b949e',
         'animation_name': 'darkGlow', 'animation_particles': 'rgba(0, 212, 255, 0.06)',
         'shadow_opacity': '3',
     },
@@ -48,25 +50,27 @@ themes = {
         'success': '#2ecc71', 'danger': '#e74c3c', 'warning': '#f39c12',
         'text_dim': '#7a9b87', 'nav_inactive': '#7a9b87', 'nav_active': '#d4af37',
         'login_bg': 'radial-gradient(ellipse at 50% 0%, #0f3d2a 0%, #0a2e1f 50%, #051910 100%)',
-        'login_card_bg': 'rgba(15, 61, 42, 0.85)',
+        'login_card_bg': 'rgba(15, 61, 42, 0.95)',
         'login_card_border': '1px solid rgba(212, 175, 55, 0.2)',
         'login_card_shadow': '0 0 60px rgba(212, 175, 55, 0.1), 0 20px 40px rgba(0,0,0,0.5)',
         'login_logo_color': '#d4af37',
         'login_logo_shadow': '0 0 20px rgba(212, 175, 55, 0.6), 0 0 40px rgba(212, 175, 55, 0.4)',
         'login_btn_bg': 'linear-gradient(135deg, #d4af37, #b8941f)',
         'login_btn_color': '#0a2e1f',
-        'header_bg': 'rgba(10, 46, 31, 0.95)', 'header_border': '1px solid #1a5e3a',
+        'header_bg': 'rgba(10, 46, 31, 0.98)', 'header_border': '1px solid #1a5e3a',
         'wallet_bg': 'linear-gradient(135deg, #0a2e1f, #0f3d2a)',
         'wallet_border': '1px solid rgba(212, 175, 55, 0.15)',
         'wallet_balance_color': '#d4af37',
         'wallet_balance_shadow': '0 0 30px rgba(212, 175, 55, 0.5)',
+        'wallet_sub_color': '#7a9b87',
         'fund_btn_bg': 'linear-gradient(135deg, #d4af37, #b8941f)', 'fund_btn_color': '#0a2e1f',
-        'nav_bg': 'rgba(10, 46, 31, 0.95)',
+        'nav_bg': 'rgba(10, 46, 31, 0.98)',
         'btn_bg': 'linear-gradient(135deg, #d4af37, #b8941f)', 'btn_color': '#0a2e1f',
         'rgba_accent': 'rgba(212, 175, 55,', 'rgba_success': 'rgba(46, 204, 113,',
         'rgba_danger': 'rgba(231, 76, 60,', 'badge_bg': 'rgba(212,175,55,0.1)',
         'badge_color': '#d4af37', 'badge_border': '1px solid rgba(212,175,55,0.3)',
-        'subtitle_color': 'rgba(232, 245, 233, 0.8)',
+        'subtitle_color': 'rgba(232, 245, 233, 0.9)',
+        'helper_color': '#7a9b87',
         'animation_name': 'emeraldGlow', 'animation_particles': 'rgba(212, 175, 55, 0.06)',
         'shadow_opacity': '3',
     },
@@ -77,25 +81,27 @@ themes = {
         'success': '#00ff9f', 'danger': '#ff6b6b', 'warning': '#ff9502',
         'text_dim': '#5c7a89', 'nav_inactive': '#5c7a89', 'nav_active': '#00d4d4',
         'login_bg': 'radial-gradient(ellipse at 50% 0%, #003d5c 0%, #001428 50%, #000a14 100%)',
-        'login_card_bg': 'rgba(0, 31, 63, 0.85)',
+        'login_card_bg': 'rgba(0, 31, 63, 0.95)',
         'login_card_border': '1px solid rgba(0, 212, 212, 0.2)',
         'login_card_shadow': '0 0 80px rgba(0, 212, 212, 0.08), 0 0 40px rgba(0, 255, 159, 0.05), 0 20px 40px rgba(0,0,0,0.5)',
         'login_logo_color': '#00d4d4',
         'login_logo_shadow': '0 0 20px rgba(0, 212, 212, 0.6), 0 0 40px rgba(0, 212, 212, 0.3)',
         'login_btn_bg': 'linear-gradient(135deg, #00d4d4, #008080)',
         'login_btn_color': '#001428',
-        'header_bg': 'rgba(0, 20, 40, 0.95)', 'header_border': '1px solid #003d5c',
+        'header_bg': 'rgba(0, 20, 40, 0.98)', 'header_border': '1px solid #003d5c',
         'wallet_bg': 'linear-gradient(135deg, #001428, #003d5c)',
         'wallet_border': '1px solid rgba(0, 212, 212, 0.15)',
         'wallet_balance_color': '#00d4d4',
         'wallet_balance_shadow': '0 0 30px rgba(0, 212, 212, 0.4)',
+        'wallet_sub_color': '#5c7a89',
         'fund_btn_bg': 'linear-gradient(135deg, #00d4d4, #00b3b3)', 'fund_btn_color': '#001428',
-        'nav_bg': 'rgba(0, 20, 40, 0.95)',
+        'nav_bg': 'rgba(0, 20, 40, 0.98)',
         'btn_bg': 'linear-gradient(135deg, #00d4d4, #008080)', 'btn_color': '#001428',
         'rgba_accent': 'rgba(0, 212, 212,', 'rgba_success': 'rgba(0, 255, 159,',
         'rgba_danger': 'rgba(255, 107, 107,', 'badge_bg': 'rgba(0,212,212,0.1)',
         'badge_color': '#00d4d4', 'badge_border': '1px solid rgba(0,212,212,0.25)',
-        'subtitle_color': 'rgba(224, 247, 250, 0.8)',
+        'subtitle_color': 'rgba(224, 247, 250, 0.9)',
+        'helper_color': '#5c7a89',
         'animation_name': 'oceanWave', 'animation_particles': 'rgba(0, 212, 212, 0.08)',
         'shadow_opacity': '3',
     },
@@ -106,25 +112,27 @@ themes = {
         'success': '#00b894', 'danger': '#e84393', 'warning': '#fdcb6e',
         'text_dim': '#636e72', 'nav_inactive': '#b2bec3', 'nav_active': '#6c5ce7',
         'login_bg': 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 40%, #6c5ce7 100%)',
-        'login_card_bg': 'rgba(255, 255, 255, 0.95)',
+        'login_card_bg': 'rgba(255, 255, 255, 0.98)',
         'login_card_border': '1px solid rgba(255, 255, 255, 0.5)',
         'login_card_shadow': '0 20px 60px rgba(0,0,0,0.12), 0 0 40px rgba(255, 107, 107, 0.1)',
         'login_logo_color': '#ffffff',
         'login_logo_shadow': '0 2px 15px rgba(0,0,0,0.15)',
         'login_btn_bg': 'linear-gradient(135deg, #6c5ce7, #5849be)',
         'login_btn_color': '#ffffff',
-        'header_bg': 'rgba(255, 255, 255, 0.95)', 'header_border': '1px solid rgba(0,0,0,0.05)',
+        'header_bg': 'rgba(255, 255, 255, 0.98)', 'header_border': '1px solid rgba(0,0,0,0.05)',
         'wallet_bg': 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 50%, #6c5ce7 100%)',
         'wallet_border': 'none',
         'wallet_balance_color': '#ffffff',
         'wallet_balance_shadow': '0 2px 10px rgba(0,0,0,0.1)',
+        'wallet_sub_color': 'rgba(255,255,255,0.9)',
         'fund_btn_bg': '#ffffff', 'fund_btn_color': '#6c5ce7',
-        'nav_bg': 'rgba(255, 255, 255, 0.95)',
+        'nav_bg': 'rgba(255, 255, 255, 0.98)',
         'btn_bg': 'linear-gradient(135deg, #6c5ce7, #5849be)', 'btn_color': '#ffffff',
         'rgba_accent': 'rgba(108, 92, 231,', 'rgba_success': 'rgba(0, 184, 148,',
         'rgba_danger': 'rgba(232, 67, 147,', 'badge_bg': 'rgba(255,255,255,0.15)',
         'badge_color': '#ffffff', 'badge_border': '1px solid rgba(255,255,255,0.25)',
-        'subtitle_color': 'rgba(255,255,255,0.8)',
+        'subtitle_color': 'rgba(255,255,255,0.9)',
+        'helper_color': '#636e72',
         'animation_name': 'sunsetPulse', 'animation_particles': 'rgba(255, 107, 107, 0.1)',
         'shadow_opacity': '06',
     },
@@ -135,7 +143,7 @@ if choice not in themes:
     exit()
 
 t = themes[choice]
-print(f"\n  Applying {t['name']} theme...")
+print(f"\n  Applying {t['name']} theme with proper contrast...")
 
 # === STEP 1: Restore from clean backup ===
 backups = ['tenant_portal.html.bak_brand', 'tenant_portal.html.bak_demo']
@@ -159,6 +167,7 @@ root_css = f""":root {{
             --accent-glow: {t['rgba_accent']} 0.3); --success: {t['success']};
             --danger: {t['danger']}; --warning: {t['warning']}; --primary: {t['body_bg']};
             --secondary: {t['accent']}; --gray: {t['text_dim']}; --light: {t['card_bg']}; --dark: {t['body_bg']};
+            --helper: {t['helper_color']};
         }}"""
 c = re.sub(r':root\s*\{[^}]*\}', root_css, c, count=1)
 print("  Set :root variables.")
@@ -200,76 +209,133 @@ all_rgba = {
     'rgba(46, 204, 113,': t['rgba_success'], 'rgba(255, 71, 87,': t['rgba_danger'],
     'rgba(255, 107, 107,': t['rgba_danger'], 'rgba(231, 76, 60,': t['rgba_danger'],
     'rgba(232, 67, 147,': t['rgba_danger'], 'rgba(44, 62, 80,': 'rgba(45, 52, 54,',
-    'rgba(10, 37, 64,': 'rgba(0, 0, 0,', 'rgba(10, 46, 31,': t['header_bg'].replace('0.95','').replace('rgba(','rgba(') if 'rgba' in t['header_bg'] else 'rgba(255, 255, 255,',
-    'rgba(0, 20, 40,': 'rgba(255, 255, 255,' if t['body_bg'] == '#f5f6fa' else t['header_bg'].replace('0.95',''),
-    'rgba(13, 17, 23,': 'rgba(255, 255, 255,' if t['body_bg'] == '#f5f6fa' else 'rgba(255, 255, 255,',
-    'rgba(22, 27, 34,': 'rgba(255, 255, 255,' if t['body_bg'] == '#f5f6fa' else 'rgba(255, 255, 255,',
-    'rgba(15, 61, 42,': 'rgba(255, 255, 255,' if t['body_bg'] == '#f5f6fa' else 'rgba(255, 255, 255,',
-    'rgba(0, 31, 63,': 'rgba(255, 255, 255,' if t['body_bg'] == '#f5f6fa' else 'rgba(255, 255, 255,',
+    'rgba(10, 37, 64,': 'rgba(0, 0, 0,', 'rgba(10, 46, 31,': 'rgba(255, 255, 255,',
+    'rgba(0, 20, 40,': 'rgba(255, 255, 255,', 'rgba(13, 17, 23,': 'rgba(255, 255, 255,',
+    'rgba(22, 27, 34,': 'rgba(255, 255, 255,', 'rgba(15, 61, 42,': 'rgba(255, 255, 255,',
+    'rgba(0, 31, 63,': 'rgba(255, 255, 255,',
 }
 for old, new in all_rgba.items():
     c = c.replace(old, new)
 print("  Replaced all rgba colors.")
 
-# === STEP 5: Fix CSS rules ===
+# === STEP 5: Fix CSS rules with PROPER CONTRAST ===
 sh = t['shadow_opacity']
 
-# Body
+# Body — text color contrasts with body background
 c = re.sub(r'body\s*\{[^}]*background-color:[^;]*;', f'body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: {t["body_bg"]};', c, count=1)
+c = c.replace('background: #0d1117; margin: 0; padding: 0; color: #1c1c1e;', f'background: {t["body_bg"]}; margin: 0; padding: 0; color: {t["text"]};')
+c = c.replace('background: #f5f6fa; margin: 0; padding: 0; color: #2d3436;', f'background: {t["body_bg"]}; margin: 0; padding: 0; color: {t["text"]};')
+c = c.replace('background: #0a2e1f; margin: 0; padding: 0; color: #e8f5e9;', f'background: {t["body_bg"]}; margin: 0; padding: 0; color: {t["text"]};')
+c = c.replace('background: #001428; margin: 0; padding: 0; color: #e0f7fa;', f'background: {t["body_bg"]}; margin: 0; padding: 0; color: {t["text"]};')
 
 # Login screen
 c = re.sub(r'\.login-screen\s*\{[^}]*background:[^;]*;', f'.login-screen {{ display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; background: {t["login_bg"]};', c)
 
-# Login logo
+# Login logo — bright/white on dark gradient, white on sunset gradient
 c = re.sub(r'\.login-logo\s*\{[^}]*\}', f'.login-logo {{ font-size: 3em; font-weight: 900; margin-bottom: 5px; letter-spacing: 6px; text-align: center; color: {t["login_logo_color"]}; text-shadow: {t["login_logo_shadow"]}; }}', c)
 
-# Login card
+# Login card — background that contrasts with text
 c = re.sub(r'\.login-card\s*\{[^}]*\}', f'.login-card {{ background: {t["login_card_bg"]}; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); padding: 30px; border-radius: 16px; width: 100%; max-width: 350px; border: {t["login_card_border"]}; box-shadow: {t["login_card_shadow"]}; }}', c)
 
-# Login h2
+# Login card heading — CONTRASTS with card background
 c = re.sub(r'\.login-card h2\s*\{[^}]*\}', f'.login-card h2 {{ text-align: center; color: {t["text"]}; margin-top: 0; margin-bottom: 20px; font-weight: 700; }}', c)
 
-# Login inputs
+# Login inputs — text CONTRASTS with input background
 c = re.sub(r'\.login-card input[^}]*\}', f'.login-card input, .login-card select {{ width: 100%; padding: 15px; margin-bottom: 15px; border: 1px solid {t["card_border"]}; border-radius: 8px; font-size: 16px; box-sizing: border-box; background: {t["input_bg"]}; color: {t["text"]}; transition: border-color 0.3s, box-shadow 0.3s; }}', c)
+c = re.sub(r'\.login-card input::placeholder[^}]*\}', f'.login-card input::placeholder {{ color: {t["text_dim"]}; }}', c)
 
-# Login button
+# Login button — button text CONTRASTS with button background
 c = re.sub(r'\.login-card button\s*\{[^}]*\}', f'.login-card button {{ width: 100%; padding: 15px; background: {t["login_btn_bg"]}; color: {t["login_btn_color"]}; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 25px {t["rgba_accent"]} 0.35); transition: all 0.3s; }}', c)
+c = re.sub(r'\.login-card button:hover\s*\{[^}]*\}', f'.login-card button:hover {{ box-shadow: 0 6px 30px {t["rgba_accent"]} 0.5); transform: translateY(-2px); }}', c)
 
-# Header
-c = re.sub(r'\.app-header\s*\{[^}]*\}', f'.app-header {{ background: {t["header_bg"]}; backdrop-filter: blur(10px); color: {t["text"]}; padding: 15px 20px; text-align: center; font-size: 1.1em; font-weight: bold; position: sticky; top: 0; z-index: 100; border-bottom: {t["header_border"]}; box-shadow: 0 2px 10px rgba(0,0,0,0.0{"3" if sh == "3" else "3"}); display: flex; justify-content: space-between; align-items: center; }}', c)
+# Login links — visible on card background
+c = re.sub(r'\.login-error\s*\{[^}]*\}', f'.login-error {{ color: {t["danger"]}; text-align: center; margin-top: 15px; font-size: 0.9em; display: none; }}', c)
 
-# Cards
+# Header — text CONTRASTS with header background
+c = re.sub(r'\.app-header\s*\{[^}]*\}', f'.app-header {{ background: {t["header_bg"]}; backdrop-filter: blur(10px); color: {t["text"]}; padding: 15px 20px; text-align: center; font-size: 1.1em; font-weight: bold; position: sticky; top: 0; z-index: 100; border-bottom: {t["header_border"]}; box-shadow: 0 2px 10px rgba(0,0,0,0.03); display: flex; justify-content: space-between; align-items: center; }}', c)
+
+# Cards — text CONTRASTS with card background
 c = re.sub(r'\.card\s*\{[^}]*\}', f'.card {{ background: {t["card_bg"]}; border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid {t["card_border"]}; box-shadow: 0 4px 20px rgba(0,0,0,0.{sh}); transition: border-color 0.3s, box-shadow 0.3s; }}', c)
 c = re.sub(r'\.card:hover\s*\{[^}]*\}', f'.card:hover {{ border-color: {t["rgba_accent"]} 0.3); box-shadow: 0 8px 30px {t["rgba_accent"]} 0.08); }}', c)
 c = re.sub(r'\.card h3\s*\{[^}]*\}', f'.card h3 {{ margin: 0 0 15px 0; color: {t["text"]}; font-size: 1.1em; border-bottom: 1px solid {t["card_border"]}; padding-bottom: 10px; font-weight: 700; }}', c)
 
-# Wallet card
+# Wallet card — white text on gradient
 c = re.sub(r'\.wallet-card\s*\{[^}]*\}', f'.wallet-card {{ background: {t["wallet_bg"]}; border: {t["wallet_border"]}; color: #ffffff; padding: 30px 20px; border-radius: 16px; text-align: center; margin-bottom: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.{"1" if t["body_bg"] == "#f5f6fa" else "4"}); }}', c)
+c = re.sub(r'\.wallet-card h2\s*\{[^}]*\}', f'.wallet-card h2 {{ margin: 0 0 10px 0; font-size: 1.2em; font-weight: 400; color: {t["wallet_sub_color"]}; }}', c)
 c = re.sub(r'\.wallet-balance\s*\{[^}]*\}', f'.wallet-balance {{ font-size: 3em; font-weight: 800; margin-bottom: 5px; color: {t["wallet_balance_color"]}; text-shadow: {t["wallet_balance_shadow"]}; }}', c)
+c = re.sub(r'\.wallet-sub\s*\{[^}]*\}', f'.wallet-sub {{ font-size: 0.9em; opacity: 0.85; margin-bottom: 25px; color: {t["wallet_sub_color"]}; }}', c)
+
+# Fund button — button text CONTRASTS with button background
 c = re.sub(r'\.btn-fund\s*\{[^}]*\}', f'.btn-fund {{ background: {t["fund_btn_bg"]}; color: {t["fund_btn_color"]}; border: none; padding: 15px; width: 100%; border-radius: 8px; font-size: 1.1em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: all 0.3s; }}', c)
 
-# Bottom nav — KEY FIX: nav_inactive for text color
+# Bottom nav — text CONTRASTS with nav background
 c = re.sub(r'\.bottom-nav\s*\{[^}]*\}', f'.bottom-nav {{ position: fixed; bottom: 0; left: 0; width: 100%; background: {t["nav_bg"]}; backdrop-filter: blur(10px); border-top: 1px solid {t["card_border"]}; box-shadow: 0 -4px 20px rgba(0,0,0,0.{sh}); display: flex; justify-content: space-around; padding: 8px 0; z-index: 100; }}', c)
 c = re.sub(r'\.nav-btn\s*\{[^}]*\}', f'.nav-btn {{ background: none; border: none; color: {t["nav_inactive"]}; font-size: 0.65em; display: flex; flex-direction: column; align-items: center; cursor: pointer; padding: 5px; width: 100%; }}', c)
 c = re.sub(r'\.nav-btn\.active\s*\{[^}]*\}', f'.nav-btn.active {{ color: {t["nav_active"]}; font-weight: bold; }}', c)
+c = re.sub(r'\.nav-icon\s*\{[^}]*\}', f'.nav-icon {{ font-size: 1.5em; margin-bottom: 3px; transition: transform 0.2s; }}', c)
 
-# General inputs
+# General inputs — text CONTRASTS with input background
 c = re.sub(r'^input, select\s*\{[^}]*\}', f'input, select {{ width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid {t["card_border"]}; border-radius: 8px; font-size: 16px; box-sizing: border-box; background: {t["input_bg"]}; color: {t["text"]}; }}', c, count=1, flags=re.MULTILINE)
+c = re.sub(r'input::placeholder\s*\{[^}]*\}', f'input::placeholder {{ color: {t["text_dim"]}; }}', c)
 
-# General buttons
+# General buttons — button text CONTRASTS with button background
 c = re.sub(r'^button\s*\{[^}]*\}', f'button {{ width: 100%; padding: 12px; background: {t["btn_bg"]}; color: {t["btn_color"]}; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s; }}', c, count=1, flags=re.MULTILINE)
+c = re.sub(r'^button:hover\s*\{[^}]*\}', f'button:hover {{ box-shadow: 0 4px 20px {t["rgba_accent"]} 0.3); transform: translateY(-1px); }}', c, count=1, flags=re.MULTILINE)
 
-# Other elements
+# Other elements with proper contrast
 c = re.sub(r'\.kpi-card\s*\{[^}]*\}', f'.kpi-card {{ background: {t["card_bg"]}; border-radius: 12px; padding: 15px; border: 1px solid {t["card_border"]}; text-align: center; }}', c)
+c = re.sub(r'\.kpi-card h4\s*\{[^}]*\}', f'.kpi-card h4 {{ margin: 0 0 5px 0; color: {t["text_dim"]}; font-size: 0.8em; text-transform: uppercase; }}', c)
+c = re.sub(r'\.kpi-card \.val\s*\{[^}]*\}', f'.kpi-card .val {{ font-size: 1.4em; font-weight: bold; color: {t["text"]}; }}', c)
 c = re.sub(r'\.credit-card\s*\{[^}]*\}', f'.credit-card {{ background: {t["card_bg"]}; border: 2px dashed {t["rgba_accent"]} 0.2); padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 20px; }}', c)
 c = re.sub(r'\.utility-card\s*\{[^}]*\}', f'.utility-card {{ display: flex; flex-direction: column; align-items: center; margin-bottom: 15px; padding: 15px; border-radius: 10px; background: {t["input_bg"]}; border: 1px solid {t["card_border"]}; }}', c)
+c = re.sub(r'\.utility-card h4\s*\{[^}]*\}', f'.utility-card h4 {{ margin: 0 0 10px 0; color: {t["text"]}; font-size: 1.2em; display: flex; align-items: center; gap: 8px; }}', c)
 c = re.sub(r'\.force-change-screen\s*\{[^}]*\}', f'.force-change-screen {{ display: none; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; background: {t["login_bg"]}; color: white; padding: 20px; box-sizing: border-box; }}', c)
 c = re.sub(r'\.change-pw-content\s*\{[^}]*\}', f'.change-pw-content {{ background: {t["card_bg"]}; margin: 20px; border-radius: 16px; padding: 30px; margin-top: 60px; max-width: 400px; margin-left: auto; margin-right: auto; border: 1px solid {t["card_border"]}; box-shadow: 0 20px 60px rgba(0,0,0,0.{"15" if t["body_bg"] == "#f5f6fa" else "5"}); }}', c)
+c = re.sub(r'\.change-pw-content h2\s*\{[^}]*\}', f'.change-pw-content h2 {{ color: {t["text"]}; margin-top: 0; }}', c)
+c = re.sub(r'\.change-pw-content input\s*\{[^}]*\}', f'.change-pw-content input {{ width: 100%; padding: 15px; margin-bottom: 15px; border: 1px solid {t["card_border"]}; border-radius: 8px; font-size: 16px; box-sizing: border-box; background: {t["input_bg"]}; color: {t["text"]}; }}', c)
+c = re.sub(r'\.change-pw-content \.btn-submit\s*\{[^}]*\}', f'.change-pw-content .btn-submit {{ background: {t["btn_bg"]}; color: {t["btn_color"]}; box-shadow: 0 4px 15px {t["rgba_accent"]} 0.25); }}', c)
+c = re.sub(r'\.change-pw-content \.btn-cancel\s*\{[^}]*\}', f'.change-pw-content .btn-cancel {{ background: {t["card_bg"]}; color: {t["text_dim"]}; border: 1px solid {t["card_border"]}; }}', c)
 c = re.sub(r'\.btn-token\s*\{[^}]*\}', f'.btn-token {{ background: {t["rgba_accent"]} 0.1); color: {t["accent"]}; border: 1px solid {t["rgba_accent"]} 0.25); padding: 5px 10px; font-size: 0.75em; width: auto; border-radius: 4px; cursor: pointer; }}', c)
+
+# Transaction items
+c = re.sub(r'\.txn-item\s*\{[^}]*\}', f'.txn-item {{ display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid {t["card_border"]}; font-size: 0.95em; }}', c)
+c = re.sub(r'\.txn-date\s*\{[^}]*\}', f'.txn-date {{ color: {t["text_dim"]}; font-size: 0.85em; }}', c)
+c = re.sub(r'\.text-success\s*\{[^}]*\}', f'.text-success {{ color: {t["success"]}; }}', c)
+c = re.sub(r'\.text-danger\s*\{[^}]*\}', f'.text-danger {{ color: {t["danger"]}; }}', c)
+
+# Helper text
+c = re.sub(r'\.helper-text\s*\{[^}]*\}', f'.helper-text {{ font-size: 0.85em; color: {t["helper_color"]}; margin-bottom: 8px; text-align: center; }}', c)
+
+# Home header
+c = re.sub(r'\.home-header h1\s*\{[^}]*\}', f'.home-header h1 {{ margin: 0; font-size: 1.8em; color: {t["text"]}; font-weight: 700; }}', c)
+c = re.sub(r'\.home-header p\s*\{[^}]*\}', f'.home-header p {{ margin: 5px 0 0 0; color: {t["text_dim"]}; font-size: 0.9em; }}', c)
+
+# PayGate
+c = re.sub(r'\.paygate-logo\s*\{[^}]*\}', f'.paygate-logo {{ font-weight: 800; color: {t["text"]}; font-size: 1.5em; margin: 10px 0; }}', c)
+c = re.sub(r'\.payment-logo\s*\{[^}]*\}', f'.payment-logo {{ background: {t["input_bg"]}; padding: 5px 10px; border-radius: 4px; font-size: 0.8em; font-weight: bold; color: {t["text_dim"]}; border: 1px solid {t["card_border"]}; }}', c)
+
+# Insight card
+c = re.sub(r'\.insight-card\s*\{[^}]*\}', f'.insight-card {{ background: {t["rgba_accent"]} 0.04); padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 4px solid {t["accent"]}; }}', c)
+c = re.sub(r'\.insight-card h4\s*\{[^}]*\}', f'.insight-card h4 {{ margin: 0 0 5px 0; color: {t["accent"]}; font-size: 0.95em; font-weight: 600; }}', c)
+c = re.sub(r'\.insight-card p\s*\{[^}]*\}', f'.insight-card p {{ margin: 0; font-size: 0.85em; color: {t["text_dim"]}; }}', c)
+
+# Alert banners
+c = re.sub(r'\.alert-banner\s*\{[^}]*\}', f'.alert-banner {{ padding: 20px; border-radius: 12px; margin-bottom: 20px; border-left: 5px solid; text-align: center; background: {t["card_bg"]}; border: 1px solid {t["card_border"]}; box-shadow: 0 2px 10px rgba(0,0,0,0.04); }}', c)
+c = re.sub(r'\.alert-danger\s*\{[^}]*\}', f'.alert-danger {{ background-color: {t["rgba_danger"]} 0.05); color: {t["danger"]}; border-left-color: {t["danger"]}; border: 1px solid {t["rgba_danger"]} 0.12); }}', c)
+c = re.sub(r'\.alert-danger h3\s*\{[^}]*\}', f'.alert-danger h3 {{ color: {t["danger"]}; }}', c)
+c = re.sub(r'\.alert-danger button\s*\{[^}]*\}', f'.alert-danger button {{ background: {t["rgba_danger"]} 0.2); border: 1px solid {t["rgba_danger"]} 0.4); color: {t["danger"]}; }}', c)
+c = re.sub(r'\.alert-warning\s*\{[^}]*\}', f'.alert-warning {{ background-color: rgba(243, 156, 18, 0.05); color: {t["warning"]}; border-left-color: {t["warning"]}; border: 1px solid rgba(243, 156, 18, 0.12); }}', c)
+c = re.sub(r'\.alert-warning h3\s*\{[^}]*\}', f'.alert-warning h3 {{ color: {t["warning"]}; }}', c)
+c = re.sub(r'\.alert-warning button\s*\{[^}]*\}', f'.alert-warning button {{ background: rgba(243, 156, 18, 0.2); border: 1px solid rgba(243, 156, 18, 0.4); color: {t["warning"]}; }}', c)
+
+# Credit card
+c = re.sub(r'\.credit-card h3\s*\{[^}]*\}', f'.credit-card h3 {{ color: {t["accent"]}; border: none; margin-bottom: 5px; }}', c)
+c = re.sub(r'\.credit-card \.val\s*\{[^}]*\}', f'.credit-card .val {{ font-size: 1.8em; font-weight: bold; color: {t["accent"]}; margin-bottom: 5px; }}', c)
 
 # Scrollbar
 c = re.sub(r'::-webkit-scrollbar-track\s*\{[^}]*\}', f'::-webkit-scrollbar-track {{ background: {t["body_bg"]}; }}', c)
 c = re.sub(r'::-webkit-scrollbar-thumb\s*\{[^}]*\}', f'::-webkit-scrollbar-thumb {{ background: {t["accent"]}; border-radius: 3px; }}', c)
+c = re.sub(r'::-webkit-scrollbar-thumb:hover\s*\{[^}]*\}', f'::-webkit-scrollbar-thumb:hover {{ background: {t["success"]}; }}', c)
 
 # B-BBEE badge
 if 'Level 1 B-BBEE' in c:
@@ -286,7 +352,7 @@ for old_anim in ['oceanWave', 'emeraldGlow', 'sunsetPulse', 'darkGlow']:
     c = c.replace('@keyframes ' + old_anim, '@keyframes ' + t['animation_name'])
     c = c.replace('animation: ' + old_anim, 'animation: ' + t['animation_name'])
 
-print("  Fixed all CSS rules.")
+print("  Fixed all CSS rules with proper contrast.")
 
 with open('tenant_portal.html', 'w', encoding='utf-8') as f:
     f.write(c)
@@ -294,8 +360,14 @@ with open('tenant_portal.html', 'w', encoding='utf-8') as f:
 print(f"\n{'='*50}")
 print(f"  {t['name'].upper()} THEME APPLIED!")
 print(f"{'='*50}")
-print(f"\n  Nav text color (inactive): {t['nav_inactive']}")
-print(f"  Nav text color (active):   {t['nav_active']}")
+print(f"\n  Contrast summary:")
+print(f"    Body text:   {t['text']} on {t['body_bg']}")
+print(f"    Card text:   {t['text']} on {t['card_bg']}")
+print(f"    Input text:  {t['text']} on {t['input_bg']}")
+print(f"    Button text: {t['btn_color']} on gradient")
+print(f"    Nav text:    {t['nav_inactive']} on {t['nav_bg']}")
+print(f"    Nav active:  {t['nav_active']}")
+print(f"    Helper text: {t['helper_color']}")
 print(f"\n  Test: http://127.0.0.1:8000/tenant (Ctrl+F5)")
-print(f"  If cached: F12 → Console → localStorage.clear() → F5")
+print(f"  If cached: F12 -> Console -> localStorage.clear() -> F5")
 print(f"\n  Run again to switch: A, B, C, or S")

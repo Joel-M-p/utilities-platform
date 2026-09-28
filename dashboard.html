@@ -329,7 +329,7 @@
             </table>
         </div>
 
-        <div class="container">
+        <div class="container" id="companySettingsCard" style="display:none;">
             <h2>Company Settings (Invoice Branding) <span class="help-icon" title="These details appear on all generated invoices and statements. Set your VAT rate here.">ℹ️</span></h2>
             <p style="color: #7f8c8d; font-size: 0.9rem;">These details appear dynamically on all generated invoices, statements, and tariff screens.</p>
             <input autocomplete="off" type="text" id="compName" placeholder="Company Name">
@@ -541,8 +541,28 @@
     <!-- TAB 4: INVOICES -->
     <div id="tab-invoices" class="tab-content">
         <div class="container">
-            <h2>Billing & Interactive Invoices <span class="help-icon" title="Generate consolidated invoices for tenants. Sanitation charges are added automatically based on the property.">ℹ️</span></h2>
-            <input autocomplete="off" type="text" id="invUnitNumber" placeholder="Unit Number"><input type="text" id="invPeriod" placeholder="Period (e.g., 2024-05)">
+            <h2>Billing & Interactive Invoices
+
+        <!-- BULK INVOICE GENERATION -->
+        <div id="bulkInvoiceSection" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #27ae60;">
+            <h3 style="margin: 0 0 10px 0; color: #2c3e50;">Generate Invoices for Entire Property</h3>
+            <p style="font-size: 0.85em; color: #7f8c8d; margin: 0 0 10px 0;">Generates invoices for ALL active tenants in the selected property. Skips tenants with no arrears or who already have an invoice for this period.</p>
+            <input type="text" id="bulkInvPeriod" placeholder="Period (e.g., 2026-09)" style="width: 200px;">
+            <select id="bulkInvCycle" style="width: 150px;">
+                <option value="MONTHLY">Monthly</option>
+                <option value="BI_MONTHLY">Bi-Monthly</option>
+                <option value="QUARTERLY">Quarterly</option>
+            </select>
+            <button onclick="generateBulkInvoices()" style="background: #27ae60;">Generate All Invoices</button>
+            <button type="button" style="background:#7f8c8d; padding:5px 10px; font-size:12px; width:auto; margin-left:5px;" onclick="document.getElementById('bulkInvPeriod').value=''; document.getElementById('bulkInvCycle').selectedIndex=0;">Clear</button>
+            <div id="bulkInvResult" class="result" style="display:none; margin-top: 15px;"></div>
+        </div>
+        
+        <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+
+        <h3>Generate Single Invoice</h3>
+ <span class="help-icon" title="Generate consolidated invoices for tenants. Sanitation charges are added automatically based on the property.">ℹ️</span></h2>
+            <input autocomplete="off" type="text" id="invUnitNumber" placeholder="Unit Number"><input type="text" id="invPeriod" autocomplete="off" placeholder="Period (e.g., 2024-05)">
             <select autocomplete="off" id="invCycle"><option value="MONTHLY">Monthly</option><option value="BI_MONTHLY">Bi-Monthly</option><option value="QUARTERLY">Quarterly</option></select>
             <button onclick="generateInvoice()">Generate Invoice</button>
             <div id="invResult" class="result" style="display:none;"></div>
@@ -1097,7 +1117,7 @@
             currentStmtTenantId = id; 
             let rows = ""; 
             d.transactions.forEach(t => { rows += `<tr><td>${t.date}</td><td>${t.type}</td><td>R${t.amount.toFixed(2)}</td><td>${t.reference}</td></tr>`; }); 
-            document.getElementById("statementContent").innerHTML = `<div class="stmt-header"><h2>Account Statement</h2><h3>${d.tenant_name}</h3><p>${d.email}</p></div><div class="stmt-summary"><div><h3>Arrears</h3><p>Rent: R${d.rent_outstanding.toFixed(2)}</p><p>Elec: R${d.electricity_outstanding.toFixed(2)}</p><p>Water: R${d.water_outstanding.toFixed(2)}</p></div><div><h3>Wallet</h3><p>Balance: R${d.wallet_balance.toFixed(2)}</p><p>Credit Limit: R${(d.credit_limit || 0).toFixed(2)}</p></div></div><table><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Reference</th></tr></thead><tbody>${rows}</tbody></table>`; 
+            document.getElementById("statementContent").innerHTML = `<div class="stmt-header" id="stmt-company-header" style="border-bottom:2px solid #2c3e50; padding-bottom:15px; margin-bottom:15px; text-align:center;">  ${companyData && companyData.name ?     `<div style="font-size:1.3em; font-weight:bold; color:#2c3e50; margin-bottom:5px;">${companyData.name}</div>` : ""  }  ${companyData && companyData.address ?     `<div style="font-size:0.9em; color:#7f8c8d;">${companyData.address}</div>` : ""  }  ${companyData && companyData.vat_number ?     `<div style="font-size:0.85em; color:#7f8c8d;">VAT: ${companyData.vat_number}</div>` : ""  }</div><div class="stmt-header"><h2>Account Statement</h2><h3>${d.tenant_name}</h3><p>${d.email}</p>${d.property_name ? `<p style="color:#7f8c8d; font-size:0.9em;">${d.property_name}${d.address ? " — " + d.address : ""}</p>` : ""}</div><div class="stmt-summary"><div><h3>Arrears</h3><p>Rent: R${d.rent_outstanding.toFixed(2)}</p><p>Elec: R${d.electricity_outstanding.toFixed(2)}</p><p>Water: R${d.water_outstanding.toFixed(2)}</p></div><div><h3>Wallet</h3><p>Balance: R${d.wallet_balance.toFixed(2)}</p><p>Credit Limit: R${(d.credit_limit || 0).toFixed(2)}</p></div></div><table><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Reference</th></tr></thead><tbody>${rows}</tbody></table>`; 
             document.getElementById("statementModal").style.display = "block"; 
         } catch (e) { alert(`Error calling /tenant-statement: ` + e.message); } 
     }
@@ -1737,8 +1757,8 @@
         const tenantId = tenantCheck.id;
         const payload = {
             tenant_id: tenantId,
-            period: document.getElementById("invPeriod").value,
-            cycle: document.getElementById("invCycle").value
+            billing_period: document.getElementById("invPeriod").value,
+            cycle_type: document.getElementById("invCycle").value
         };
         try {
             const url = `/generate-invoice/`;
@@ -1746,7 +1766,10 @@
             const d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
             resultDiv.style.display = "block";
-            resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`;
+            resultDiv.innerHTML = `<p style="color:green;">${d.message} (Invoice #${d.invoice_id}, Total: R${d.total.toFixed(2)})</p>`;
+            document.getElementById('invUnitNumber').value = '';
+            document.getElementById('invPeriod').value = '';
+            document.getElementById('invCycle').selectedIndex = 0;
             loadInvoices();
         } catch (e) {
             resultDiv.style.display = "block";
@@ -1767,8 +1790,9 @@
                     <td>${inv.id}</td>
                     <td>${inv.tenant_name}</td>
                     <td>${inv.period}</td>
-                    <td>R${inv.total_amount.toFixed(2)}</td>
+                    <td>R${inv.total.toFixed(2)}</td>
                     <td>${inv.status}</td>
+                    <td>${inv.date}</td>
                     <td><button onclick="viewInvoice(${inv.id})" class="btn-invoice">View</button></td>
                 </tr>`;
             });
@@ -1778,44 +1802,43 @@
 
     async function viewInvoice(id) {
         try {
-            const url = `/invoice/${id}`;
-            const r = await fetch(url, { headers: getAuthHeaders() });
+            const r = await fetch(`/invoice/${id}`, { headers: getAuthHeaders() });
             const d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
             let itemsRows = "";
-            d.line_items.forEach(item => {
-                itemsRows += `<tr><td>${item.description}</td><td>${item.qty}</td><td>R${item.rate.toFixed(2)}</td><td>R${item.amount.toFixed(2)}</td></tr>`;
+            d.items.forEach(item => {
+                itemsRows += `<tr><td>${item.description}</td><td>${item.quantity.toFixed(2)}</td><td>R${item.unit_price.toFixed(2)}</td><td>R${item.total.toFixed(2)}</td></tr>`;
             });
             document.getElementById("invoiceContent").innerHTML = `
                 <div class="invoice-paper">
                     <div class="invoice-branding">
                         <div class="company-info">
-                            <h2>${companyData.name || 'Company Name'}</h2>
+                            <h2>${companyData.name || 'ELUP Services'}</h2>
                             <p>${companyData.address || ''}</p>
                             <p>VAT: ${companyData.vat_number || ''}</p>
                         </div>
                         <div>
                             <h3>INVOICE</h3>
                             <p>#${d.id}</p>
-                            <p>Date: ${d.date_generated}</p>
+                            <p>Date: ${d.date}</p>
                         </div>
                     </div>
                     <div style="margin-bottom: 20px;">
                         <h3>Bill To:</h3>
                         <p>${d.tenant_name}</p>
-                        <p>${d.unit_number}</p>
                     </div>
                     <table style="width:100%; border-collapse: collapse;">
-                        <thead><tr><th style="text-align:left; border-bottom: 1px solid #ddd;">Desc</th><th style="text-align:left; border-bottom: 1px solid #ddd;">Qty</th><th style="text-align:left; border-bottom: 1px solid #ddd;">Rate</th><th style="text-align:left; border-bottom: 1px solid #ddd;">Amount</th></tr></thead>
+                        <thead><tr><th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">Description</th><th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">Qty</th><th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">Unit Price</th><th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">Total</th></tr></thead>
                         <tbody>${itemsRows}</tbody>
                     </table>
                     <div style="text-align: right; margin-top: 20px;">
-                        <h3>Total: R${d.total_amount.toFixed(2)}</h3>
+                        <h3>Total: R${d.total.toFixed(2)}</h3>
+                        <p>Status: ${d.status}</p>
                     </div>
                 </div>
             `;
             document.getElementById("invoiceModal").style.display = "block";
-        } catch (e) { alert(`Error calling /invoice: ` + e.message); }
+        } catch (e) { alert("Error calling /invoice: " + e.message); }
     }
 
     function closeInvoice() { document.getElementById("invoiceModal").style.display = "none"; }
@@ -2721,6 +2744,179 @@
         }
     }
 
+
+    // Clear invoice form after generation (delayed to beat browser autocomplete)
+    function clearInvoiceForm() {
+        setTimeout(function() {
+            var u = document.getElementById('invUnitNumber');
+            var p = document.getElementById('invPeriod');
+            var c = document.getElementById('invCycle');
+            if (u) u.value = '';
+            if (p) p.value = '';
+            if (c) c.selectedIndex = 0;
+        }, 500);
+    }
+
+
+    // Clear all input fields on page load (beats browser autocomplete)
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            var inputs = document.querySelectorAll('input[type="text"], input[type="number"], input[type="email"], input[type="tel"], input[type="password"]');
+            for (var i = 0; i < inputs.length; i++) {
+                // Don't clear hidden inputs or inputs with values set by the system
+                if (inputs[i].id !== 'loginUser' && inputs[i].id !== 'loginPass') {
+                    inputs[i].value = '';
+                }
+            }
+            // Reset all selects to first option
+            var selects = document.querySelectorAll('select');
+            for (var j = 0; j < selects.length; j++) {
+                if (selects[j].id !== 'login_property' && selects[j].id !== 'propertyFilter') {
+                    selects[j].selectedIndex = 0;
+                }
+            }
+        }, 300);
+    });
+
+
+    // OVERRIDE: Clear form fields when switching to specific tabs
+    var originalSwitchTab = switchTab;
+    switchTab = function(evt, tabId) {
+        originalSwitchTab(evt, tabId);
+        // Clear invoice form when switching to Invoices tab
+        if (tabId === 'tab-invoices') {
+            setTimeout(function() {
+                var u = document.getElementById('invUnitNumber');
+                var p = document.getElementById('invPeriod');
+                var cy = document.getElementById('invCycle');
+                if (u) u.value = '';
+                if (p) p.value = '';
+                if (cy) cy.selectedIndex = 0;
+            }, 100);
+        }
+        // Clear billing form when switching to Billing tab
+        if (tabId === 'tab-ops') {
+            setTimeout(function() {
+                var fields = ['paymentUnitNumber', 'paymentAmount', 'meterUnitNumber', 'meterSerial', 
+                               'billUnitNumber', 'billAmount', 'restrictUnitNumber', 'adjUnitNumber', 
+                               'adjAmount', 'adjReason', 'creditUnitNumber', 'creditLimitInput',
+                               'readingMeterSerial', 'readingValue', 'readingDate'];
+                fields.forEach(function(id) {
+                    var el = document.getElementById(id);
+                    if (el) { el.value = ''; }
+                });
+                var selects = ['meterType', 'billingType', 'billType', 'adjTarget', 'inspStatus'];
+                selects.forEach(function(id) {
+                    var el = document.getElementById(id);
+                    if (el) { el.selectedIndex = 0; }
+                });
+            }, 100);
+        }
+        // Clear tenant form when switching to Tenants tab
+        if (tabId === 'tab-tenants') {
+            setTimeout(function() {
+                var fields = ['newUnitNumber', 'newFirstName', 'newLastName', 'newEmail', 
+                               'newCellphone', 'newRentDebt', 'newElecDebt', 'newWaterDebt',
+                               'unitNumberInput', 'docUnitNumber', 'ntvUnitNumber', 'ntvReason',
+                               'inspUnitNumber', 'inspNotes', 'syncRentUnitNumber'];
+                fields.forEach(function(id) {
+                    var el = document.getElementById(id);
+                    if (el) { el.value = ''; }
+                });
+                var selects = ['docType', 'inspStatus'];
+                selects.forEach(function(id) {
+                    var el = document.getElementById(id);
+                    if (el) { el.selectedIndex = 0; }
+                });
+            }, 100);
+        }
+        // Clear reports form when switching to Reports tab
+        if (tabId === 'tab-reports') {
+            setTimeout(function() {
+                var fields = ['cnUnitNumber', 'cnAmount', 'cnReason', 'reconMonth', 'reconMuni', 
+                               'reconSub', 'excelMonth'];
+                fields.forEach(function(id) {
+                    var el = document.getElementById(id);
+                    if (el) { el.value = ''; }
+                });
+                var selects = ['reconType'];
+                selects.forEach(function(id) {
+                    var el = document.getElementById(id);
+                    if (el) { el.selectedIndex = 0; }
+                });
+            }, 100);
+        }
+    };
+    
+    // Also clear on page load (delayed to beat autocomplete)
+    setTimeout(function() {
+        var inputs = document.querySelectorAll('input[type="text"], input[type="number"]');
+        for (var i = 0; i < inputs.length; i++) {
+            if (inputs[i].id !== 'loginUser' && inputs[i].id !== 'loginPass' && 
+                inputs[i].id !== 'propertyFilter' && !inputs[i].id.startsWith('edit') &&
+                inputs[i].id !== 'propId' && inputs[i].type !== 'hidden') {
+                inputs[i].value = '';
+            }
+        }
+    }, 500);
+
+
+    async function generateBulkInvoices() {
+        var propId = document.getElementById("propertyFilter").value;
+        var period = document.getElementById("bulkInvPeriod").value;
+        var cycle = document.getElementById("bulkInvCycle").value;
+        var resultDiv = document.getElementById("bulkInvResult");
+        
+        if(!propId) { 
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = "<p style='color:red;'>Please select a property first.</p>";
+            return;
+        }
+        if(!period) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = "<p style='color:red;'>Please enter a billing period (e.g., 2026-09).</p>";
+            return;
+        }
+        
+        resultDiv.style.display = "block";
+        resultDiv.innerHTML = "<p style='color:#7f8c8d;'>Generating invoices for all active tenants...</p>";
+        
+        try {
+            var r = await fetch('/generate-invoices-bulk/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+                body: JSON.stringify({ property_id: parseInt(propId), billing_period: period, cycle_type: cycle })
+            });
+            var d = await r.json();
+            if (!r.ok) throw new Error(d.detail || "Failed");
+            
+            var s = d.summary;
+            var html = "<p style='color:green; font-weight:bold; font-size:1.1em;'>" + d.message + "</p>";
+            html += "<div style='margin-top:10px; font-size:0.9em; color:#2c3e50;'>";
+            html += "<strong>Summary:</strong><br>";
+            html += "Total tenants: " + s.total_tenants + "<br>";
+            html += "Invoices generated: <strong style='color:green;'>" + s.invoices_generated + "</strong><br>";
+            html += "Already invoiced (skipped): " + s.already_invoiced + "<br>";
+            html += "No arrears (skipped): " + s.no_arrears + "<br>";
+            html += "Errors: " + s.errors + "<br>";
+            html += "Total invoiced amount: <strong>R" + s.total_amount.toFixed(2) + "</strong>";
+            html += "</div>";
+            
+            if (d.errors && d.errors.length > 0) {
+                html += "<div style='margin-top:10px; color:#e74c3c; font-size:0.85em;'>";
+                html += "<strong>Errors:</strong><br>";
+                d.errors.forEach(function(err) { html += err + "<br>"; });
+                html += "</div>";
+            }
+            
+            resultDiv.innerHTML = html;
+            logAction("Bulk Invoice Generation", "Property: " + propId + ", Period: " + period + ", Generated: " + s.invoices_generated);
+            loadInvoices();
+        } catch (e) {
+            resultDiv.innerHTML = "<p style='color:red;'>Error: " + e.message + "</p>";
+        }
+    }
+
 </script>
 <!-- CHANGE PASSWORD MODAL -->
 <div id="changePwModal" class="change-pw-modal">
@@ -2734,6 +2930,221 @@
         <div id="changePwError" style="color:red; margin-top:10px; display:none;"></div>
     </div>
 </div>
+
+
+<!-- FIX-CLEAR-INVOICES-ON-TAB: auto-clear Invoices tab when entering it -->
+<script>
+(function() {
+    if (window.__invoicesTabClearFix) return;
+    window.__invoicesTabClearFix = true;
+
+    var __prevSwitchTabInv = switchTab;
+    switchTab = function(evt, tabId) {
+        __prevSwitchTabInv(evt, tabId);
+        if (tabId === 'tab-invoices') {
+            setTimeout(function() {
+                // 1. Clear single-invoice form
+                var u = document.getElementById('invUnitNumber');
+                var p = document.getElementById('invPeriod');
+                var c = document.getElementById('invCycle');
+                if (u) u.value = '';
+                if (p) p.value = '';
+                if (c) c.selectedIndex = 0;
+
+                // 2. Clear bulk-invoice form
+                var bp = document.getElementById('bulkInvPeriod');
+                var bc = document.getElementById('bulkInvCycle');
+                if (bp) bp.value = '';
+                if (bc) bc.selectedIndex = 0;
+
+                // 3. Hide and empty the invoices table
+                var tbl = document.getElementById('invoicesTable');
+                var tb = document.getElementById('invoicesTableBody');
+                if (tb) tb.innerHTML = '';
+                if (tbl) tbl.style.display = 'none';
+
+                // 4. Hide and clear the bulk result box
+                var br = document.getElementById('bulkInvResult');
+                if (br) { br.style.display = 'none'; br.innerHTML = ''; }
+            }, 100);
+        }
+    };
+})();// OVERRIDE: Show Company Settings only for Admin at Head Office (All Properties)
+    function updateCompanySettingsVisibility() {
+        var card = document.getElementById('companySettingsCard');
+        if (!card) return;
+        var propFilter = document.getElementById('propertyFilter');
+        var propValue = propFilter ? propFilter.value : '';
+        var role = localStorage.getItem('pm_role');
+        
+        // Show only if: Admin AND "All Properties" is selected
+        if (role === 'ADMIN' && !propValue) {
+            card.style.display = 'block';
+        } else {
+            card.style.display = 'none';
+        }
+    }
+    
+    // Run on page load
+    setTimeout(updateCompanySettingsVisibility, 500);
+    
+    // Run when property filter changes
+    var propFilterEl = document.getElementById('propertyFilter');
+    if (propFilterEl) {
+        propFilterEl.addEventListener('change', function() {
+            setTimeout(updateCompanySettingsVisibility, 100);
+        });
+    }
+
+
+    /* [v3] removed conflicting loadProperties */
+
+    var originalSaveProperty = saveProperty;
+    saveProperty = async function() {
+        var id = document.getElementById("propId").value;
+        var name = document.getElementById("propName").value;
+        var province = document.getElementById("propProvince").value;
+        var address = document.getElementById("propAddress").value;
+        var utility_model = document.getElementById("propUtilityModel").value;
+        if (!name) { alert("Property name is required."); return; }
+        var payload = { name: name, province: province, address: address, utility_model: utility_model };
+        var url = id ? '/properties/' + id : '/properties';
+        var method = id ? 'PUT' : 'POST';
+        try {
+            var r = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken }, body: JSON.stringify(payload) });
+            var d = await r.json();
+            if (!r.ok) throw new Error(d.detail || "Failed");
+            alert(d.message);
+            clearPropertyForm();
+            loadProperties(); 
+        } catch (e) { alert('Error: ' + e.message); }
+    };
+
+    // OVERRIDDEN: clearPropertyForm — clean version
+    function clearPropertyForm() {
+        document.getElementById("propId").value = "";
+        document.getElementById("propName").value = "";
+        document.getElementById("propProvince").value = "";
+        document.getElementById("propAddress").value = "";
+        document.getElementById("propUtilityModel").value = "STS_TOKEN";
+    }</script>
+
+
+
+<script>
+/* ==============================================================
+   PROPERTY EDIT — v3 (fix_property_edit_v3.py)
+   Single source of truth for property editing. Do not add more.
+   ============================================================== */
+(function () {
+    "use strict";
+
+    // --- 1. Cache full property data whenever /properties/ responds ---
+    var propCache = {};
+    window.__propCache = propCache;
+
+    // --- 2. The one clean loadProperties. Renders our own buttons. ---
+    window.loadProperties = async function () {
+        try {
+            var r = await fetch("/properties/", { headers: getAuthHeaders() });
+            if (!r.ok) throw new Error("load failed");
+            var d = await r.json();
+
+            var filter = document.getElementById("propertyFilter");
+            var tblBody = document.getElementById("propertiesTableBody");
+            var userDD = document.getElementById("newUserProp");
+
+            if (filter) filter.innerHTML = '<option value="">All Properties (Owner View)</option>';
+            if (userDD) userDD.innerHTML = '<option value="">Select Property...</option>';
+            if (tblBody) tblBody.innerHTML = "";
+
+            (d.properties || []).forEach(function (p) {
+                propCache[String(p.id)] = p;
+
+                if (filter) {
+                    var label = p.utility_model === "WALLET_CONSUMPTION"
+                        ? "Smart Meters" : "Dumb Meters";
+                    filter.innerHTML += '<option value="' + p.id + '">' + p.name + " (" + label + ")</option>";
+                }
+                if (userDD) {
+                    userDD.innerHTML += '<option value="' + p.id + '">' + p.name + "</option>";
+                }
+                if (tblBody) {
+                    var badge = p.utility_model === "WALLET_CONSUMPTION"
+                        ? '<span class="badge badge-smart">Smart</span>'
+                        : '<span class="badge badge-dumb">Dumb</span>';
+                    tblBody.innerHTML +=
+                        "<tr><td>" + p.id + "</td>" +
+                        "<td>" + (p.name || "") + "</td>" +
+                        "<td>" + (p.province || "") + "</td>" +
+                        "<td>" + badge + "</td>" +
+                        '<td><button type="button" class="btn-edit" data-prop-id="' + p.id + '">Edit</button></td></tr>';
+                }
+            });
+
+            var table = document.getElementById("propertiesTable");
+            if (table) table.style.display = "block";
+
+            var role = localStorage.getItem("pm_role");
+            var assigned = localStorage.getItem("pm_prop_id");
+            if (filter && role !== "ADMIN" && assigned && assigned !== "null") {
+                filter.value = assigned;
+                filter.disabled = true;
+            }
+        } catch (e) {
+            console.error("[v3] loadProperties failed:", e);
+        }
+    };
+
+    // --- 3. Single delegated click handler. ---
+    //     Uses capturing phase so it wins even if other handlers
+    //     were attached to the buttons.
+    document.addEventListener("click", function (ev) {
+        var btn = ev.target.closest("#propertiesTableBody button.btn-edit");
+        if (!btn) return;
+
+        // Don't stop propagation — allow other listeners to still work.
+        // But we do the populating here.
+        ev.preventDefault();
+
+        var id = btn.getAttribute("data-prop-id");
+        if (!id) {
+            // Fallback: read from first cell
+            var row = btn.closest("tr");
+            var firstCell = row && row.querySelector("td");
+            id = firstCell ? firstCell.textContent.trim() : null;
+        }
+        var p = id ? propCache[String(id)] : null;
+        if (!p) {
+            console.warn("[v3] no cached property for id", id);
+            alert("Could not load property data. Refresh and try again.");
+            return;
+        }
+
+        document.getElementById("propId").value           = p.id;
+        document.getElementById("propName").value         = p.name || "";
+        document.getElementById("propProvince").value     = p.province || "";
+        document.getElementById("propAddress").value      = p.address || "";
+        document.getElementById("propUtilityModel").value = p.utility_model || "STS_TOKEN";
+        var __t = document.getElementById("propName"); if (__t) { __t.scrollIntoView({ behavior: "smooth", block: "center" }); setTimeout(function(){ __t.focus(); }, 400); }
+    }, true);   // <-- capture phase, catches clicks before other handlers
+
+    // --- 4. Legacy no-ops so old inline onclick attrs don't throw. ---
+    window.editProperty = function (id) {
+        var p = propCache[String(id)];
+        if (!p) return;
+        document.getElementById("propId").value           = p.id;
+        document.getElementById("propName").value         = p.name || "";
+        document.getElementById("propProvince").value     = p.province || "";
+        document.getElementById("propAddress").value      = p.address || "";
+        document.getElementById("propUtilityModel").value = p.utility_model || "STS_TOKEN";
+        var __t = document.getElementById("propName"); if (__t) { __t.scrollIntoView({ behavior: "smooth", block: "center" }); setTimeout(function(){ __t.focus(); }, 400); }
+    };
+    window.openPropertyEdit = window.editProperty;
+
+    console.log("[v3] property edit handler installed");
+})();
+</script>
 
 </body>
 </html>

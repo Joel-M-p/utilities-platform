@@ -76,19 +76,28 @@ def api_generate_invoice(req: InvoiceGenerateRequest):
         conn.close()
 
 @router.get("/invoices/", dependencies=[Depends(verify_token)])
-def api_get_invoices():
+def api_get_invoices(property_id: int = None):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
         # --- AUTOMATIC SCHEMA FIX ---
         conn.commit()
 
-        cursor.execute("""
-            SELECT i.id, t.first_name, t.last_name, i.billing_period, i.total, i.status, i.date 
-            FROM invoices i 
-            JOIN tenants t ON i.tenant_id = t.id 
-            ORDER BY i.date DESC
-        """)
+        if property_id:
+            cursor.execute("""
+                SELECT i.id, t.first_name, t.last_name, i.billing_period, i.total, i.status, i.date 
+                FROM invoices i 
+                JOIN tenants t ON i.tenant_id = t.id 
+                WHERE t.property_id = %s
+                ORDER BY i.date DESC
+            """, (property_id,))
+        else:
+            cursor.execute("""
+                SELECT i.id, t.first_name, t.last_name, i.billing_period, i.total, i.status, i.date 
+                FROM invoices i 
+                JOIN tenants t ON i.tenant_id = t.id 
+                ORDER BY i.date DESC
+            """)
         rows = cursor.fetchall()
         inv_list = []
         for row in rows:
@@ -136,6 +145,139 @@ def api_view_invoice(invoice_id: int):
             "date": inv[7].strftime("%Y-%m-%d") if inv[7] else "N/A", "items": items_list
         }
     except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        cursor.close()
+        conn.close()
+
+@router.post("/generate-invoices-bulk/", dependencies=[Depends(verify_token)])
+def api_generate_bulk_invoices(payload: dict):
+    """Generate invoices for ALL active tenants in a property."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        property_id = payload.get("property_id")
+        billing_period = payload.get("billing_period")
+        cycle_type = payload.get("cycle_type", "MONTHLY")
+        
+        if not property_id or not billing_period:
+            raise HTTPException(status_code=400, detail="Property ID and billing period are required.")
+        
+        # Ensure invoice_items table exists
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS invoice_items (
+                id SERIAL PRIMARY KEY,
+                invoice_id INTEGER,
+                description TEXT,
+                quantity DECIMAL,
+                unit_price DECIMAL,
+                total DECIMAL,
+                drill_down TEXT
+            );
+        """)
+        
+        # Check for existing invoices in this period (prevent duplicates)
+        cursor.execute("""
+            SELECT DISTINCT i.tenant_id FROM invoices i 
+            JOIN tenants t ON i.tenant_id = t.id 
+            WHERE t.property_id = %s AND i.billing_period = %s
+        """, (property_id, billing_period))
+        existing = set(row[0] for row in cursor.fetchall())
+        
+        # Get all active tenants in this property with arrears
+        cursor.execute("""
+            SELECT id, first_name, last_name, rent_outstanding, electricity_outstanding, water_outstanding
+            FROM tenants 
+            WHERE property_id = %s AND status = 'ACTIVE'
+            ORDER BY unit_number
+        """, (property_id,))
+        tenants = cursor.fetchall()
+        
+        if not tenants:
+            raise HTTPException(status_code=404, detail="No active tenants found for this property.")
+        
+        generated = 0
+        skipped = 0
+        no_arrears = 0
+        total_amount = Decimal('0')
+        errors = []
+        
+        for t in tenants:
+            tenant_id = t[0]
+            first_name = t[1] or ""
+            last_name = t[2] or ""
+            rent_due = Decimal(str(t[3] or 0))
+            elec_due = Decimal(str(t[4] or 0))
+            water_due = Decimal(str(t[5] or 0))
+            tenant_total = rent_due + elec_due + water_due
+            
+            # Skip if already invoiced this period
+            if tenant_id in existing:
+                skipped += 1
+                continue
+            
+            # Skip if no arrears
+            if tenant_total <= 0:
+                no_arrears += 1
+                continue
+            
+            try:
+                # Create invoice header
+                cursor.execute("""
+                    INSERT INTO invoices (tenant_id, billing_period, total, status, date) 
+                    VALUES (%s, %s, %s, 'DUE', CURRENT_DATE) RETURNING id
+                """, (tenant_id, billing_period, tenant_total))
+                invoice_id = cursor.fetchone()[0]
+                
+                # Create line items
+                if rent_due > 0:
+                    cursor.execute("""
+                        INSERT INTO invoice_items (invoice_id, description, quantity, unit_price, total, drill_down) 
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                    """, (invoice_id, f"Rent ({cycle_type})", 1, rent_due, rent_due, 
+                          f"Property rent for period {billing_period}"))
+                
+                if elec_due > 0:
+                    cursor.execute("""
+                        INSERT INTO invoice_items (invoice_id, description, quantity, unit_price, total, drill_down) 
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                    """, (invoice_id, "Electricity Charges", 1, elec_due, elec_due,
+                          f"Total electricity usage for period {billing_period}"))
+                
+                if water_due > 0:
+                    cursor.execute("""
+                        INSERT INTO invoice_items (invoice_id, description, quantity, unit_price, total, drill_down) 
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                    """, (invoice_id, "Water Charges", 1, water_due, water_due,
+                          f"Total water usage for period {billing_period}"))
+                
+                generated += 1
+                total_amount += tenant_total
+                
+            except Exception as e:
+                errors.append(f"Unit {first_name} {last_name}: {str(e)}")
+                conn.rollback()
+                continue
+        
+        conn.commit()
+        
+        return {
+            "status": "success",
+            "message": f"Generated {generated} invoices for {billing_period}.",
+            "summary": {
+                "total_tenants": len(tenants),
+                "invoices_generated": generated,
+                "already_invoiced": skipped,
+                "no_arrears": no_arrears,
+                "errors": len(errors),
+                "total_amount": float(total_amount)
+            },
+            "errors": errors[:10]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
         raise HTTPException(status_code=400, detail=str(e))
     finally:
         cursor.close()

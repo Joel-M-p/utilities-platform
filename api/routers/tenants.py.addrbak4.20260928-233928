@@ -428,8 +428,6 @@ def api_get_tenant_balance(tenant_id: int, current_user: dict = Depends(verify_t
             "water_hot_balance_kl": water_hot_balance_kl,
             "utility_model": utility_model,
             "property_id": prop_id,
-            "property_name": prop_name,
-            "address": prop_address,
             "assigned_meters": assigned_meters
         }
     finally:
@@ -442,14 +440,7 @@ def api_get_tenant_statement(tenant_id: int, current_user: dict = Depends(verify
     cursor = conn.cursor()
     try:
         check_tenant_access(cursor, tenant_id, current_user)
-        cursor.execute("""
-            SELECT t.first_name, t.last_name, t.email, t.rent_outstanding,
-                   t.electricity_outstanding, t.water_outstanding, t.status,
-                   p.address, p.name
-            FROM tenants t
-            LEFT JOIN properties p ON t.property_id = p.id
-            WHERE t.id = %s
-        """, (tenant_id,))
+        cursor.execute("SELECT first_name, last_name, email, rent_outstanding, electricity_outstanding, water_outstanding, status FROM tenants WHERE id = %s", (tenant_id,))
         t = cursor.fetchone()
             
         cursor.execute("SELECT id, balance, credit_limit FROM wallets WHERE tenant_id = %s", (tenant_id,))
@@ -486,8 +477,6 @@ def api_get_tenant_statement(tenant_id: int, current_user: dict = Depends(verify
             "total_arrears": total_arrears,
             "wallet_balance": float(w[1]),
             "credit_limit": float(w[2] if w[2] is not None else 0),
-            "property_name": t[8],
-            "address": t[7],
             "transactions": txns_list
         }
     finally:

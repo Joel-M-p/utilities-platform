@@ -7,7 +7,35 @@
     <meta http-equiv="Expires" content="0">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Utilities PM Dashboard</title>
-    <style>
+    
+<style>
+
+        .page-btn { background: #3498db; color: white; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; margin: 0 2px; }
+        .page-btn:hover { background: #2980b9; }
+        .page-btn:disabled { background: #bdc3c7; cursor: not-allowed; }
+        .pagination-bar { margin-top: 10px; display: flex; justify-content: space-between; align-items: center; }
+    
+        .smart-meter-card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-left: 5px solid #3498db; }
+        .smart-meter-card h3 { color: #2c3e50; margin: 0 0 15px 0; font-size: 1.1em; }
+        .meter-health-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+        .meter-health-item { background: #f8f9fa; padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .meter-health-item .serial { font-weight: bold; color: #2c3e50; font-size: 0.9em; }
+        .meter-health-item .battery { font-size: 1.1em; font-weight: bold; }
+        .battery-good { color: #27ae60; }
+        .battery-warn { color: #f39c12; }
+        .battery-critical { color: #e74c3c; }
+        .alarm-card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-left: 5px solid #e74c3c; }
+        .alarm-item { padding: 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .alarm-item:last-child { border-bottom: none; }
+        .alarm-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.75em; font-weight: bold; color: white; }
+        .alarm-high { background: #e74c3c; }
+        .alarm-medium { background: #f39c12; }
+        .alarm-low { background: #7f8c8d; }
+        .demo-banner { background: linear-gradient(135deg, #2c3e50, #3498db); color: white; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 20px; font-size: 0.9em; }
+        .demo-banner strong { font-size: 1.1em; }
+    
+
+
         .force-change-screen { display: none; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; background: #2c3e50; color: white; padding: 20px; box-sizing: border-box; }
         .force-change-screen .login-card { background: white; padding: 30px; border-radius: 10px; width: 100%; max-width: 400px; box-shadow: 0px 0px 10px #ccc; }
         .force-change-screen .login-card h1 { color: #2c3e50; }
@@ -153,8 +181,8 @@
 
 <div id="loginScreen" class="container">
     <h1>PM Login</h1>
-    <input type="text" id="loginUser" placeholder="Username (admin)">
-    <input type="password" id="loginPass" placeholder="Password (password123)">
+    <input autocomplete="off" type="text" id="loginUser" placeholder="Username (admin)">
+    <input autocomplete="off" type="password" id="loginPass" placeholder="Password (password123)">
     <button onclick="login()">Log In</button>
     <div id="loginError" style="color: red; margin-top: 10px;"></div>
         <p style="text-align:center; margin-top:15px;"><a href="#" onclick="showUserForgotPassword()" style="color:#3498db; text-decoration:none; font-size:0.9em;">Forgot Password?</a></p>
@@ -165,8 +193,8 @@
     <div class="login-card">
         <h1>Forgot Password</h1>
         <p style="color:#7f8c8d; font-size:0.9em; text-align:center; margin-bottom:15px;">Enter your username and email. A temp password will be generated.</p>
-        <input type="text" id="forgotUsername" placeholder="Username">
-        <input type="email" id="forgotEmail" placeholder="Email Address">
+        <input autocomplete="off" type="text" id="forgotUsername" placeholder="Username">
+        <input autocomplete="off" type="email" id="forgotEmail" placeholder="Email Address">
         <button onclick="submitUserForgotPassword()">Send Reset</button>
         <button style="background:#7f8c8d;" onclick="backToUserLogin()">Back to Login</button>
         <div id="userForgotError" style="color:red; margin-top:10px; display:none;"></div>
@@ -185,9 +213,9 @@
     <div class="login-card">
         <h1>Set Your Password</h1>
         <p style="color:#7f8c8d; font-size:0.9em; text-align:center; margin-bottom:15px;">Please set a new password to secure your account.</p>
-        <input type="password" id="forceCurPw" placeholder="Temporary Password">
-        <input type="password" id="forceNewPw" placeholder="New Password (min 8 chars)">
-        <input type="password" id="forceConfirmPw" placeholder="Confirm New Password">
+        <input autocomplete="off" type="password" id="forceCurPw" placeholder="Temporary Password">
+        <input autocomplete="off" type="password" id="forceNewPw" placeholder="New Password (min 8 chars)">
+        <input autocomplete="off" type="password" id="forceConfirmPw" placeholder="Confirm New Password">
         <button onclick="submitForceChangePw()">Set Password</button>
         <div id="forceChangePwError" style="color:red; margin-top:10px; display:none;"></div>
     </div>
@@ -205,7 +233,7 @@
             <button class="tab-btn" onclick="switchTab(event, 'tab-reports')">Reports</button>
         </div>
         <div class="header-controls">
-            <select id="propertyFilter" onchange="loadAllData()" disabled>
+            <select id="propertyFilter" autocomplete="off" onchange="loadAllData()" disabled>
                 <option value="">All Properties (Owner View)</option>
             </select>
             <button class="btn-help" onclick="toggleHelpMode()">? Help</button>
@@ -231,20 +259,41 @@
             </div>
         </div>
 
+        <!-- SMART METER HEALTH CARD -->
+        <div class="smart-meter-card">
+            <h3>🔋 Smart Meter Health Dashboard</h3>
+            <div class="meter-health-grid" id="smartMeterHealth">
+                <p style="color:#7f8c8d; font-size:0.9em;">Loading meter health data...</p>
+            </div>
+        </div>
+
+        <!-- ACTIVE ALARMS CARD -->
+        <div class="alarm-card">
+            <h3>🚨 Active Meter Alarms</h3>
+            <div id="activeAlarms">
+                <p style="color:#7f8c8d; font-size:0.9em;">Loading alarms...</p>
+            </div>
+        </div>
+
+        <!-- DEMO BANNER -->
+        <div class="demo-banner">
+            <strong>⚡ IoT Integration Ready</strong> — This system supports LoRaWAN smart meters with real-time data, automated valve control, and instant alarm notifications.
+        </div>
+
         <!-- USER MANAGEMENT CARD (Admin Only) -->
         <div class="container" id="userMgmtCard" style="display:none;">
             <h2>User Management & Access Control <span class="help-icon" title="Create users here. Admins see everything. PM Users are locked to their assigned property.">ℹ️</span></h2>
             <p style="color: #7f8c8d; font-size: 0.9rem;">Create users with specific roles. Property Managers are locked to their assigned property.</p>
             
             <h3>Add New User</h3>
-            <input type="text" id="newUsername" placeholder="Username" title="Enter a unique username for the new user.">
-            <input type="email" id="newUserEmail" placeholder="Email Address" title="Enter the user email. A temp password will be auto-generated.">
-            <select id="newUserRole" title="Select the user's role. Admins have full access. PM users are restricted.">
+            <input autocomplete="off" type="text" id="newUsername" placeholder="Username" title="Enter a unique username for the new user.">
+            <input autocomplete="off" type="email" id="newUserEmail" placeholder="Email Address" title="Enter the user email. A temp password will be auto-generated.">
+            <select autocomplete="off" id="newUserRole" title="Select the user's role. Admins have full access. PM users are restricted.">
                 <option value="ADMIN">Admin (Head Office - All Properties)</option>
                 <option value="PM_SUPER">Super User (Property Level)</option>
                 <option value="PM_USER">Limited User (Property Level)</option>
             </select>
-            <select id="newUserProp" title="Assign the user to a specific property. Leave blank for Admins."><option value="">Select Property...</option></select>
+            <select autocomplete="off" id="newUserProp" title="Assign the user to a specific property. Leave blank for Admins."><option value="">Select Property...</option></select>
             <button onclick="createUser()">Create User</button>
             <div id="userResult" class="result" style="display:none;"></div>
             
@@ -262,11 +311,11 @@
             <p style="color: #7f8c8d; font-size: 0.9rem;">Define your properties and their utility meter type. This determines how the Tenant App behaves for tenants on that property.</p>
             
             <h3>Add / Edit Property</h3>
-            <input type="hidden" id="propId">
-            <input type="text" id="propName" placeholder="Property Name (e.g., Sandton Sky)" title="The official name of the property or complex.">
-            <input type="text" id="propProvince" placeholder="Province (e.g., Gauteng)" title="The province where the property is located.">
-            <input type="text" id="propAddress" placeholder="Address" title="The physical street address of the property.">
-            <select id="propUtilityModel" title="STS Token = Dumb meters requiring 20-digit codes. Wallet Consumption = Smart meters that deduct from a live wallet balance.">
+            <input autocomplete="off" type="hidden" id="propId">
+            <input autocomplete="off" type="text" id="propName" placeholder="Property Name (e.g., Sandton Sky)" title="The official name of the property or complex.">
+            <input autocomplete="off" type="text" id="propProvince" placeholder="Province (e.g., Gauteng)" title="The province where the property is located.">
+            <input autocomplete="off" type="text" id="propAddress" placeholder="Address" title="The physical street address of the property.">
+            <select autocomplete="off" id="propUtilityModel" title="STS Token = Dumb meters requiring 20-digit codes. Wallet Consumption = Smart meters that deduct from a live wallet balance.">
                 <option value="STS_TOKEN">STS Token (Dumb Meters)</option>
                 <option value="WALLET_CONSUMPTION">Wallet Consumption (Smart Meters)</option>
             </select>
@@ -280,16 +329,16 @@
             </table>
         </div>
 
-        <div class="container">
+        <div class="container" id="companySettingsCard" style="display:none;">
             <h2>Company Settings (Invoice Branding) <span class="help-icon" title="These details appear on all generated invoices and statements. Set your VAT rate here.">ℹ️</span></h2>
             <p style="color: #7f8c8d; font-size: 0.9rem;">These details appear dynamically on all generated invoices, statements, and tariff screens.</p>
-            <input type="text" id="compName" placeholder="Company Name">
-            <input type="text" id="compLogo" placeholder="Logo Path (e.g., /static/logo.png)">
-            <input type="text" id="compAddress" placeholder="Address">
-            <input type="text" id="compVat" placeholder="VAT Number">
-            <input type="number" id="compVatRate" placeholder="VAT Rate (%) e.g., 15" value="15">
-            <input type="email" id="compEmail" placeholder="Contact Email">
-            <input type="text" id="compPhone" placeholder="Contact Phone">
+            <input autocomplete="off" type="text" id="compName" placeholder="Company Name">
+            <input autocomplete="off" type="text" id="compLogo" placeholder="Logo Path (e.g., /static/logo.png)">
+            <input autocomplete="off" type="text" id="compAddress" placeholder="Address">
+            <input autocomplete="off" type="text" id="compVat" placeholder="VAT Number">
+            <input autocomplete="off" type="number" id="compVatRate" placeholder="VAT Rate (%) e.g., 15" >
+            <input autocomplete="off" type="email" id="compEmail" placeholder="Contact Email">
+            <input autocomplete="off" type="text" id="compPhone" placeholder="Contact Phone">
             <button onclick="updateCompanySettings()" class="btn-download">Save Company Settings</button>
             <div id="compResult" class="result" style="display:none;"></div>
         </div>
@@ -303,42 +352,42 @@
                 <div>
                     <h3>Onboard New Tenant <span class="help-icon" title="You must select a property from the top right dropdown first. Initial debt is optional.">ℹ️</span></h3>
                     <div id="propWarning" class="prop-warning">Please select a specific property from the top right dropdown first!</div>
-                    <input type="text" id="newUnitNumber" placeholder="Unit Number (e.g., 101)" title="The unit number the tenant lives in. They will use this to log in to the Tenant App.">
-                    <input type="text" id="newFirstName" placeholder="First Name">
-                    <input type="text" id="newLastName" placeholder="Last Name">
-                    <input type="email" id="newEmail" placeholder="Email">
-                    <input type="tel" id="newCellphone" placeholder="Cellphone (e.g., 0821234567)">
-                    <input type="number" id="newRentDebt" placeholder="Rent Debt">
-                    <input type="number" id="newElecDebt" placeholder="Elec Debt">
-                    <input type="number" id="newWaterDebt" placeholder="Water Debt">
+                    <input autocomplete="off" type="text" id="newUnitNumber" placeholder="Unit Number (e.g., 101)" title="The unit number the tenant lives in. They will use this to log in to the Tenant App.">
+                    <input autocomplete="off" type="text" id="newFirstName" placeholder="First Name">
+                    <input autocomplete="off" type="text" id="newLastName" placeholder="Last Name">
+                    <input autocomplete="off" type="email" id="newEmail" placeholder="Email">
+                    <input autocomplete="off" type="tel" id="newCellphone" placeholder="Cellphone (e.g., 0821234567)">
+                    <input autocomplete="off" type="number" id="newRentDebt" placeholder="Rent Debt">
+                    <input autocomplete="off" type="number" id="newElecDebt" placeholder="Elec Debt">
+                    <input autocomplete="off" type="number" id="newWaterDebt" placeholder="Water Debt">
                     <button onclick="createTenant()">Create Tenant</button>
                     <div id="createResult" class="result" style="display:none;"></div>
                 </div>
                 <div>
                     <h3>Check Tenant Balance <span class="help-icon" title="Enter a Unit Number to view their current rent, utility, and wallet balances.">ℹ️</span></h3>
-                    <input type="text" id="unitNumberInput" placeholder="Enter Unit Number">
+                    <input autocomplete="off" type="text" id="unitNumberInput" placeholder="Enter Unit Number">
                     <button onclick="checkBalance()">Check Balance</button>
                     <div id="balanceResult" class="result" style="display:none;"></div>
                 </div>
                 <div>
                     <h3>Tenant Document Upload (FICA/Lease) <span class="help-icon" title="Upload PDFs or Images of tenant documents for compliance.">ℹ️</span></h3>
-                    <input type="text" id="docUnitNumber" placeholder="Unit Number">
-                    <select id="docType"><option value="ID">ID</option><option value="FICA">FICA</option><option value="LEASE">Lease</option></select>
-                    <input type="file" id="docFile" accept=".pdf,.jpg,.png">
+                    <input autocomplete="off" type="text" id="docUnitNumber" placeholder="Unit Number">
+                    <select autocomplete="off" id="docType"><option value="ID">ID</option><option value="FICA">FICA</option><option value="LEASE">Lease</option></select>
+                    <input autocomplete="off" type="file" id="docFile" accept=".pdf,.jpg,.png">
                     <button onclick="uploadDoc()">Upload Document</button>
                     <div id="docResult" class="result" style="display:none;"></div>
                 </div>
                 <div>
                     <h3>Tenant Exit & Inspections <span class="help-icon" title="Submit notice to vacate, then record the final inspection result to close the account.">ℹ️</span></h3>
                     <h4>Submit Notice to Vacate</h4>
-                    <input type="text" id="ntvUnitNumber" placeholder="Unit Number"><input type="date" id="ntvExitDate"><input type="text" id="ntvReason" placeholder="Reason">
+                    <input autocomplete="off" type="text" id="ntvUnitNumber" placeholder="Unit Number"><input type="date" id="ntvExitDate"><input type="text" id="ntvReason" placeholder="Reason">
                     <button onclick="submitNTV()">Submit Notice</button>
                     <div id="ntvResult" class="result" style="display:none;"></div>
                     <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
                     <h4>Record Inspection Result</h4>
-                    <input type="text" id="inspUnitNumber" placeholder="Unit Number">
-                    <select id="inspStatus"><option value="PASSED">Passed</option><option value="FAILED">Failed</option><option value="PENDING_DEDUCTION">Pending</option></select>
-                    <input type="text" id="inspNotes" placeholder="Inspection Notes">
+                    <input autocomplete="off" type="text" id="inspUnitNumber" placeholder="Unit Number">
+                    <select autocomplete="off" id="inspStatus"><option value="PASSED">Passed</option><option value="FAILED">Failed</option><option value="PENDING_DEDUCTION">Pending</option></select>
+                    <input autocomplete="off" type="text" id="inspNotes" placeholder="Inspection Notes">
                     <button onclick="submitInspection()" class="btn-inspect">Submit Result</button>
                     <div id="inspResult" class="result" style="display:none;"></div>
                 </div>
@@ -349,8 +398,17 @@
             <h2>All Tenants Overview <span class="help-icon" title="This table shows all tenants for the selected property. Use the action buttons to manage them.">ℹ️</span></h2>
             <button onclick="loadAllTenants()">Refresh Tenant List</button>
             <button onclick="downloadCSV()" class="btn-download">Download CSV</button>
-            <input type="text" id="syncRentUnitNumber" placeholder="Unit No (Leave blank for ALL)" style="width: 250px; margin-bottom: 0px;">
+            <input autocomplete="off" type="text" id="syncRentUnitNumber" placeholder="Unit No (Leave blank for ALL)" style="width: 250px; margin-bottom: 0px;">
             <button onclick="triggerMockRent()" class="btn-restrict">Sync Rent</button>
+            <input autocomplete="off" type="text" id="tenantSearchInput" placeholder="Search unit, name, email..." style="width: 250px; margin-bottom: 0; margin-left: 10px;" oninput="filterTenants()">
+            <select autocomplete="off" id="tenantStatusFilter" style="width: 120px; margin-bottom: 0;" onchange="filterTenants()">
+                <option value="">All Status</option>
+                <option value="ACTIVE">Active</option>
+                <option value="SUSPENDED">Suspended</option>
+                <option value="VACATED">Vacated</option>
+                <option value="ARREARS">In Arrears</option>
+            </select>
+            <span id="tenantPageInfo" style="font-size: 0.85em; color: #7f8c8d; margin-left: 10px;"></span>
             
             <table id="tenantsTable" style="display:none;">
                 <thead>
@@ -368,17 +426,17 @@
         <div class="container">
             <h2>Process Payment & Credit Facility <span class="help-icon" title="Process manual payments. The waterfall automatically pays Rent first, then Elec, then Water. Set emergency fund limits here.">ℹ️</span></h2>
             <h3>Process Payment</h3>
-            <input type="text" id="paymentUnitNumber" placeholder="Unit Number">
-            <input type="number" id="paymentAmount" placeholder="Amount">
+            <input autocomplete="off" type="text" id="paymentUnitNumber" placeholder="Unit Number">
+            <input autocomplete="off" type="number" id="paymentAmount" placeholder="Amount">
             <label style="font-size: 0.8em; color: #7f8c8d; display:block; margin-bottom:5px;">Allocation % (Leave blank for standard sequential):</label>
-            <input type="number" id="paymentRentPct" placeholder="Rent %">
-            <input type="number" id="paymentElecPct" placeholder="Elec %">
-            <input type="number" id="paymentWaterPct" placeholder="Water %">
+            <input autocomplete="off" type="number" id="paymentRentPct" placeholder="Rent %">
+            <input autocomplete="off" type="number" id="paymentElecPct" placeholder="Elec %">
+            <input autocomplete="off" type="number" id="paymentWaterPct" placeholder="Water %">
             <button onclick="processPayment()">Process Payment</button>
             <div id="paymentResult" class="result" style="display:none;"></div>
             <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
             <h3>Set Emergency Fund Limit (3 Taps/Month)</h3>
-            <input type="text" id="creditUnitNumber" placeholder="Unit Number"><input type="number" id="creditLimitInput" placeholder="Emergency Fund Limit (R)">
+            <input autocomplete="off" type="text" id="creditUnitNumber" placeholder="Unit Number"><input type="number" id="creditLimitInput" placeholder="Emergency Fund Limit (R)">
             <button onclick="setCreditLimit()" class="btn-download">Set Emergency Fund</button>
             <div id="creditResult" class="result" style="display:none;"></div>
         </div>
@@ -388,10 +446,10 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                 <div>
                     <h3>Assign Meter</h3>
-                    <input type="text" id="meterUnitNumber" placeholder="Unit Number">
-                    <input type="text" id="meterSerial" placeholder="Serial Number">
-                    <select id="meterType"><option value="ELECTRICITY">Electricity</option><option value="WATER_HOT">Hot Water</option><option value="WATER_COLD">Cold Water</option></select>
-                    <select id="billingType"><option value="PREPAID">Prepaid</option><option value="POSTPAID">Postpaid</option></select>
+                    <input autocomplete="off" type="text" id="meterUnitNumber" placeholder="Unit Number">
+                    <input autocomplete="off" type="text" id="meterSerial" placeholder="Serial Number">
+                    <select autocomplete="off" id="meterType"><option value="ELECTRICITY">Electricity</option><option value="WATER_HOT">Hot Water</option><option value="WATER_COLD">Cold Water</option></select>
+                    <select autocomplete="off" id="billingType"><option value="PREPAID">Prepaid</option><option value="POSTPAID">Postpaid</option></select>
                     <button onclick="assignMeter()">Assign Meter</button>
                     <button onclick="loadAvailableMeters()" class="btn-statement" style="padding:10px 15px; font-size:12px;">View Available</button>
                     <div id="meterResult" class="result" style="display:none;"></div>
@@ -399,9 +457,9 @@
                 </div>
                 <div>
                     <h3>Generate Utility Bill (Manual)</h3>
-                    <input type="text" id="billUnitNumber" placeholder="Unit Number">
-                    <select id="billType"><option value="ELECTRICITY">Electricity</option><option value="WATER_HOT">Hot Water</option><option value="WATER_COLD">Cold Water</option></select>
-                    <input type="number" id="billAmount" placeholder="Total Units"><input type="number" id="billPeak" placeholder="Peak Units"><input type="number" id="billOffpeak" placeholder="Off-Peak Units">
+                    <input autocomplete="off" type="text" id="billUnitNumber" placeholder="Unit Number">
+                    <select autocomplete="off" id="billType"><option value="ELECTRICITY">Electricity</option><option value="WATER_HOT">Hot Water</option><option value="WATER_COLD">Cold Water</option></select>
+                    <input autocomplete="off" type="number" id="billAmount" placeholder="Total Units"><input type="number" id="billPeak" placeholder="Peak Units"><input type="number" id="billOffpeak" placeholder="Off-Peak Units">
                     <button onclick="generateBill()">Generate Bill</button>
                     <div id="billResult" class="result" style="display:none;"></div>
                 </div>
@@ -413,16 +471,16 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                 <div>
                     <h3>Water Flow Control (Trickle Mode)</h3>
-                    <input type="text" id="restrictUnitNumber" placeholder="Unit Number">
+                    <input autocomplete="off" type="text" id="restrictUnitNumber" placeholder="Unit Number">
                     <button onclick="restrictWater()" class="btn-restrict">Restrict Water Flow</button>
                     <button onclick="unrestrictWater()" class="btn-download">Restore Water Flow</button>
                     <div id="restrictResult" class="result" style="display:none;"></div>
                 </div>
                 <div>
                     <h3>Manual Account Adjustment</h3>
-                    <input type="text" id="adjUnitNumber" placeholder="Unit Number">
-                    <select id="adjTarget"><option value="RENT">Rent</option><option value="ELECTRICITY">Electricity</option><option value="WATER">Water</option><option value="WALLET">Wallet</option></select>
-                    <input type="number" id="adjAmount" placeholder="Amount (+/-)"><input type="text" id="adjReason" placeholder="Reason">
+                    <input autocomplete="off" type="text" id="adjUnitNumber" placeholder="Unit Number">
+                    <select autocomplete="off" id="adjTarget"><option value="RENT">Rent</option><option value="ELECTRICITY">Electricity</option><option value="WATER">Water</option><option value="WALLET">Wallet</option></select>
+                    <input autocomplete="off" type="number" id="adjAmount" placeholder="Amount (+/-)"><input type="text" id="adjReason" placeholder="Reason">
                     <button onclick="adjustAccount()">Apply Adjustment</button>
                     <div id="adjResult" class="result" style="display:none;"></div>
                 </div>
@@ -432,6 +490,14 @@
         <div class="container">
             <h2>Installed Meters Overview <span class="help-icon" title="View all meters assigned to tenants for this property. Use 'Log Event' to record tamper or bypass incidents. Use 'History' to view the full audit trail.">ℹ️</span></h2>
             <button onclick="loadAllMeters()">Refresh Meters List</button>
+            <input autocomplete="off" type="text" id="meterSearchInput" placeholder="Search serial, unit, or tenant..." style="width: 250px; margin-bottom: 0;" oninput="filterMeters()">
+            <select autocomplete="off" id="meterTypeFilter" style="width: 150px; margin-bottom: 0;" onchange="filterMeters()">
+                <option value="">All Types</option>
+                <option value="ELECTRICITY">Electricity</option>
+                <option value="WATER_COLD">Cold Water</option>
+                <option value="WATER_HOT">Hot Water</option>
+            </select>
+            <span id="meterPageInfo" style="font-size: 0.85em; color: #7f8c8d; margin-left: 10px;"></span>
             <table id="metersTable" style="display:none;">
                 <thead><tr><th>Meter ID</th><th>Unit</th><th>Property</th><th>Tenant</th><th>Type</th><th>Billing</th><th>Serial</th><th>Valve</th><th>Active?</th><th>Actions</th></tr></thead>
                 <tbody id="metersTableBody"></tbody>
@@ -441,31 +507,31 @@
         <div class="container">
             <h2>Tariff Management (Complex Structures) <span class="help-icon" title="Create Flat, Tiered, or Time-of-Use tariffs. Sanitation is a fixed daily charge. You must select a property first.">ℹ️</span></h2>
             <div id="tariffWarning" class="prop-warning">Please select a specific property from the top right dropdown first!</div>
-            <input type="text" id="tariffName" placeholder="Tariff Name">
-            <select id="tariffMeterType" onchange="toggleTariffFields()">
+            <input autocomplete="off" type="text" id="tariffName" placeholder="Tariff Name">
+            <select autocomplete="off" id="tariffMeterType" onchange="toggleTariffFields()">
                 <option value="ELECTRICITY">Electricity (Consumption)</option>
                 <option value="WATER_HOT">Water Hot (Consumption)</option>
                 <option value="WATER_COLD">Water Cold (Consumption)</option>
                 <option value="SANITATION">Sanitation (Fixed Daily)</option>
             </select>
-            <select id="tariffStructure" onchange="toggleTariffFields()"><option value="FLAT">Flat Rate</option><option value="TIERED">Tiered (Block)</option><option value="TOU">Time-of-Use</option></select>
+            <select autocomplete="off" id="tariffStructure" onchange="toggleTariffFields()"><option value="FLAT">Flat Rate</option><option value="TIERED">Tiered (Block)</option><option value="TOU">Time-of-Use</option></select>
             <br>
             
             <div id="flatFields">
-                <input type="number" id="rateFlat" placeholder="Flat Rate (e.g., 2.50 for Elec, 4.14 for Daily Sani)">
+                <input autocomplete="off" type="number" id="rateFlat" placeholder="Flat Rate (e.g., 2.50 for Elec, 4.14 for Daily Sani)">
                 
                 <div id="hotWaterCalc" class="hw-calc-box" style="display:none;">
                     <label>Cold Water Base Rate (Auto-fetched)</label>
-                    <input type="text" id="hwBaseRate" placeholder="N/A" readonly>
+                    <input autocomplete="off" type="text" id="hwBaseRate" placeholder="N/A" readonly>
                     <label>Surcharge (X) - Defaults to 227.26</label>
-                    <input type="number" id="hwSurcharge" value="227.26" oninput="calcHotWater()">
+                    <input autocomplete="off" type="number" id="hwSurcharge"  oninput="calcHotWater()">
                     <label>Final Hot Water Rate (R)</label>
-                    <input type="text" id="hwFinalRate" placeholder="Auto-calculated" readonly class="final-rate">
+                    <input autocomplete="off" type="text" id="hwFinalRate" placeholder="Auto-calculated" readonly class="final-rate">
                 </div>
             </div>
             
-            <div id="tieredFields" style="display:none;"><input type="number" id="tier1Limit" placeholder="Limit"><input type="number" id="tier1Rate" placeholder="Rate 1"><input type="number" id="tier2Rate" placeholder="Rate 2"></div>
-            <div id="touFields" style="display:none;"><input type="number" id="touPeak" placeholder="Peak"><input type="number" id="touOffpeak" placeholder="Off-Peak"></div>
+            <div id="tieredFields" style="display:none;"><input autocomplete="off" type="number" id="tier1Limit" placeholder="Limit"><input type="number" id="tier1Rate" placeholder="Rate 1"><input type="number" id="tier2Rate" placeholder="Rate 2"></div>
+            <div id="touFields" style="display:none;"><input autocomplete="off" type="number" id="touPeak" placeholder="Peak"><input type="number" id="touOffpeak" placeholder="Off-Peak"></div>
             <button onclick="createTariff()">Create Tariff</button>
             <div id="tariffResult" class="result" style="display:none;"></div>
             <table id="tariffsTable" style="display:none;"><thead><tr><th>ID</th><th>Name</th><th>Type</th><th>Structure</th><th>Details</th><th>Actions</th></tr></thead><tbody id="tariffsTableBody"></tbody></table>
@@ -475,9 +541,29 @@
     <!-- TAB 4: INVOICES -->
     <div id="tab-invoices" class="tab-content">
         <div class="container">
-            <h2>Billing & Interactive Invoices <span class="help-icon" title="Generate consolidated invoices for tenants. Sanitation charges are added automatically based on the property.">ℹ️</span></h2>
-            <input type="text" id="invUnitNumber" placeholder="Unit Number"><input type="text" id="invPeriod" placeholder="Period (e.g., 2024-05)">
-            <select id="invCycle"><option value="MONTHLY">Monthly</option><option value="BI_MONTHLY">Bi-Monthly</option><option value="QUARTERLY">Quarterly</option></select>
+            <h2>Billing & Interactive Invoices
+
+        <!-- BULK INVOICE GENERATION -->
+        <div id="bulkInvoiceSection" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #27ae60;">
+            <h3 style="margin: 0 0 10px 0; color: #2c3e50;">Generate Invoices for Entire Property</h3>
+            <p style="font-size: 0.85em; color: #7f8c8d; margin: 0 0 10px 0;">Generates invoices for ALL active tenants in the selected property. Skips tenants with no arrears or who already have an invoice for this period.</p>
+            <input type="text" id="bulkInvPeriod" placeholder="Period (e.g., 2026-09)" style="width: 200px;">
+            <select id="bulkInvCycle" style="width: 150px;">
+                <option value="MONTHLY">Monthly</option>
+                <option value="BI_MONTHLY">Bi-Monthly</option>
+                <option value="QUARTERLY">Quarterly</option>
+            </select>
+            <button onclick="generateBulkInvoices()" style="background: #27ae60;">Generate All Invoices</button>
+            <button type="button" style="background:#7f8c8d; padding:5px 10px; font-size:12px; width:auto; margin-left:5px;" onclick="document.getElementById('bulkInvPeriod').value=''; document.getElementById('bulkInvCycle').selectedIndex=0;">Clear</button>
+            <div id="bulkInvResult" class="result" style="display:none; margin-top: 15px;"></div>
+        </div>
+        
+        <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+
+        <h3>Generate Single Invoice</h3>
+ <span class="help-icon" title="Generate consolidated invoices for tenants. Sanitation charges are added automatically based on the property.">ℹ️</span></h2>
+            <input autocomplete="off" type="text" id="invUnitNumber" placeholder="Unit Number"><input type="text" id="invPeriod" autocomplete="off" placeholder="Period (e.g., 2024-05)">
+            <select autocomplete="off" id="invCycle"><option value="MONTHLY">Monthly</option><option value="BI_MONTHLY">Bi-Monthly</option><option value="QUARTERLY">Quarterly</option></select>
             <button onclick="generateInvoice()">Generate Invoice</button>
             <div id="invResult" class="result" style="display:none;"></div>
             <table id="invoicesTable" style="display:none;"><thead><tr><th>ID</th><th>Tenant</th><th>Period</th><th>Total</th><th>Status</th><th>Action</th></tr></thead><tbody id="invoicesTableBody"></tbody></table>
@@ -501,6 +587,8 @@
         <div class="container">
             <h2>Audit Trail <span class="help-icon" title="View the last 100 actions performed on the system by all users.">ℹ️</span></h2>
             <button onclick="loadAuditLog()">Load Audit Log</button>
+            <input autocomplete="off" type="text" id="auditSearchInput" placeholder="Search user, action, or details..." style="width: 300px; margin-bottom: 0;" oninput="filterAudit()">
+            <span id="auditPageInfo" style="font-size: 0.85em; color: #7f8c8d; margin-left: 10px;"></span>
             <table id="auditTable" style="display:none;">
                 <thead><tr><th>Timestamp</th><th>User</th><th>Action</th><th>Details</th></tr></thead>
                 <tbody id="auditTableBody"></tbody>
@@ -513,9 +601,9 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                 <div>
                     <h3>Generate Credit Note</h3>
-                    <input type="text" id="cnUnitNumber" placeholder="Unit Number">
-                    <input type="number" id="cnAmount" placeholder="Amount (R)">
-                    <input type="text" id="cnReason" placeholder="Reason">
+                    <input autocomplete="off" type="text" id="cnUnitNumber" placeholder="Unit Number">
+                    <input autocomplete="off" type="number" id="cnAmount" placeholder="Amount (R)">
+                    <input autocomplete="off" type="text" id="cnReason" placeholder="Reason">
                     <button onclick="submitCreditNote()">Submit Credit Note</button>
                     <div id="cnResult" class="result" style="display:none;"></div>
                 </div>
@@ -558,9 +646,9 @@
 
         <div class="container">
             <h2>Automated Reconciliation (Municipal vs Sub-meter) <span class="help-icon" title="Compare municipal meter readings against your sub-meter readings to find losses or gains.">ℹ️</span></h2>
-            <input type="text" id="reconMonth" placeholder="Month">
-            <select id="reconType"><option value="ELECTRICITY">Electricity</option><option value="WATER">Water</option></select>
-            <input type="number" id="reconMuni" placeholder="Muni Units"><input type="number" id="reconSub" placeholder="Sub-meter Units">
+            <input autocomplete="off" type="text" id="reconMonth" placeholder="Month">
+            <select autocomplete="off" id="reconType"><option value="ELECTRICITY">Electricity</option><option value="WATER">Water</option></select>
+            <input autocomplete="off" type="number" id="reconMuni" placeholder="Muni Units"><input type="number" id="reconSub" placeholder="Sub-meter Units">
             <button onclick="runRecon()">Run Reconciliation</button>
             <div id="reconResult" class="result" style="display:none;"></div>
             <table id="reconTable" style="display:none;"><thead><tr><th>Date</th><th>Month</th><th>Type</th><th>Muni</th><th>Sub</th><th>Var</th><th>Status</th></tr></thead><tbody id="reconTableBody"></tbody></table>
@@ -585,7 +673,7 @@
         <div class="container">
             <h2>Excel Export (Monthly Report) <span class="help-icon" title="Download a multi-sheet Excel report for a specific month for auditors or SARS.">ℹ️</span></h2>
             <p style="color: #7f8c8d; font-size: 0.9rem;">Download a multi-sheet Excel report for a specific month.</p>
-            <input type="text" id="excelMonth" placeholder="Month (e.g., 2023-11)">
+            <input autocomplete="off" type="text" id="excelMonth" placeholder="Month (e.g., 2023-11)">
             <button onclick="downloadExcel()" class="btn-download">Download Excel File</button>
             <div id="excelResult" class="result" style="display:none;"></div>
         </div>
@@ -605,17 +693,17 @@
     <div class="modal-content" style="max-width: 500px;">
         <span class="close" onclick="closeTenantEdit()">&times;</span>
         <h2>Edit Tenant Details</h2>
-        <input type="hidden" id="editTenantId">
+        <input autocomplete="off" type="hidden" id="editTenantId">
         <label>First Name</label><br>
-        <input type="text" id="editFirstName" style="width: 100%;"><br>
+        <input autocomplete="off" type="text" id="editFirstName" style="width: 100%;"><br>
         <label>Last Name</label><br>
-        <input type="text" id="editLastName" style="width: 100%;"><br>
+        <input autocomplete="off" type="text" id="editLastName" style="width: 100%;"><br>
         <label>Email</label><br>
-        <input type="email" id="editEmail" style="width: 100%;"><br>
+        <input autocomplete="off" type="email" id="editEmail" style="width: 100%;"><br>
         <label>Cellphone</label><br>
-        <input type="tel" id="editCellphone" style="width: 100%;"><br>
+        <input autocomplete="off" type="tel" id="editCellphone" style="width: 100%;"><br>
         <label>Status</label><br>
-        <select id="editStatus" style="width: 100%;">
+        <select autocomplete="off" id="editStatus" style="width: 100%;">
             <option value="ACTIVE">Active</option>
             <option value="SUSPENDED">Suspended</option>
             <option value="VACATED">Vacated</option>
@@ -629,18 +717,18 @@
     <div class="modal-content" style="max-width: 500px;">
         <span class="close" onclick="closeTariffEdit()">&times;</span>
         <h2>Edit Tariff</h2>
-        <input type="hidden" id="editTariffId">
+        <input autocomplete="off" type="hidden" id="editTariffId">
         <label>Name</label><br>
-        <input type="text" id="editTariffName" style="width: 100%;"><br>
+        <input autocomplete="off" type="text" id="editTariffName" style="width: 100%;"><br>
         <label>Meter Type</label><br>
-        <select id="editTariffMeterType" style="width: 100%;">
+        <select autocomplete="off" id="editTariffMeterType" style="width: 100%;">
             <option value="ELECTRICITY">Electricity</option>
             <option value="WATER_HOT">Water Hot</option>
             <option value="WATER_COLD">Water Cold</option>
             <option value="SANITATION">Sanitation</option>
         </select><br>
         <label>Structure</label><br>
-        <select id="editTariffStructure" style="width: 100%;" onchange="toggleEditTariffFields()">
+        <select autocomplete="off" id="editTariffStructure" style="width: 100%;" onchange="toggleEditTariffFields()">
             <option value="FLAT">Flat Rate</option>
             <option value="TIERED">Tiered (Block)</option>
             <option value="TOU">Time-of-Use</option>
@@ -648,21 +736,21 @@
         
         <div id="editFlatFields">
             <label>Flat Rate (R)</label><br>
-            <input type="number" id="editRateFlat" style="width: 100%;"><br>
+            <input autocomplete="off" type="number" id="editRateFlat" style="width: 100%;"><br>
         </div>
         <div id="editTieredFields" style="display:none;">
             <label>Tier 1 Limit (kWh/kL)</label><br>
-            <input type="number" id="editTier1Limit" style="width: 100%;"><br>
+            <input autocomplete="off" type="number" id="editTier1Limit" style="width: 100%;"><br>
             <label>Tier 1 Rate (R)</label><br>
-            <input type="number" id="editTier1Rate" style="width: 100%;"><br>
+            <input autocomplete="off" type="number" id="editTier1Rate" style="width: 100%;"><br>
             <label>Tier 2 Rate (R)</label><br>
-            <input type="number" id="editTier2Rate" style="width: 100%;"><br>
+            <input autocomplete="off" type="number" id="editTier2Rate" style="width: 100%;"><br>
         </div>
         <div id="editTouFields" style="display:none;">
             <label>Peak Rate (R)</label><br>
-            <input type="number" id="editTouPeak" style="width: 100%;"><br>
+            <input autocomplete="off" type="number" id="editTouPeak" style="width: 100%;"><br>
             <label>Off-Peak Rate (R)</label><br>
-            <input type="number" id="editTouOffpeak" style="width: 100%;"><br>
+            <input autocomplete="off" type="number" id="editTouOffpeak" style="width: 100%;"><br>
         </div>
         <br>
         <button onclick="saveTariffEdit()" class="btn-download">Save Changes</button>
@@ -681,7 +769,11 @@
     window.onload = function() {
         if(authToken) {
             document.getElementById("loginScreen").style.display = "none";
-            document.getElementById("mainDashboard").style.display = "block";
+            if(localStorage.getItem('pm_must_change') === 'true') {
+                document.getElementById("screen-force-change-pw").style.display = "flex";
+            } else {
+                document.getElementById("mainDashboard").style.display = "block";
+            }
             
             if(currentRole === 'ADMIN') {
                 document.getElementById('userMgmtCard').style.display = 'block';
@@ -695,7 +787,7 @@
             
             loadProperties(); 
             loadAllData();
-            if(currentRole === 'ADMIN') loadUsers();
+            if(currentRole === 'ADMIN') clearFields(['newUsername', 'newUserEmail', 'newUserRole', 'newUserProp']); loadUsers();
         }
     };
 
@@ -721,9 +813,9 @@
     }
 
     function loadAllData() {
-        loadCompanySettings(); loadDashboardStats(); loadAllTenants(); loadAllMeters(); loadTariffs(); 
-        if (typeof loadRecons === 'function') { loadRecons(); }
-        if (typeof loadInvoices === 'function') { loadInvoices(); }
+        loadCompanySettings(); loadDashboardStats(); loadSmartMeterHealth(); loadActiveAlarms(); clearField('syncRentUnitNumber'); loadAllTenants(); clearFields(['inspUnitNumber', 'inspNotes']); loadAllMeters(); clearFields(['tariffName', 'rateFlat', 'tier1Limit', 'tier1Rate', 'tier2Rate', 'touPeak', 'touOffpeak']); document.getElementById('tariffName').value = ''; document.getElementById('rateFlat').value = ''; document.getElementById('tier1Limit').value = ''; document.getElementById('tier1Rate').value = ''; document.getElementById('tier2Rate').value = ''; document.getElementById('touPeak').value = ''; document.getElementById('touOffpeak').value = ''; document.getElementById('tariffMeterType').selectedIndex = 0; document.getElementById('tariffStructure').selectedIndex = 0; toggleTariffFields(); loadTariffs(); 
+        if (typeof loadRecons === 'function') { clearFields(['reconMonth', 'reconMuni', 'reconSub']); loadRecons(); }
+        if (typeof loadInvoices === 'function') { clearFields(['invUnitNumber', 'invPeriod']); loadInvoices(); }
     }
 
     function getPropertyFilter() {
@@ -834,7 +926,11 @@
             const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) });
             const d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
-            alert(d.message); logAction("Saved Property", `Name: ${name}, Model: ${utility_model}`); clearPropertyForm(); loadProperties(); 
+            alert(d.message); logAction("Saved Property", `Name: ${name}, Model: ${utility_model}`);
+            clearField('propId');
+            clearField('propName');
+            clearField('propProvince');
+            clearField('propAddress'); clearPropertyForm(); loadProperties(); 
         } catch (e) { alert(`Error calling ${url}: ` + e.message); }
     }
 
@@ -856,6 +952,14 @@
             localStorage.setItem('pm_role', data.role);
             localStorage.setItem('pm_prop_id', data.property_id || "null");
             localStorage.setItem('pm_username', user);
+            localStorage.setItem('pm_user_id', data.user_id);
+            localStorage.setItem('pm_must_change', data.must_change_password || false);
+            if(data.must_change_password) {
+                document.getElementById("loginScreen").style.display = "none";
+                var fc = document.getElementById("screen-force-change-pw");
+                if(fc) { fc.style.display = "flex"; } else { location.reload(); }
+                return;
+            }
             location.reload(); 
         } catch (error) { errorDiv.innerText = error.message; }
     }
@@ -905,7 +1009,15 @@
             electricity_outstanding: parseFloat(document.getElementById("newElecDebt").value || 0), 
             water_outstanding: parseFloat(document.getElementById("newWaterDebt").value || 0) 
         };
-        try { const r = await fetch(`/create-tenant`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); logAction("Created Tenant", `Unit: ${payload.unit_number}`); loadAllTenants(); } catch (e) { alert("Error calling /create-tenant: " + e.message); }
+        try { const r = await fetch(`/create-tenant`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); alert(d.message); logAction("Created Tenant", `Unit: ${payload.unit_number}`);
+            clearField('newUnitNumber');
+            clearField('newFirstName');
+            clearField('newLastName');
+            clearField('newEmail');
+            clearField('newCellphone');
+            clearField('newRentDebt');
+            clearField('newElecDebt');
+            clearField('newWaterDebt'); loadAllTenants(); } catch (e) { alert("Error calling /create-tenant: " + e.message); }
     }
 
     async function checkBalance() {
@@ -1034,7 +1146,8 @@
             if (!r.ok) throw new Error(extractError(d)); 
             resultDiv.style.display = "block";
             resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`;
-            logAction("Uploaded Doc", `Unit: ${unit}`); 
+            logAction("Uploaded Doc", `Unit: ${unit}`);
+            clearField('docUnitNumber'); 
         } catch (e) { 
             resultDiv.style.display = "block";
             resultDiv.innerHTML = `<p style="color:red;">Error calling /upload-doc: ${e.message}</p>`;
@@ -1088,7 +1201,9 @@
             return;
         }
         const tenantId = tenantCheck.id;
-        try { const url = `/set-credit-limit/${tenantId}?limit=${limit}`; const r = await fetch(url, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`; logAction("Set Emergency Fund", `Unit: ${unit}, Limit: ${limit}`); loadAllTenants(); } catch (e) { resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:red;">Error calling /set-credit-limit: ${e.message}</p>`; }
+        try { const url = `/set-credit-limit/${tenantId}?limit=${limit}`; const r = await fetch(url, { method: 'POST', headers: getAuthHeaders() }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`; logAction("Set Emergency Fund", `Unit: ${unit}, Limit: ${limit}`);
+            clearField('creditUnitNumber');
+            clearField('creditLimitInput'); loadAllTenants(); } catch (e) { resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:red;">Error calling /set-credit-limit: ${e.message}</p>`; }
     }
 
     async function loadAvailableMeters() {
@@ -1147,7 +1262,11 @@
             
             resultDiv.style.display = "block";
             resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`;
-            logAction("Assigned Meter", `Unit: ${unit}`); 
+            logAction("Assigned Meter", `Unit: ${unit}`);
+            clearField('meterUnitNumber');
+            clearField('meterSerial');
+            clearField('meterType');
+            clearField('billingType'); 
             
             document.getElementById('meterUnitNumber').value = '';
             document.getElementById('meterSerial').value = '';
@@ -1172,7 +1291,7 @@
         }
         const tenantId = tenantCheck.id;
         const payload = { tenant_id: tenantId, utility_type: document.getElementById("billType").value, amount: parseFloat(document.getElementById("billAmount").value || 0), peak_units: parseFloat(document.getElementById("billPeak").value || 0), offpeak_units: parseFloat(document.getElementById("billOffpeak").value || 0), manual_entry: true };
-        try { const url = `/generate-bill`; const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`; loadAllTenants(); } catch (e) { resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:red;">Error calling /generate-bill: ${e.message}</p>`; }
+        try { const url = `/generate-bill`; const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) }); const d = await r.json(); if (!r.ok) throw new Error(extractError(d)); resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`; clearFields(['billUnitNumber', 'billType', 'billAmount', 'billPeak', 'billOffpeak']); loadAllTenants(); } catch (e) { resultDiv.style.display = "block"; resultDiv.innerHTML = `<p style="color:red;">Error calling /generate-bill: ${e.message}</p>`; }
     }
 
     async function restrictWater() {
@@ -1186,7 +1305,7 @@
         }
         const tenantId = tenantCheck.id;
         try {
-            const url = `/water-control/${tenantId}?action=RESTRICT`;
+            const url = `/restrict-water/${tenantId}`;
             const r = await fetch(url, { method: 'POST', headers: getAuthHeaders() });
             const d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
@@ -1195,7 +1314,7 @@
             loadAllMeters();
         } catch (e) {
             resultDiv.style.display = "block";
-            resultDiv.innerHTML = `<p style="color:red;">Error calling /water-control: ${e.message}</p>`;
+            resultDiv.innerHTML = `<p style="color:red;">Error: ${e.message}</p>`;
         }
     }
 
@@ -1210,7 +1329,7 @@
         }
         const tenantId = tenantCheck.id;
         try {
-            const url = `/water-control/${tenantId}?action=RESTORE`;
+            const url = `/unrestrict-water/${tenantId}`;
             const r = await fetch(url, { method: 'POST', headers: getAuthHeaders() });
             const d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
@@ -1219,7 +1338,7 @@
             loadAllMeters();
         } catch (e) {
             resultDiv.style.display = "block";
-            resultDiv.innerHTML = `<p style="color:red;">Error calling /water-control: ${e.message}</p>`;
+            resultDiv.innerHTML = `<p style="color:red;">Error: ${e.message}</p>`;
         }
     }
 
@@ -1246,6 +1365,9 @@
             resultDiv.style.display = "block";
             resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`;
             logAction("Adjusted Account", `Unit: ${unit}, Target: ${payload.target}`);
+            clearField('adjUnitNumber');
+            clearField('adjAmount');
+            clearField('adjReason');
             loadAllTenants();
         } catch (e) {
             resultDiv.style.display = "block";
@@ -1301,7 +1423,7 @@
         if(!eventType) return;
         const notes = prompt("Enter event notes:");
         try {
-            const url = `/meter-event/${id}`;
+            const url = `/log-meter-event/${id}`;
             const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify({ event_type: eventType.toUpperCase(), notes }) });
             const d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
@@ -1312,7 +1434,7 @@
 
     async function viewMeterHistory(id) {
         try {
-            const url = `/meter-history/${id}`;
+            const url = `/meter-audit-history/${id}`;
             const r = await fetch(url, { headers: getAuthHeaders() });
             const d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
@@ -1398,6 +1520,45 @@
             if (isNaN(tou_offpeak_rate_val)) tou_offpeak_rate_val = 0;
         }
 
+        // VALIDATION 1: Check for zero rates
+        if (structure === 'FLAT' && flat_rate_val <= 0) {
+            if (mType === 'WATER_HOT') {
+                alert("ERROR: Hot water final rate is R0.00.\n\nPlease ensure:\n1. A Cold Water flat rate tariff exists\n2. The surcharge is entered\n\nThe final rate = Cold Water Base + Surcharge");
+            } else {
+                alert("ERROR: Rate cannot be 0.\n\nPlease enter a valid rate for the " + mType + " tariff.");
+            }
+            return;
+        }
+        if (structure === 'TIERED' && tier_1_rate_val <= 0 && tier_2_rate_val <= 0) {
+            alert("ERROR: Tier 1 and Tier 2 rates cannot both be 0.\n\nPlease enter at least one valid rate.");
+            return;
+        }
+        if (structure === 'TOU' && tou_peak_rate_val <= 0 && tou_offpeak_rate_val <= 0) {
+            alert("ERROR: Peak and Off-Peak rates cannot both be 0.\n\nPlease enter at least one valid rate.");
+            return;
+        }
+
+        // VALIDATION 2: Check for hot water without cold water
+        if (mType === 'WATER_HOT') {
+            let coldWaterTariff = allTariffsCache.find(t => (t.meter_type === 'WATER_COLD') && ((t.structure || t.structure_type) === 'FLAT'));
+            if(!coldWaterTariff) {
+                alert("ERROR: Cannot create Hot Water tariff.\n\nPlease create a Cold Water flat rate tariff FIRST.\nThe hot water rate is calculated as: Cold Water Base Rate + Surcharge.");
+                return;
+            }
+            let cwRate = coldWaterTariff.rate_flat || coldWaterTariff.flat_rate || 0;
+            if(cwRate <= 0) {
+                alert("ERROR: Cold Water tariff exists but has a rate of R0.00.\n\nPlease edit the Cold Water tariff to have a valid rate first.");
+                return;
+            }
+            // Update the base rate display
+            document.getElementById("hwBaseRate").value = parseFloat(cwRate).toFixed(2);
+            calcHotWater();
+            // Recalculate after update
+            base = parseFloat(cwRate);
+            surcharge = parseFloat(document.getElementById("hwSurcharge").value || 227.26);
+            flat_rate_val = base + surcharge;
+        }
+
         const payload = {
             property_id: parseInt(propId),
             name: document.getElementById("tariffName").value,
@@ -1410,12 +1571,32 @@
             tou_peak_rate: tou_peak_rate_val,
             tou_offpeak_rate: tou_offpeak_rate_val
         };
+        
+        if(!payload.name) {
+            alert("Please enter a tariff name.");
+            return;
+        }
+        
         try {
             const url = `/tariffs`;
             const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) });
             const d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
-            alert(d.message);
+            alert(d.message + "\n\nRate: R" + flat_rate_val.toFixed(2));
+            // CLEAR FIELDS
+            document.getElementById('tariffName').value = '';
+            document.getElementById('rateFlat').value = '';
+            document.getElementById('tier1Limit').value = '';
+            document.getElementById('tier1Rate').value = '';
+            document.getElementById('tier2Rate').value = '';
+            document.getElementById('touPeak').value = '';
+            document.getElementById('touOffpeak').value = '';
+            document.getElementById('hwSurcharge').value = '';
+            document.getElementById('hwBaseRate').value = '';
+            document.getElementById('hwFinalRate').value = '';
+            document.getElementById('tariffMeterType').selectedIndex = 0;
+            document.getElementById('tariffStructure').selectedIndex = 0;
+            toggleTariffFields();
             loadTariffs();
         } catch (e) { alert(`Error calling ${url}: ` + e.message); }
     }
@@ -1566,20 +1747,34 @@
 
     async function generateInvoice() {
         const unit = document.getElementById("invUnitNumber").value;
-        const tenantId = getTenantIdByUnit(unit);
-        if(!tenantId) return;
+        const resultDiv = document.getElementById("invResult");
+        const tenantCheck = getTenantIdByUnit(unit);
+        if(tenantCheck.error) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">${tenantCheck.error}</p>`;
+            return;
+        }
+        const tenantId = tenantCheck.id;
         const payload = {
-            period: document.getElementById("invPeriod").value,
-            cycle: document.getElementById("invCycle").value
+            tenant_id: tenantId,
+            billing_period: document.getElementById("invPeriod").value,
+            cycle_type: document.getElementById("invCycle").value
         };
         try {
-            const url = `/generate-invoice/${tenantId}`;
+            const url = `/generate-invoice/`;
             const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify(payload) });
             const d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
-            alert(d.message);
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:green;">${d.message} (Invoice #${d.invoice_id}, Total: R${d.total.toFixed(2)})</p>`;
+            document.getElementById('invUnitNumber').value = '';
+            document.getElementById('invPeriod').value = '';
+            document.getElementById('invCycle').selectedIndex = 0;
             loadInvoices();
-        } catch (e) { alert(`Error calling ${url}: ` + e.message); }
+        } catch (e) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = `<p style="color:red;">Error: ${e.message}</p>`;
+        }
     }
 
     async function loadInvoices() {
@@ -1595,8 +1790,9 @@
                     <td>${inv.id}</td>
                     <td>${inv.tenant_name}</td>
                     <td>${inv.period}</td>
-                    <td>R${inv.total_amount.toFixed(2)}</td>
+                    <td>R${inv.total.toFixed(2)}</td>
                     <td>${inv.status}</td>
+                    <td>${inv.date}</td>
                     <td><button onclick="viewInvoice(${inv.id})" class="btn-invoice">View</button></td>
                 </tr>`;
             });
@@ -1606,44 +1802,43 @@
 
     async function viewInvoice(id) {
         try {
-            const url = `/invoice/${id}`;
-            const r = await fetch(url, { headers: getAuthHeaders() });
+            const r = await fetch(`/invoice/${id}`, { headers: getAuthHeaders() });
             const d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
             let itemsRows = "";
-            d.line_items.forEach(item => {
-                itemsRows += `<tr><td>${item.description}</td><td>${item.qty}</td><td>R${item.rate.toFixed(2)}</td><td>R${item.amount.toFixed(2)}</td></tr>`;
+            d.items.forEach(item => {
+                itemsRows += `<tr><td>${item.description}</td><td>${item.quantity.toFixed(2)}</td><td>R${item.unit_price.toFixed(2)}</td><td>R${item.total.toFixed(2)}</td></tr>`;
             });
             document.getElementById("invoiceContent").innerHTML = `
                 <div class="invoice-paper">
                     <div class="invoice-branding">
                         <div class="company-info">
-                            <h2>${companyData.name || 'Company Name'}</h2>
+                            <h2>${companyData.name || 'ELUP Services'}</h2>
                             <p>${companyData.address || ''}</p>
                             <p>VAT: ${companyData.vat_number || ''}</p>
                         </div>
                         <div>
                             <h3>INVOICE</h3>
                             <p>#${d.id}</p>
-                            <p>Date: ${d.date_generated}</p>
+                            <p>Date: ${d.date}</p>
                         </div>
                     </div>
                     <div style="margin-bottom: 20px;">
                         <h3>Bill To:</h3>
                         <p>${d.tenant_name}</p>
-                        <p>${d.unit_number}</p>
                     </div>
                     <table style="width:100%; border-collapse: collapse;">
-                        <thead><tr><th style="text-align:left; border-bottom: 1px solid #ddd;">Desc</th><th style="text-align:left; border-bottom: 1px solid #ddd;">Qty</th><th style="text-align:left; border-bottom: 1px solid #ddd;">Rate</th><th style="text-align:left; border-bottom: 1px solid #ddd;">Amount</th></tr></thead>
+                        <thead><tr><th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">Description</th><th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">Qty</th><th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">Unit Price</th><th style="text-align:left; border-bottom: 1px solid #ddd; padding: 8px;">Total</th></tr></thead>
                         <tbody>${itemsRows}</tbody>
                     </table>
                     <div style="text-align: right; margin-top: 20px;">
-                        <h3>Total: R${d.total_amount.toFixed(2)}</h3>
+                        <h3>Total: R${d.total.toFixed(2)}</h3>
+                        <p>Status: ${d.status}</p>
                     </div>
                 </div>
             `;
             document.getElementById("invoiceModal").style.display = "block";
-        } catch (e) { alert(`Error calling /invoice: ` + e.message); }
+        } catch (e) { alert("Error calling /invoice: " + e.message); }
     }
 
     function closeInvoice() { document.getElementById("invoiceModal").style.display = "none"; }
@@ -1684,18 +1879,26 @@
     }
 
     async function triggerMockRent() {
-        const unitNumber = document.getElementById("syncRentUnitNumber").value.trim();
-        const payload = unitNumber ? { unit_number: unitNumber } : {};
+        var unitNumber = document.getElementById("syncRentUnitNumber").value.trim();
+        var propId = document.getElementById("propertyFilter").value;
+        var payload = {};
+        if (propId) payload.property_id = parseInt(propId);
+        if (unitNumber) payload.unit_number = unitNumber;
+        
+        if(!propId) {
+            alert("Please select a property first (top right dropdown).");
+            return;
+        }
         
         try {
-            const r = await fetch(`/sync-rent`, { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, 
+            var r = await fetch("/sync-rent", { 
+                method: "POST", 
+                headers: { "Content-Type": "application/json", "Authorization": "Bearer " + authToken }, 
                 body: JSON.stringify(payload) 
             });
-            const d = await r.json();
+            var d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
-            alert(d.message || "Rent sync triggered.");
+            alert(d.message || "Rent sync triggered for selected property.");
             loadAllTenants();
         } catch (e) { 
             alert("Error calling /sync-rent: " + e.message); 
@@ -1726,6 +1929,11 @@
             resultDiv.style.display = "block";
             resultDiv.innerHTML = `<p style="color:green;">${d.message}</p>`;
             logAction("Processed Payment", `Unit: ${unit}, Amount: ${payload.amount}`);
+            clearField('paymentUnitNumber');
+            clearField('paymentAmount');
+            clearField('paymentRentPct');
+            clearField('paymentElecPct');
+            clearField('paymentWaterPct');
             loadAllTenants();
         } catch (e) {
             resultDiv.style.display = "block";
@@ -1761,23 +1969,23 @@
     async function loadAging() {
         const tB = document.getElementById("agingTableBody");
         try {
-            const url = `/aging-report/${getPropertyFilter()}`;
+            const url = `/arrears-aging/${getPropertyFilter()}`;
             const r = await fetch(url, { headers: getAuthHeaders() });
             const d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
             tB.innerHTML = "";
-            d.report.forEach(t => {
+            (d.aging || d.report || []).forEach(t => {
                 tB.innerHTML += `<tr>
                     <td>${t.tenant_name}</td>
                     <td>R${t.total_arrears.toFixed(2)}</td>
-                    <td>R${t.bucket_30.toFixed(2)}</td>
-                    <td>R${t.bucket_60.toFixed(2)}</td>
-                    <td>R${t.bucket_90.toFixed(2)}</td>
-                    <td>R${t.bucket_over_90.toFixed(2)}</td>
+                    <td>R${(t.current || t.bucket_30 || 0).toFixed(2)}</td>
+                    <td>R${(t.days_30 || t.bucket_60 || 0).toFixed(2)}</td>
+                    <td>R${(t.days_60 || t.bucket_90 || 0).toFixed(2)}</td>
+                    <td>R${(t.days_90 || t.bucket_over_90 || 0).toFixed(2)}</td>
                 </tr>`;
             });
             document.getElementById("agingTable").style.display = "block";
-        } catch (e) { alert("Error calling /aging-report: " + e.message); }
+        } catch (e) { alert("Error calling /arrears-aging: " + e.message); }
     }
 
     async function runRecon() {
@@ -1812,8 +2020,8 @@
                     <td>${r.date}</td>
                     <td>${r.month}</td>
                     <td>${r.utility_type}</td>
-                    <td>${r.muni_units}</td>
-                    <td>${r.sub_units}</td>
+                    <td>${r.municipal_units}</td>
+                    <td>${r.submeter_units}</td>
                     <td>${r.variance}</td>
                     <td class="${statusClass}">${r.status}</td>
                 </tr>`;
@@ -1828,9 +2036,29 @@
             const r = await fetch(url, { headers: getAuthHeaders() });
             const d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
-            document.getElementById("reportContent").innerHTML = `<h2>Financial Report</h2><pre>${JSON.stringify(d, null, 2)}</pre>`;
+            let monthlyRows = (d.revenue.monthly || []).map(m =>
+                `<tr><td>${m.month}</td><td>R${m.revenue.toFixed(2)}</td><td>R${m.billed.toFixed(2)}</td></tr>`
+            ).join("");
+            let consumptionRows = (d.consumption || []).map(c =>
+                `<tr><td>${c.tenant}</td><td>R${c.value.toFixed(2)}</td></tr>`
+            ).join("") || '<tr><td colspan="2" style="color:#7f8c8d;">No consumption data yet.</td></tr>';
+            document.getElementById("reportContent").innerHTML = `
+                <h2>Financial Report</h2>
+                <div class="kpi-grid">
+                    <div class="kpi-card green"><h3>Total Collected</h3><div class="value">R${d.revenue.total_revenue.toFixed(2)}</div></div>
+                    <div class="kpi-card orange"><h3>Total Billed</h3><div class="value">R${d.revenue.total_billed.toFixed(2)}</div></div>
+                    <div class="kpi-card"><h3>Collection Rate</h3><div class="value">${d.revenue.collection_rate.toFixed(1)}%</div></div>
+                    <div class="kpi-card red"><h3>Total Arrears</h3><div class="value">R${d.arrears.total.toFixed(2)}</div></div>
+                </div>
+                <h3>Arrears Breakdown</h3>
+                <p>Rent: R${d.arrears.rent.toFixed(2)} | Electricity: R${d.arrears.electricity.toFixed(2)} | Water: R${d.arrears.water.toFixed(2)}</p>
+                <h3>Monthly Trend</h3>
+                <table><thead><tr><th>Month</th><th>Collected</th><th>Billed</th></tr></thead><tbody>${monthlyRows || '<tr><td colspan="3" style="color:#7f8c8d;">No monthly data yet.</td></tr>'}</tbody></table>
+                <h3>Top Consumers</h3>
+                <table><thead><tr><th>Tenant</th><th>Consumption (R)</th></tr></thead><tbody>${consumptionRows}</tbody></table>
+            `;
             document.getElementById("reportModal").style.display = "block";
-        } catch (e) { alert(`Error calling /financial-report: ` + e.message); }
+        } catch (e) { alert("Error calling /financial-report: " + e.message); }
     }
 
     function closeReport() { document.getElementById("reportModal").style.display = "none"; }
@@ -1838,12 +2066,12 @@
     async function loadPaymentRecon() {
         const tB = document.getElementById("reconReportTableBody");
         try {
-            const url = `/payment-recon/${getPropertyFilter()}`;
+            const url = `/payment-reconciliation/${getPropertyFilter()}`;
             const r = await fetch(url, { headers: getAuthHeaders() });
             const d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
             tB.innerHTML = "";
-            d.report.forEach(t => {
+            (d.reconciliation || d.report || []).forEach(t => {
                 tB.innerHTML += `<tr>
                     <td>${t.tenant_name}</td>
                     <td>R${t.total_billed.toFixed(2)}</td>
@@ -1852,11 +2080,11 @@
                     <td>R${t.rent_arrears.toFixed(2)}</td>
                     <td>R${t.elec_arrears.toFixed(2)}</td>
                     <td>R${t.water_arrears.toFixed(2)}</td>
-                    <td>R${t.net_balance.toFixed(2)}</td>
+                    <td>R${t.balance_due.toFixed(2)}</td>
                 </tr>`;
             });
             document.getElementById("reconReportTable").style.display = "block";
-        } catch (e) { alert("Error calling /payment-recon: " + e.message); }
+        } catch (e) { alert("Error calling /payment-reconciliation: " + e.message); }
     }
 
     async function downloadExcel() {
@@ -1877,19 +2105,42 @@
     }
 
     async function loadBankRecon() {
-        document.getElementById("bankResult").style.display = "block";
-        document.getElementById("bankResult").innerHTML = "<p>Generating Bank Recon... (Mock)</p>";
+        const div = document.getElementById("bankResult");
+        div.style.display = "block";
+        div.innerHTML = "<p>Generating Bank Recon...</p>";
+        try {
+            const url = `/bank-reconciliation/${getPropertyFilter()}`;
+            const r = await fetch(url, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            div.innerHTML = `<p><strong>Total Collected:</strong> R${d.total_collected.toFixed(2)}<br>
+                <strong>Total Disbursed:</strong> R${d.total_disbursed.toFixed(2)}<br>
+                <strong>Net Balance:</strong> R${d.net_balance.toFixed(2)}</p>`;
+        } catch (e) { div.innerHTML = `<p style="color:red;">Error: ${e.message}</p>`; }
     }
 
     async function loadMgmtInvoice() {
-        document.getElementById("mgmtResult").style.display = "block";
-        document.getElementById("mgmtResult").innerHTML = "<p>Generating Management Fee Invoice... (Mock)</p>";
+        const div = document.getElementById("mgmtResult");
+        div.style.display = "block";
+        div.innerHTML = "<p>Generating Management Fee Invoice...</p>";
+        try {
+            const url = `/management-fee-invoice/${getPropertyFilter()}`;
+            const r = await fetch(url, { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            let rows = (d.items || []).map(i => `<li>${i.desc}: R${i.amount.toFixed(2)}</li>`).join("");
+            div.innerHTML = `<p><strong>Total Collections:</strong> R${d.total_collections.toFixed(2)}</p>
+                <ul>${rows}</ul>
+                <p><strong>Subtotal:</strong> R${d.subtotal.toFixed(2)}<br>
+                <strong>VAT:</strong> R${d.vat.toFixed(2)}<br>
+                <strong>Total:</strong> R${d.total.toFixed(2)}</p>`;
+        } catch (e) { div.innerHTML = `<p style="color:red;">Error: ${e.message}</p>`; }
     }
 
     async function load3MonthStats() {
         const tB = document.getElementById("statsTableBody");
         try {
-            const url = `/stats-3month/${getPropertyFilter()}`;
+            const url = `/three-month-stats/${getPropertyFilter()}`;
             const r = await fetch(url, { headers: getAuthHeaders() });
             const d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
@@ -1902,22 +2153,22 @@
                 </tr>`;
             });
             document.getElementById("statsTable").style.display = "block";
-        } catch (e) { alert("Error calling /stats-3month: " + e.message); }
+        } catch (e) { alert("Error calling /three-month-stats: " + e.message); }
     }
 
     async function loadPropertyReport() {
         const tB = document.getElementById("propTableBody");
         try {
-            const r = await fetch(`/property-report`, { headers: getAuthHeaders() });
+            const r = await fetch(`/property-report/${getPropertyFilter()}`, { headers: getAuthHeaders() });
             const d = await r.json();
             if (!r.ok) throw new Error(extractError(d));
             tB.innerHTML = "";
-            d.report.forEach(p => {
+            (d.properties || d.report || []).forEach(p => {
                 tB.innerHTML += `<tr>
-                    <td>${p.property_name}</td>
+                    <td>${p.name || p.property_name}</td>
                     <td>${p.tenant_count}</td>
                     <td>R${p.total_arrears.toFixed(2)}</td>
-                    <td>R${p.wallet_balances.toFixed(2)}</td>
+                    <td>R${(p.wallet_balance || p.wallet_balances || 0).toFixed(2)}</td>
                 </tr>`;
             });
             document.getElementById("propTable").style.display = "block";
@@ -1965,14 +2216,18 @@
     }
     function closeChangePwModal() { document.getElementById('changePwModal').style.display = 'none'; }
     async function submitChangePassword() {
-        const userId = localStorage.getItem('pm_user_id');
+        var userId = localStorage.getItem('pm_user_id');
+        if(!userId || userId === 'undefined' || userId === 'null') {
+            alert('Session expired. Please log out and log in again.');
+            return;
+        }
         const curPw = document.getElementById('changeCurPw').value;
         const newPw = document.getElementById('changeNewPw').value;
         const confPw = document.getElementById('changeConfirmPw').value;
         const errBox = document.getElementById('changePwError');
         errBox.style.display = 'none';
         try {
-            const r = await fetch('/user-change-password/', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` }, body: JSON.stringify({ user_id: parseInt(userId), current_password: curPw, new_password: newPw, confirm_password: confPw }) });
+            const r = await fetch('/user-change-password/', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken }, body: JSON.stringify({ user_id: parseInt(userId), current_password: curPw, new_password: newPw, confirm_password: confPw }) });
             const d = await r.json();
             if (!r.ok) throw new Error(d.detail || 'Failed');
             alert('Password changed successfully!');
@@ -1992,6 +2247,7 @@
             if (!r.ok) throw new Error(d.detail || 'Failed');
             document.getElementById('screen-force-change-pw').style.display = 'none';
             document.getElementById('mainDashboard').style.display = 'block';
+            localStorage.setItem('pm_must_change', 'false');
             loadAllData();
         } catch (e) { errBox.innerText = e.message; errBox.style.display = 'block'; }
     }
@@ -2006,19 +2262,889 @@
         } catch (e) { alert('Error: ' + e.message); }
     }
 
+
+    // --- SMART METER DEMO FUNCTIONS ---
+    async function loadSmartMeterHealth() {
+        const container = document.getElementById('smartMeterHealth');
+        if (!container) return;
+        try {
+            const r = await fetch('/all-meters/' + getPropertyFilter(), { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error('Failed');
+            let html = '';
+            (d.meters || []).slice(0, 12).forEach(m => {
+                var mockBattery = (3.2 + Math.random() * 0.4).toFixed(2);
+                var battClass = 'battery-good';
+                var battIcon = 'Battery';
+                if (parseFloat(mockBattery) < 3.0) { battClass = 'battery-critical'; battIcon = 'LOW BATT'; }
+                else if (parseFloat(mockBattery) < 3.2) { battClass = 'battery-warn'; battIcon = 'WARN BATT'; }
+
+                var typeIcon = '?';
+                var typeLabel = m.meter_type || 'Unknown';
+                var typeColor = '#7f8c8d';
+                if (m.meter_type === 'WATER_COLD') { typeIcon = 'COLD WATER'; typeColor = '#3498db'; }
+                else if (m.meter_type === 'WATER_HOT') { typeIcon = 'HOT WATER'; typeColor = '#e74c3c'; }
+                else if (m.meter_type === 'ELECTRICITY') { typeIcon = 'ELECTRICITY'; typeColor = '#f39c12'; }
+
+                var minsAgo = Math.floor(Math.random() * 30) + 1;
+                var statusColor = minsAgo < 5 ? '#27ae60' : (minsAgo < 15 ? '#f39c12' : '#e74c3c');
+
+                html += '<div class="meter-health-item">' +
+                    '<div><div class="serial">' + (m.serial_number || 'N/A') + '</div>' +
+                    '<div style="font-size:0.7em; color:' + typeColor + '; font-weight:bold;">' + typeIcon + '</div>' +
+                    '<div style="font-size:0.75em; color:#7f8c8d;">' + (m.unit_number || 'N/A') + ' &bull; ' + minsAgo + 'm ago</div></div>' +
+                    '<div class="' + battClass + '">' + battIcon + ' ' + mockBattery + 'V</div>' +
+                    '</div>';
+            });
+            container.innerHTML = html || '<p style="color:#7f8c8d;">No active meters.</p>';
+        } catch (e) { container.innerHTML = '<p style="color:#e74c3c;">Error: ' + e.message + '</p>'; }
+    }
+
+    async function loadActiveAlarms() {
+        const container = document.getElementById('activeAlarms');
+        try {
+            const r = await fetch('/meter-events/', { headers: getAuthHeaders() });
+            const d = await r.json();
+            if (!r.ok) throw new Error('Failed');
+            
+            if (!d.events || d.events.length === 0) {
+                // Show mock alarms for demo
+                const mockAlarms = [
+                    { serial: 'WM-101', type: 'WATER_LEAKAGE', notes: 'Continuous flow for 26 hours. Flow: 0.3 m³/h', severity: 'HIGH', time: '2h ago' },
+                    { serial: 'WM-205', type: 'LOW_BATTERY', notes: 'Battery at 2.9V. Replacement within 30 days.', severity: 'MEDIUM', time: '5h ago' },
+                    { serial: 'WM-308', type: 'TAMPER_DETECT', notes: 'Magnetic interference. Valve auto-closed.', severity: 'HIGH', time: '1h ago' },
+                    { serial: 'WM-412', type: 'VALVE_FAIL', notes: 'Valve close command failed after 3 retries.', severity: 'HIGH', time: '8h ago' },
+                ];
+                
+                let html = '';
+                mockAlarms.forEach(a => {
+                    let sevClass = a.severity === 'HIGH' ? 'alarm-high' : (a.severity === 'MEDIUM' ? 'alarm-medium' : 'alarm-low');
+                    let icon = a.type.includes('LEAK') ? '💧' : (a.type.includes('BATTERY') ? '🪫' : (a.type.includes('TAMPER') ? '🧲' : '⚠️'));
+                    html += '<div class="alarm-item">' +
+                        '<div><div style="font-weight:bold; color:#2c3e50;">' + icon + ' ' + a.type.replace(/_/g, ' ') + ' — ' + a.serial + '</div>' +
+                        '<div style="font-size:0.85em; color:#7f8c8d;">' + a.notes + ' • ' + a.time + '</div></div>' +
+                        '<span class="alarm-badge ' + sevClass + '">' + a.severity + '</span>' +
+                        '</div>';
+                });
+                container.innerHTML = html;
+            } else {
+                let html = '';
+                d.events.slice(0, 5).forEach(a => {
+                    let sevClass = 'alarm-high';
+                    let icon = '⚠️';
+                    html += '<div class="alarm-item">' +
+                        '<div><div style="font-weight:bold;">' + icon + ' ' + a.event_type + ' — ' + (a.serial_number || 'N/A') + '</div>' +
+                        '<div style="font-size:0.85em; color:#7f8c8d;">' + (a.event_notes || '') + '</div></div>' +
+                        '<span class="alarm-badge ' + sevClass + '">ACTIVE</span>' +
+                        '</div>';
+                });
+                container.innerHTML = html;
+            }
+        } catch (e) {
+            // Fallback to mock alarms
+            const mockAlarms = [
+                { serial: 'WM-101', type: 'WATER_LEAKAGE', notes: 'Continuous flow for 26 hours', severity: 'HIGH', time: '2h ago' },
+                { serial: 'WM-205', type: 'LOW_BATTERY', notes: 'Battery at 2.9V', severity: 'MEDIUM', time: '5h ago' },
+                { serial: 'WM-308', type: 'TAMPER_DETECT', notes: 'Magnetic interference detected', severity: 'HIGH', time: '1h ago' },
+            ];
+            let html = '';
+            mockAlarms.forEach(a => {
+                let sevClass = a.severity === 'HIGH' ? 'alarm-high' : 'alarm-medium';
+                let icon = a.type.includes('LEAK') ? '💧' : (a.type.includes('BATTERY') ? '🪫' : '🧲');
+                html += '<div class="alarm-item"><div><div style="font-weight:bold;">' + icon + ' ' + a.type.replace(/_/g, ' ') + ' — ' + a.serial + '</div><div style="font-size:0.85em; color:#7f8c8d;">' + a.notes + ' • ' + a.time + '</div></div><span class="alarm-badge ' + sevClass + '">' + a.severity + '</span></div>';
+            });
+            container.innerHTML = html;
+        }
+    }
+
+
+    async function submitCreditNote() {
+        var unit = document.getElementById("cnUnitNumber").value;
+        var resultDiv = document.getElementById("cnResult");
+        if(!unit) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = "<p style='color:red;'>Please enter a Unit Number.</p>";
+            return;
+        }
+        var tenantCheck = getTenantIdByUnit(unit);
+        if(tenantCheck.error) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = "<p style='color:red;'>" + tenantCheck.error + "</p>";
+            return;
+        }
+        var tenantId = tenantCheck.id;
+        var amount = document.getElementById("cnAmount").value;
+        var reason = document.getElementById("cnReason").value;
+        if(!amount || !reason) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = "<p style='color:red;'>Please enter an amount and a reason.</p>";
+            return;
+        }
+        var url = "/generate-credit-note/";
+        try {
+            var r = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": "Bearer " + authToken },
+                body: JSON.stringify({ tenant_id: tenantId, amount: parseFloat(amount), reason: reason })
+            });
+            var d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = "<p style='color:green;'>" + d.message + " (" + (d.note_no || "") + ")</p>";
+            logAction("Generated Credit Note", "Unit: " + unit + ", Amount: " + amount);
+            clearField('cnUnitNumber');
+            clearField('cnAmount');
+            clearField('cnReason');
+            document.getElementById("cnAmount").value = "";
+            document.getElementById("cnReason").value = "";
+            loadAllTenants();
+        } catch (e) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = "<p style='color:red;'>Error: " + e.message + "</p>";
+        }
+    }
+
+    // OVERRIDDEN: Meters with search, filter, and pagination
+    var allMetersCache = [];
+    var metersPage = 1;
+    var metersPerPage = 25;
+
+    async function loadAllMeters() {
+        var tB = document.getElementById("metersTableBody");
+        var url = '/all-meters/' + getPropertyFilter();
+        try {
+            var r = await fetch(url, { headers: getAuthHeaders() });
+            var d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            allMetersCache = d.meters || [];
+            metersPage = 1;
+            filterMeters();
+        } catch (e) { console.error("Error: " + e.message); }
+    }
+
+    function filterMeters() {
+        var tB = document.getElementById("metersTableBody");
+        var search = (document.getElementById('meterSearchInput') || {}).value || '';
+        var typeFilter = (document.getElementById('meterTypeFilter') || {}).value || '';
+        var searchLower = search.toLowerCase();
+
+        var filtered = allMetersCache.filter(function(m) {
+            var matchSearch = !searchLower ||
+                (m.serial_number || '').toLowerCase().indexOf(searchLower) >= 0 ||
+                (m.unit_number || '').toLowerCase().indexOf(searchLower) >= 0 ||
+                (m.tenant_name || '').toLowerCase().indexOf(searchLower) >= 0;
+            var matchType = !typeFilter || m.meter_type === typeFilter;
+            return matchSearch && matchType;
+        });
+
+        var totalPages = Math.ceil(filtered.length / metersPerPage);
+        if (metersPage > totalPages) metersPage = 1;
+        if (metersPage < 1) metersPage = totalPages;
+
+        var start = (metersPage - 1) * metersPerPage;
+        var end = start + metersPerPage;
+        var pageItems = filtered.slice(start, end);
+
+        tB.innerHTML = "";
+        pageItems.forEach(function(m) {
+            var mId = m.meter_id || m.id;
+            tB.innerHTML += '<tr><td>' + mId + '</td><td>' + (m.unit_number || 'N/A') + '</td><td>' + (m.property_name || 'N/A') + '</td><td>' + (m.tenant_name || 'Vacant') + '</td><td>' + m.meter_type + '</td><td>' + m.billing_type + '</td><td>' + m.serial_number + '</td><td>' + (m.valve_status || 'N/A') + '</td><td>' + (m.is_active ? 'Yes' : 'No') + '</td><td><button onclick="logMeterEvent(' + mId + ')" class="btn-event">Log Event</button> <button onclick="viewMeterHistory(' + mId + ')" class="btn-history">History</button>' + (m.is_active ? ' <button onclick="deactivateMeter(' + mId + ')" class="btn-danger">Deactivate</button>' : '') + '</td></tr>';
+        });
+
+        document.getElementById("metersTable").style.display = "block";
+
+        var info = document.getElementById("meterPageInfo");
+        if (info) {
+            info.innerHTML = 'Showing ' + (start + 1) + '-' + Math.min(end, filtered.length) + ' of ' + filtered.length + ' meters';
+        }
+
+        var pagBar = document.getElementById("meterPaginationBar");
+        if (!pagBar) {
+            pagBar = document.createElement('div');
+            pagBar.id = "meterPaginationBar";
+            pagBar.className = "pagination-bar";
+            document.getElementById("metersTable").parentNode.insertBefore(pagBar, document.getElementById("metersTable").nextSibling);
+        }
+        pagBar.innerHTML = '<div><button class="page-btn" onclick="changeMeterPage(-1)" ' + (metersPage <= 1 ? 'disabled' : '') + '>Previous</button> <span style="font-size:0.85em;">Page ' + metersPage + ' of ' + (totalPages || 1) + '</span> <button class="page-btn" onclick="changeMeterPage(1)" ' + (metersPage >= totalPages ? 'disabled' : '') + '>Next</button></div><div style="font-size:0.8em; color:#7f8c8d;">25 per page</div>';
+    }
+
+    function changeMeterPage(dir) {
+        metersPage += dir;
+        filterMeters();
+    }
+
+    // OVERRIDDEN: Audit with search and pagination
+    var allAuditCache = [];
+    var auditPage = 1;
+    var auditPerPage = 50;
+
+    async function loadAuditLog() {
+        var tB = document.getElementById("auditTableBody");
+        try {
+            var r = await fetch('/audit-log/', { headers: getAuthHeaders() });
+            var d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            allAuditCache = d.logs || [];
+            auditPage = 1;
+            filterAudit();
+        } catch(e) { console.error("Error: " + e.message); }
+    }
+
+    function filterAudit() {
+        var tB = document.getElementById("auditTableBody");
+        var search = (document.getElementById('auditSearchInput') || {}).value || '';
+        var searchLower = search.toLowerCase();
+
+        var filtered = allAuditCache.filter(function(l) {
+            if (!searchLower) return true;
+            return (l.username || '').toLowerCase().indexOf(searchLower) >= 0 ||
+                   (l.action || '').toLowerCase().indexOf(searchLower) >= 0 ||
+                   (l.details || '').toLowerCase().indexOf(searchLower) >= 0;
+        });
+
+        var totalPages = Math.ceil(filtered.length / auditPerPage);
+        if (auditPage > totalPages) auditPage = 1;
+        if (auditPage < 1) auditPage = totalPages;
+
+        var start = (auditPage - 1) * auditPerPage;
+        var end = start + auditPerPage;
+        var pageItems = filtered.slice(start, end);
+
+        tB.innerHTML = "";
+        pageItems.forEach(function(l) {
+            tB.innerHTML += '<tr><td>' + l.timestamp + '</td><td>' + l.username + '</td><td>' + l.action + '</td><td>' + l.details + '</td></tr>';
+        });
+
+        document.getElementById("auditTable").style.display = "block";
+
+        var info = document.getElementById("auditPageInfo");
+        if (info) {
+            info.innerHTML = 'Showing ' + (start + 1) + '-' + Math.min(end, filtered.length) + ' of ' + filtered.length;
+        }
+
+        var pagBar = document.getElementById("auditPaginationBar");
+        if (!pagBar) {
+            pagBar = document.createElement('div');
+            pagBar.id = "auditPaginationBar";
+            pagBar.className = "pagination-bar";
+            document.getElementById("auditTable").parentNode.insertBefore(pagBar, document.getElementById("auditTable").nextSibling);
+        }
+        pagBar.innerHTML = '<div><button class="page-btn" onclick="changeAuditPage(-1)" ' + (auditPage <= 1 ? 'disabled' : '') + '>Previous</button> <span style="font-size:0.85em;">Page ' + auditPage + ' of ' + (totalPages || 1) + '</span> <button class="page-btn" onclick="changeAuditPage(1)" ' + (auditPage >= totalPages ? 'disabled' : '') + '>Next</button></div><div style="font-size:0.8em; color:#7f8c8d;">50 per page</div>';
+    }
+
+    function changeAuditPage(dir) {
+        auditPage += dir;
+        filterAudit();
+    }
+
+
+    // OVERRIDDEN: Tenants with search, filter, and pagination
+    async function loadAllTenants() {
+        var tB = document.getElementById("tenantsTableBody");
+        try {
+            var url = '/all-tenants/' + getPropertyFilter();
+            var r = await fetch(url, { headers: getAuthHeaders() });
+            var d = await r.json();
+            if (!r.ok) throw new Error(extractError(d));
+            allTenantsCache = d.tenants || [];
+            tenantsPage = 1;
+            filterTenants();
+        } catch (e) { console.error("Error calling /all-tenants: " + e.message); }
+    }
+
+    var tenantsPage = 1;
+    var tenantsPerPage = 25;
+
+    function filterTenants() {
+        var tB = document.getElementById("tenantsTableBody");
+        if (!tB) return;
+        var search = (document.getElementById('tenantSearchInput') || {}).value || '';
+        var statusFilter = (document.getElementById('tenantStatusFilter') || {}).value || '';
+        var searchLower = search.toLowerCase();
+
+        var filtered = allTenantsCache.filter(function(t) {
+            // Search filter
+            var matchSearch = !searchLower ||
+                (t.unit_number || '').toLowerCase().indexOf(searchLower) >= 0 ||
+                (t.first_name || '').toLowerCase().indexOf(searchLower) >= 0 ||
+                (t.last_name || '').toLowerCase().indexOf(searchLower) >= 0 ||
+                (t.email || '').toLowerCase().indexOf(searchLower) >= 0 ||
+                (t.cellphone || '').toLowerCase().indexOf(searchLower) >= 0;
+
+            // Status filter
+            var matchStatus = true;
+            if (statusFilter === 'ARREARS') {
+                matchStatus = (t.rent_outstanding > 0 || t.electricity_outstanding > 0 || t.water_outstanding > 0);
+            } else if (statusFilter) {
+                matchStatus = (t.status || '').toUpperCase() === statusFilter;
+            }
+
+            return matchSearch && matchStatus;
+        });
+
+        var totalPages = Math.ceil(filtered.length / tenantsPerPage);
+        if (tenantsPage > totalPages) tenantsPage = 1;
+        if (tenantsPage < 1) tenantsPage = totalPages || 1;
+
+        var start = (tenantsPage - 1) * tenantsPerPage;
+        var end = start + tenantsPerPage;
+        var pageItems = filtered.slice(start, end);
+
+        tB.innerHTML = "";
+        pageItems.forEach(function(t) {
+            var tId = t.tenant_id || t.id;
+            var upperStatus = (t.status || 'ACTIVE').toUpperCase();
+            var statusClass = upperStatus === 'ACTIVE' ? 'status-active' : (upperStatus === 'VACATED' ? 'status-vacated' : 'status-suspended');
+            var payStatus = (t.rent_outstanding > 0 || t.electricity_outstanding > 0 || t.water_outstanding > 0) ? '<span style="color:red;font-weight:bold;">IN ARREARS</span>' : '<span style="color:green;font-weight:bold;">CLEAR</span>';
+
+            tB.innerHTML += '<tr><td>' + (t.unit_number || 'N/A') + '</td><td>' + (t.first_name || '') + ' ' + (t.last_name || '') + '</td><td>' + (t.email || 'N/A') + '</td><td>' + (t.cellphone || 'N/A') + '</td><td>' + payStatus + '</td><td>R' + (t.rent_outstanding || 0).toFixed(2) + '</td><td>R' + (t.electricity_outstanding || 0).toFixed(2) + '</td><td>R' + (t.water_outstanding || 0).toFixed(2) + '</td><td>R' + (t.wallet_balance || 0).toFixed(2) + '</td><td class="' + statusClass + '">' + upperStatus + '</td><td>' + (t.credit_status || 'N/A') + '</td><td><button onclick="editTenant(' + tId + ')" class="btn-edit">Edit</button> <button onclick="viewStatement(' + tId + ')" class="btn-statement">Statement</button> <button onclick="openDocs(' + tId + ')" class="btn-docs">Docs</button> <button onclick="grantConsent(' + tId + ')" class="btn-popia">Consent</button> <button onclick="anonymize(' + tId + ')" class="btn-anonymize">Anonymize</button> <button onclick="runCreditCheck(' + tId + ')" class="btn-credit">Credit</button> <button onclick="suspendTenant(' + tId + ')" class="btn-suspend">Suspend</button> <button onclick="vacateTenant(' + tId + ')" class="btn-danger">Vacate</button></td></tr>';
+        });
+
+        document.getElementById("tenantsTable").style.display = "block";
+
+        var info = document.getElementById("tenantPageInfo");
+        if (info) {
+            info.innerHTML = 'Showing ' + (start + 1) + '-' + Math.min(end, filtered.length) + ' of ' + filtered.length + ' tenants';
+        }
+
+        // Pagination bar
+        var pagBar = document.getElementById("tenantPaginationBar");
+        if (!pagBar) {
+            pagBar = document.createElement('div');
+            pagBar.id = "tenantPaginationBar";
+            pagBar.className = "pagination-bar";
+            var table = document.getElementById("tenantsTable");
+            table.parentNode.insertBefore(pagBar, table.nextSibling);
+        }
+        pagBar.innerHTML = '<div><button class="page-btn" onclick="changeTenantPage(-1)" ' + (tenantsPage <= 1 ? 'disabled' : '') + '>Previous</button> <span style="font-size:0.85em;">Page ' + tenantsPage + ' of ' + (totalPages || 1) + '</span> <button class="page-btn" onclick="changeTenantPage(1)" ' + (tenantsPage >= totalPages ? 'disabled' : '') + '>Next</button></div><div style="font-size:0.8em; color:#7f8c8d;">25 per page</div>';
+    }
+
+    function changeTenantPage(dir) {
+        tenantsPage += dir;
+        filterTenants();
+    }
+
+
+    function clearField(id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        if (el.tagName === 'SELECT') { el.selectedIndex = 0; }
+        else if (el.type === 'file') { el.value = ''; }
+        else { el.value = ''; }
+    }
+    function clearFields(ids) { ids.forEach(function(id) { clearField(id); }); }
+
+
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            var lu = document.getElementById('loginUser');
+            var lp = document.getElementById('loginPass');
+            if (lu) lu.value = '';
+            if (lp) lp.value = '';
+            var le = document.getElementById('loginError');
+            if (le) le.innerText = '';
+        }, 200);
+    });
+
+
+    // OVERRIDDEN: Clean login function
+    async function login() {
+        var user = document.getElementById("loginUser").value;
+        var pass = document.getElementById("loginPass").value;
+        var errorDiv = document.getElementById("loginError");
+        if (errorDiv) { errorDiv.innerText = ""; errorDiv.style.display = "none"; }
+        
+        if (!user || !pass) {
+            if (errorDiv) { errorDiv.innerText = "Please enter username and password."; errorDiv.style.display = "block"; }
+            return;
+        }
+        
+        try {
+            var response = await fetch('/login/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: user, password: pass })
+            });
+            
+            if (!response.ok) {
+                var errData = await response.json().catch(function() { return {}; });
+                throw new Error(errData.detail || "Login failed. Check username and password.");
+            }
+            
+            var data = await response.json();
+            authToken = data.token;
+            localStorage.setItem('pm_token', authToken);
+            localStorage.setItem('pm_role', data.role);
+            localStorage.setItem('pm_prop_id', data.property_id || "null");
+            localStorage.setItem('pm_username', user);
+            localStorage.setItem('pm_user_id', String(data.user_id || '1'));
+            localStorage.setItem('pm_must_change', String(data.must_change_password || false));
+            
+            if (data.must_change_password) {
+                var ls = document.getElementById("loginScreen");
+                if (ls) ls.style.display = "none";
+                var fc = document.getElementById("screen-force-change-pw");
+                if (fc) { fc.style.display = "flex"; }
+                else { location.reload(); }
+                return;
+            }
+            
+            location.reload();
+        } catch (error) {
+            if (errorDiv) { errorDiv.innerText = error.message; errorDiv.style.display = "block"; }
+        }
+    }
+
+
+    // OVERRIDDEN: Clean login function
+    async function login() {
+        var user = document.getElementById("loginUser").value;
+        var pass = document.getElementById("loginPass").value;
+        var errorDiv = document.getElementById("loginError");
+        if (errorDiv) { errorDiv.innerText = ""; errorDiv.style.display = "none"; }
+        
+        if (!user || !pass) {
+            if (errorDiv) { errorDiv.innerText = "Please enter username and password."; errorDiv.style.display = "block"; }
+            return;
+        }
+        
+        try {
+            var response = await fetch('/login/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: user, password: pass })
+            });
+            
+            if (!response.ok) {
+                var errData = await response.json().catch(function() { return {}; });
+                throw new Error(errData.detail || "Login failed. Check username and password.");
+            }
+            
+            var data = await response.json();
+            authToken = data.token;
+            localStorage.setItem('pm_token', authToken);
+            localStorage.setItem('pm_role', data.role);
+            localStorage.setItem('pm_prop_id', data.property_id || "null");
+            localStorage.setItem('pm_username', user);
+            localStorage.setItem('pm_user_id', String(data.user_id || '1'));
+            localStorage.setItem('pm_must_change', String(data.must_change_password || false));
+            
+            if (data.must_change_password) {
+                var ls = document.getElementById("loginScreen");
+                if (ls) ls.style.display = "none";
+                var fc = document.getElementById("screen-force-change-pw");
+                if (fc) { fc.style.display = "flex"; }
+                else { location.reload(); }
+                return;
+            }
+            
+            location.reload();
+        } catch (error) {
+            if (errorDiv) { errorDiv.innerText = error.message; errorDiv.style.display = "block"; }
+        }
+    }
+
+
+    // Clear invoice form after generation (delayed to beat browser autocomplete)
+    function clearInvoiceForm() {
+        setTimeout(function() {
+            var u = document.getElementById('invUnitNumber');
+            var p = document.getElementById('invPeriod');
+            var c = document.getElementById('invCycle');
+            if (u) u.value = '';
+            if (p) p.value = '';
+            if (c) c.selectedIndex = 0;
+        }, 500);
+    }
+
+
+    // Clear all input fields on page load (beats browser autocomplete)
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            var inputs = document.querySelectorAll('input[type="text"], input[type="number"], input[type="email"], input[type="tel"], input[type="password"]');
+            for (var i = 0; i < inputs.length; i++) {
+                // Don't clear hidden inputs or inputs with values set by the system
+                if (inputs[i].id !== 'loginUser' && inputs[i].id !== 'loginPass') {
+                    inputs[i].value = '';
+                }
+            }
+            // Reset all selects to first option
+            var selects = document.querySelectorAll('select');
+            for (var j = 0; j < selects.length; j++) {
+                if (selects[j].id !== 'login_property' && selects[j].id !== 'propertyFilter') {
+                    selects[j].selectedIndex = 0;
+                }
+            }
+        }, 300);
+    });
+
+
+    // OVERRIDE: Clear form fields when switching to specific tabs
+    var originalSwitchTab = switchTab;
+    switchTab = function(evt, tabId) {
+        originalSwitchTab(evt, tabId);
+        // Clear invoice form when switching to Invoices tab
+        if (tabId === 'tab-invoices') {
+            setTimeout(function() {
+                var u = document.getElementById('invUnitNumber');
+                var p = document.getElementById('invPeriod');
+                var cy = document.getElementById('invCycle');
+                if (u) u.value = '';
+                if (p) p.value = '';
+                if (cy) cy.selectedIndex = 0;
+            }, 100);
+        }
+        // Clear billing form when switching to Billing tab
+        if (tabId === 'tab-ops') {
+            setTimeout(function() {
+                var fields = ['paymentUnitNumber', 'paymentAmount', 'meterUnitNumber', 'meterSerial', 
+                               'billUnitNumber', 'billAmount', 'restrictUnitNumber', 'adjUnitNumber', 
+                               'adjAmount', 'adjReason', 'creditUnitNumber', 'creditLimitInput',
+                               'readingMeterSerial', 'readingValue', 'readingDate'];
+                fields.forEach(function(id) {
+                    var el = document.getElementById(id);
+                    if (el) { el.value = ''; }
+                });
+                var selects = ['meterType', 'billingType', 'billType', 'adjTarget', 'inspStatus'];
+                selects.forEach(function(id) {
+                    var el = document.getElementById(id);
+                    if (el) { el.selectedIndex = 0; }
+                });
+            }, 100);
+        }
+        // Clear tenant form when switching to Tenants tab
+        if (tabId === 'tab-tenants') {
+            setTimeout(function() {
+                var fields = ['newUnitNumber', 'newFirstName', 'newLastName', 'newEmail', 
+                               'newCellphone', 'newRentDebt', 'newElecDebt', 'newWaterDebt',
+                               'unitNumberInput', 'docUnitNumber', 'ntvUnitNumber', 'ntvReason',
+                               'inspUnitNumber', 'inspNotes', 'syncRentUnitNumber'];
+                fields.forEach(function(id) {
+                    var el = document.getElementById(id);
+                    if (el) { el.value = ''; }
+                });
+                var selects = ['docType', 'inspStatus'];
+                selects.forEach(function(id) {
+                    var el = document.getElementById(id);
+                    if (el) { el.selectedIndex = 0; }
+                });
+            }, 100);
+        }
+        // Clear reports form when switching to Reports tab
+        if (tabId === 'tab-reports') {
+            setTimeout(function() {
+                var fields = ['cnUnitNumber', 'cnAmount', 'cnReason', 'reconMonth', 'reconMuni', 
+                               'reconSub', 'excelMonth'];
+                fields.forEach(function(id) {
+                    var el = document.getElementById(id);
+                    if (el) { el.value = ''; }
+                });
+                var selects = ['reconType'];
+                selects.forEach(function(id) {
+                    var el = document.getElementById(id);
+                    if (el) { el.selectedIndex = 0; }
+                });
+            }, 100);
+        }
+    };
+    
+    // Also clear on page load (delayed to beat autocomplete)
+    setTimeout(function() {
+        var inputs = document.querySelectorAll('input[type="text"], input[type="number"]');
+        for (var i = 0; i < inputs.length; i++) {
+            if (inputs[i].id !== 'loginUser' && inputs[i].id !== 'loginPass' && 
+                inputs[i].id !== 'propertyFilter' && !inputs[i].id.startsWith('edit') &&
+                inputs[i].id !== 'propId' && inputs[i].type !== 'hidden') {
+                inputs[i].value = '';
+            }
+        }
+    }, 500);
+
+
+    async function generateBulkInvoices() {
+        var propId = document.getElementById("propertyFilter").value;
+        var period = document.getElementById("bulkInvPeriod").value;
+        var cycle = document.getElementById("bulkInvCycle").value;
+        var resultDiv = document.getElementById("bulkInvResult");
+        
+        if(!propId) { 
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = "<p style='color:red;'>Please select a property first.</p>";
+            return;
+        }
+        if(!period) {
+            resultDiv.style.display = "block";
+            resultDiv.innerHTML = "<p style='color:red;'>Please enter a billing period (e.g., 2026-09).</p>";
+            return;
+        }
+        
+        resultDiv.style.display = "block";
+        resultDiv.innerHTML = "<p style='color:#7f8c8d;'>Generating invoices for all active tenants...</p>";
+        
+        try {
+            var r = await fetch('/generate-invoices-bulk/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+                body: JSON.stringify({ property_id: parseInt(propId), billing_period: period, cycle_type: cycle })
+            });
+            var d = await r.json();
+            if (!r.ok) throw new Error(d.detail || "Failed");
+            
+            var s = d.summary;
+            var html = "<p style='color:green; font-weight:bold; font-size:1.1em;'>" + d.message + "</p>";
+            html += "<div style='margin-top:10px; font-size:0.9em; color:#2c3e50;'>";
+            html += "<strong>Summary:</strong><br>";
+            html += "Total tenants: " + s.total_tenants + "<br>";
+            html += "Invoices generated: <strong style='color:green;'>" + s.invoices_generated + "</strong><br>";
+            html += "Already invoiced (skipped): " + s.already_invoiced + "<br>";
+            html += "No arrears (skipped): " + s.no_arrears + "<br>";
+            html += "Errors: " + s.errors + "<br>";
+            html += "Total invoiced amount: <strong>R" + s.total_amount.toFixed(2) + "</strong>";
+            html += "</div>";
+            
+            if (d.errors && d.errors.length > 0) {
+                html += "<div style='margin-top:10px; color:#e74c3c; font-size:0.85em;'>";
+                html += "<strong>Errors:</strong><br>";
+                d.errors.forEach(function(err) { html += err + "<br>"; });
+                html += "</div>";
+            }
+            
+            resultDiv.innerHTML = html;
+            logAction("Bulk Invoice Generation", "Property: " + propId + ", Period: " + period + ", Generated: " + s.invoices_generated);
+            loadInvoices();
+        } catch (e) {
+            resultDiv.innerHTML = "<p style='color:red;'>Error: " + e.message + "</p>";
+        }
+    }
+
 </script>
 <!-- CHANGE PASSWORD MODAL -->
 <div id="changePwModal" class="change-pw-modal">
     <div class="change-pw-content">
         <h2>Change Password</h2>
-        <input type="password" id="changeCurPw" placeholder="Current Password">
-        <input type="password" id="changeNewPw" placeholder="New Password (min 8 chars)">
-        <input type="password" id="changeConfirmPw" placeholder="Confirm New Password">
+        <input autocomplete="off" type="password" id="changeCurPw" placeholder="Current Password">
+        <input autocomplete="off" type="password" id="changeNewPw" placeholder="New Password (min 8 chars)">
+        <input autocomplete="off" type="password" id="changeConfirmPw" placeholder="Confirm New Password">
         <button style="background:#3498db;" onclick="submitChangePassword()">Change Password</button>
         <button style="background:#7f8c8d;" onclick="closeChangePwModal()">Cancel</button>
         <div id="changePwError" style="color:red; margin-top:10px; display:none;"></div>
     </div>
 </div>
+
+
+<!-- FIX-CLEAR-INVOICES-ON-TAB: auto-clear Invoices tab when entering it -->
+<script>
+(function() {
+    if (window.__invoicesTabClearFix) return;
+    window.__invoicesTabClearFix = true;
+
+    var __prevSwitchTabInv = switchTab;
+    switchTab = function(evt, tabId) {
+        __prevSwitchTabInv(evt, tabId);
+        if (tabId === 'tab-invoices') {
+            setTimeout(function() {
+                // 1. Clear single-invoice form
+                var u = document.getElementById('invUnitNumber');
+                var p = document.getElementById('invPeriod');
+                var c = document.getElementById('invCycle');
+                if (u) u.value = '';
+                if (p) p.value = '';
+                if (c) c.selectedIndex = 0;
+
+                // 2. Clear bulk-invoice form
+                var bp = document.getElementById('bulkInvPeriod');
+                var bc = document.getElementById('bulkInvCycle');
+                if (bp) bp.value = '';
+                if (bc) bc.selectedIndex = 0;
+
+                // 3. Hide and empty the invoices table
+                var tbl = document.getElementById('invoicesTable');
+                var tb = document.getElementById('invoicesTableBody');
+                if (tb) tb.innerHTML = '';
+                if (tbl) tbl.style.display = 'none';
+
+                // 4. Hide and clear the bulk result box
+                var br = document.getElementById('bulkInvResult');
+                if (br) { br.style.display = 'none'; br.innerHTML = ''; }
+            }, 100);
+        }
+    };
+})();// OVERRIDE: Show Company Settings only for Admin at Head Office (All Properties)
+    function updateCompanySettingsVisibility() {
+        var card = document.getElementById('companySettingsCard');
+        if (!card) return;
+        var propFilter = document.getElementById('propertyFilter');
+        var propValue = propFilter ? propFilter.value : '';
+        var role = localStorage.getItem('pm_role');
+        
+        // Show only if: Admin AND "All Properties" is selected
+        if (role === 'ADMIN' && !propValue) {
+            card.style.display = 'block';
+        } else {
+            card.style.display = 'none';
+        }
+    }
+    
+    // Run on page load
+    setTimeout(updateCompanySettingsVisibility, 500);
+    
+    // Run when property filter changes
+    var propFilterEl = document.getElementById('propertyFilter');
+    if (propFilterEl) {
+        propFilterEl.addEventListener('change', function() {
+            setTimeout(updateCompanySettingsVisibility, 100);
+        });
+    }
+
+
+    /* [v3] removed conflicting loadProperties */
+
+    var originalSaveProperty = saveProperty;
+    saveProperty = async function() {
+        var id = document.getElementById("propId").value;
+        var name = document.getElementById("propName").value;
+        var province = document.getElementById("propProvince").value;
+        var address = document.getElementById("propAddress").value;
+        var utility_model = document.getElementById("propUtilityModel").value;
+        if (!name) { alert("Property name is required."); return; }
+        var payload = { name: name, province: province, address: address, utility_model: utility_model };
+        var url = id ? '/properties/' + id : '/properties';
+        var method = id ? 'PUT' : 'POST';
+        try {
+            var r = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken }, body: JSON.stringify(payload) });
+            var d = await r.json();
+            if (!r.ok) throw new Error(d.detail || "Failed");
+            alert(d.message);
+            clearPropertyForm();
+            loadProperties(); 
+        } catch (e) { alert('Error: ' + e.message); }
+    };
+
+    // OVERRIDDEN: clearPropertyForm — clean version
+    function clearPropertyForm() {
+        document.getElementById("propId").value = "";
+        document.getElementById("propName").value = "";
+        document.getElementById("propProvince").value = "";
+        document.getElementById("propAddress").value = "";
+        document.getElementById("propUtilityModel").value = "STS_TOKEN";
+    }</script>
+
+
+
+<script>
+/* ==============================================================
+   PROPERTY EDIT — v3 (fix_property_edit_v3.py)
+   Single source of truth for property editing. Do not add more.
+   ============================================================== */
+(function () {
+    "use strict";
+
+    // --- 1. Cache full property data whenever /properties/ responds ---
+    var propCache = {};
+    window.__propCache = propCache;
+
+    // --- 2. The one clean loadProperties. Renders our own buttons. ---
+    window.loadProperties = async function () {
+        try {
+            var r = await fetch("/properties/", { headers: getAuthHeaders() });
+            if (!r.ok) throw new Error("load failed");
+            var d = await r.json();
+
+            var filter = document.getElementById("propertyFilter");
+            var tblBody = document.getElementById("propertiesTableBody");
+            var userDD = document.getElementById("newUserProp");
+
+            if (filter) filter.innerHTML = '<option value="">All Properties (Owner View)</option>';
+            if (userDD) userDD.innerHTML = '<option value="">Select Property...</option>';
+            if (tblBody) tblBody.innerHTML = "";
+
+            (d.properties || []).forEach(function (p) {
+                propCache[String(p.id)] = p;
+
+                if (filter) {
+                    var label = p.utility_model === "WALLET_CONSUMPTION"
+                        ? "Smart Meters" : "Dumb Meters";
+                    filter.innerHTML += '<option value="' + p.id + '">' + p.name + " (" + label + ")</option>";
+                }
+                if (userDD) {
+                    userDD.innerHTML += '<option value="' + p.id + '">' + p.name + "</option>";
+                }
+                if (tblBody) {
+                    var badge = p.utility_model === "WALLET_CONSUMPTION"
+                        ? '<span class="badge badge-smart">Smart</span>'
+                        : '<span class="badge badge-dumb">Dumb</span>';
+                    tblBody.innerHTML +=
+                        "<tr><td>" + p.id + "</td>" +
+                        "<td>" + (p.name || "") + "</td>" +
+                        "<td>" + (p.province || "") + "</td>" +
+                        "<td>" + badge + "</td>" +
+                        '<td><button type="button" class="btn-edit" data-prop-id="' + p.id + '">Edit</button></td></tr>';
+                }
+            });
+
+            var table = document.getElementById("propertiesTable");
+            if (table) table.style.display = "block";
+
+            var role = localStorage.getItem("pm_role");
+            var assigned = localStorage.getItem("pm_prop_id");
+            if (filter && role !== "ADMIN" && assigned && assigned !== "null") {
+                filter.value = assigned;
+                filter.disabled = true;
+            }
+        } catch (e) {
+            console.error("[v3] loadProperties failed:", e);
+        }
+    };
+
+    // --- 3. Single delegated click handler. ---
+    //     Uses capturing phase so it wins even if other handlers
+    //     were attached to the buttons.
+    document.addEventListener("click", function (ev) {
+        var btn = ev.target.closest("#propertiesTableBody button.btn-edit");
+        if (!btn) return;
+
+        // Don't stop propagation — allow other listeners to still work.
+        // But we do the populating here.
+        ev.preventDefault();
+
+        var id = btn.getAttribute("data-prop-id");
+        if (!id) {
+            // Fallback: read from first cell
+            var row = btn.closest("tr");
+            var firstCell = row && row.querySelector("td");
+            id = firstCell ? firstCell.textContent.trim() : null;
+        }
+        var p = id ? propCache[String(id)] : null;
+        if (!p) {
+            console.warn("[v3] no cached property for id", id);
+            alert("Could not load property data. Refresh and try again.");
+            return;
+        }
+
+        document.getElementById("propId").value           = p.id;
+        document.getElementById("propName").value         = p.name || "";
+        document.getElementById("propProvince").value     = p.province || "";
+        document.getElementById("propAddress").value      = p.address || "";
+        document.getElementById("propUtilityModel").value = p.utility_model || "STS_TOKEN";
+        var __t = document.getElementById("propName"); if (__t) { __t.scrollIntoView({ behavior: "smooth", block: "center" }); setTimeout(function(){ __t.focus(); }, 400); }
+    }, true);   // <-- capture phase, catches clicks before other handlers
+
+    // --- 4. Legacy no-ops so old inline onclick attrs don't throw. ---
+    window.editProperty = function (id) {
+        var p = propCache[String(id)];
+        if (!p) return;
+        document.getElementById("propId").value           = p.id;
+        document.getElementById("propName").value         = p.name || "";
+        document.getElementById("propProvince").value     = p.province || "";
+        document.getElementById("propAddress").value      = p.address || "";
+        document.getElementById("propUtilityModel").value = p.utility_model || "STS_TOKEN";
+        var __t = document.getElementById("propName"); if (__t) { __t.scrollIntoView({ behavior: "smooth", block: "center" }); setTimeout(function(){ __t.focus(); }, 400); }
+    };
+    window.openPropertyEdit = window.editProperty;
+
+    console.log("[v3] property edit handler installed");
+})();
+</script>
 
 </body>
 </html>

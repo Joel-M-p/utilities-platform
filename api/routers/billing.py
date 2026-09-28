@@ -204,3 +204,54 @@ def api_generate_bill(bill: BillRequest, current_user: dict = Depends(require_st
     finally:
         cursor.close()
         conn.close()
+
+
+# ---- /meter-events/ endpoint (added by fix_meter_events_404.py) ----
+@router.get("/meter-events/")
+def api_get_meter_events(current_user: dict = Depends(verify_token)):
+    """Return recent meter events (alarms, tamper detections, faults).
+
+    Joins meters to get serial_number, since meter_events doesn't have
+    its own serial column. If there are no events, returns an empty
+    list so the frontend falls back to its mock display.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT
+                m.serial_number,
+                me.event_type,
+                me.event_notes,
+                me.recorded_by,
+                me.created_at
+            FROM meter_events me
+            LEFT JOIN meters m ON me.meter_id = m.id
+            ORDER BY me.created_at DESC
+            LIMIT 20
+        """)
+        rows = cursor.fetchall()
+        events = []
+        for r in rows:
+            serial, etype, notes, recorded_by, ts = r
+            # Derive a severity hint from the event type string
+            et = (etype or "").upper()
+            if any(k in et for k in ("TAMPER", "BYPASS", "LEAK", "FAULT", "FAIL")):
+                severity = "HIGH"
+            elif any(k in et for k in ("LOW_BATTERY", "WARN", "MAGNET")):
+                severity = "MEDIUM"
+            else:
+                severity = "LOW"
+            events.append({
+                "serial_number": serial or "",
+                "event_type": etype or "",
+                "event_notes": notes or "",
+                "recorded_by": recorded_by or "",
+                "severity": severity,
+                "timestamp": ts.strftime("%Y-%m-%d %H:%M") if ts else "",
+            })
+        return {"events": events}
+    finally:
+        cursor.close()
+        conn.close()
+
