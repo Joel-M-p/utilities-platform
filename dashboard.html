@@ -185,8 +185,8 @@
 
 <div id="loginScreen" class="container">
     <h1>PM Login</h1>
-    <input autocomplete="off" type="text" id="loginUser" placeholder="Username (admin)">
-    <input autocomplete="off" type="password" id="loginPass" placeholder="Password (password123)">
+    <input type="text" id="loginUser" placeholder="Username (admin)" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')" oninput="this.setAttribute('user-typed','true')">
+    <input type="password" id="loginPass" placeholder="Password (password123)" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly')">
     <button onclick="login()">Log In</button>
     <div id="loginError" style="color: red; margin-top: 10px;"></div>
         <p style="text-align:center; margin-top:15px;"><a href="#" onclick="showUserForgotPassword()" style="color:#3498db; text-decoration:none; font-size:0.9em;">Forgot Password?</a></p>
@@ -770,6 +770,60 @@
 </div>
 
 <script>
+
+
+    // LOGIN SECURITY: Prevent browser from auto-filling previous user credentials
+    function clearLoginFields() {
+        var u = document.getElementById('loginUser');
+        var p = document.getElementById('loginPass');
+        var e = document.getElementById('loginError');
+        if (u) { u.value = ''; u.removeAttribute('readonly'); }
+        if (p) { p.value = ''; p.removeAttribute('readonly'); }
+        if (e) { e.innerText = ''; e.style.display = 'none'; }
+    }
+    
+    // Clear fields immediately (might not beat Chrome, but try)
+    clearLoginFields();
+    
+    // Clear after 100ms
+    setTimeout(clearLoginFields, 100);
+    
+    // Clear after 300ms (Chrome fills around this time)
+    setTimeout(clearLoginFields, 300);
+    
+    // Clear after 500ms (Chrome sometimes fills late)
+    setTimeout(clearLoginFields, 500);
+    
+    // Clear after 1000ms (final sweep)
+    setTimeout(clearLoginFields, 1000);
+    
+    // Clear after 2000ms (very late Chrome fill)
+    setTimeout(clearLoginFields, 2000);
+    
+    // Also clear when login screen is clicked or focused
+    document.addEventListener('click', function() {
+        var ls = document.getElementById('loginScreen');
+        if (ls && ls.style.display !== 'none') {
+            var u = document.getElementById('loginUser');
+            var p = document.getElementById('loginPass');
+            if (u && u.value && !u.hasAttribute('user-typed')) { u.value = ''; }
+            if (p && p.value && !p.hasAttribute('user-typed')) { p.value = ''; }
+        }
+    });
+    
+    // Monitor for Chrome auto-filling the password field
+    // Chrome sometimes fills the password AFTER all our timeouts
+    var passwordObserver = new MutationObserver(function() {
+        var p = document.getElementById('loginPass');
+        if (p && p.value && !p.hasAttribute('user-typed')) {
+            p.value = '';
+        }
+    });
+    var passField = document.getElementById('loginPass');
+    if (passField) {
+        passwordObserver.observe(passField, { attributes: true, attributeFilter: ['value'] });
+    }
+
     let authToken = localStorage.getItem('pm_token');
     let currentRole = localStorage.getItem('pm_role');
     let assignedPropId = localStorage.getItem('pm_prop_id');
@@ -977,7 +1031,8 @@
     }
 
     function logout() { 
-        localStorage.removeItem('pm_token'); localStorage.removeItem('pm_role'); localStorage.removeItem('pm_prop_id'); localStorage.removeItem('pm_username'); location.reload(); 
+        localStorage.removeItem('pm_token'); localStorage.removeItem('pm_role'); localStorage.removeItem('pm_prop_id'); localStorage.removeItem('pm_username'); 
+        window.location.href = window.location.pathname + '?logout=' + Date.now(); 
     }
     function getAuthHeaders() { return { 'Authorization': `Bearer ${authToken}` }; }
     function extractError(data) { if (typeof data.detail === 'string') return data.detail; if (Array.isArray(data.detail)) return data.detail.map(err => err.msg).join(", "); return "Unknown error"; }
